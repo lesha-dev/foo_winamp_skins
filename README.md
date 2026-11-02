@@ -52,3 +52,15 @@ ninja -C build-x64 && ninja -C build-x86
 
 Source lists come from `foo_winamp_skins.vcxproj`; add files there only.
 Windows headers included with non-lowercase names need an entry in `unix/cmake/case_shim.txt`.
+
+## License
+
+MIT, see [LICENSE](LICENSE). Third-party code keeps its own license:
+
+| Component | License | Notes |
+|---|---|---|
+| foobar2000 SDK (incl. pfc) | BSD-style, see `3rdParty/foobar2000_sdk/sdk-license.txt` | linked statically |
+| miniz | MIT, see `3rdParty/miniz/LICENSE` | compiled in; its notice must ship with binaries |
+| WTL | MS-PL, see `3rdParty/WTL/MS-PL.txt` | not used yet |
+
+Winamp skins are the property of their authors and are not part of this project.

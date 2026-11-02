@@ -7,6 +7,8 @@ New-Item -ItemType Directory -Path "$stage\x64" | Out-Null
 try {
     Copy-Item "$root\out\Win32\Release\foo_winamp_skins.dll" $stage
     Copy-Item "$root\out\x64\Release\foo_winamp_skins.dll" "$stage\x64"
+    Copy-Item "$root\LICENSE" "$stage\LICENSE.txt"
+    Copy-Item "$root\3rdParty\miniz\LICENSE" "$stage\LICENSE-miniz.txt"
     $zip = "$root\out\foo_winamp_skins-$ver.zip"
     $pkg = [IO.Path]::ChangeExtension($zip, '.fb2k-component')
     Remove-Item $zip, $pkg -ErrorAction SilentlyContinue
