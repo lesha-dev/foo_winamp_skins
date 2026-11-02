@@ -11,5 +11,6 @@ cfg_bool double_size(guids::cfg_double_size, false);
 cfg_bool always_on_top(guids::cfg_always_on_top, false);
 cfg_bool shade(guids::cfg_shade, false);
 cfg_bool repeat_with_shuffle(guids::cfg_repeat_with_shuffle, false);
+cfg_float balance(guids::cfg_balance, 0.0);
 cfg_int vis_mode(guids::cfg_vis_mode, 0);
 }

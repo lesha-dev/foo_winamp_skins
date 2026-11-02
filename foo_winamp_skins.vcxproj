@@ -90,6 +90,7 @@ exit /b 0</Command>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="src\balance_dsp.h" />
     <ClInclude Include="src\canvas.h" />
     <ClInclude Include="src\config.h" />
     <ClInclude Include="src\controls.h" />
@@ -102,12 +103,14 @@ exit /b 0</Command>
     <ClInclude Include="src\skin.h" />
     <ClInclude Include="src\skin_layout.h" />
     <ClInclude Include="src\stdafx.h" />
+    <ClInclude Include="src\skins_folder.h" />
     <ClInclude Include="src\text_font.h" />
     <ClInclude Include="src\version.h" />
     <ClInclude Include="src\visualizer.h" />
     <ClInclude Include="3rdParty\miniz\miniz.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\balance_dsp.cpp" />
     <ClCompile Include="src\canvas.cpp" />
     <ClCompile Include="src\component.cpp" />
     <ClCompile Include="src\config.cpp" />
@@ -116,6 +119,7 @@ exit /b 0</Command>
     <ClCompile Include="src\main_window.cpp" />
     <ClCompile Include="src\player.cpp" />
     <ClCompile Include="src\skin.cpp" />
+    <ClCompile Include="src\skins_folder.cpp" />
     <ClCompile Include="src\text_font.cpp" />
     <ClCompile Include="src\ui_module.cpp" />
     <ClCompile Include="src\visualizer.cpp" />

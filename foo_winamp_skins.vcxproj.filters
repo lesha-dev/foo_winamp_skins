@@ -7,6 +7,7 @@
     <Filter Include="3rdParty"><UniqueIdentifier>{0B6F2D7E-5C1A-4E3B-9F8D-2A4C6E8B1D3F}</UniqueIdentifier></Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\balance_dsp.cpp"><Filter>Source Files</Filter></ClCompile>
     <ClCompile Include="src\canvas.cpp"><Filter>Source Files</Filter></ClCompile>
     <ClCompile Include="src\component.cpp"><Filter>Source Files</Filter></ClCompile>
     <ClCompile Include="src\config.cpp"><Filter>Source Files</Filter></ClCompile>
@@ -15,12 +16,14 @@
     <ClCompile Include="src\main_window.cpp"><Filter>Source Files</Filter></ClCompile>
     <ClCompile Include="src\player.cpp"><Filter>Source Files</Filter></ClCompile>
     <ClCompile Include="src\skin.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClCompile Include="src\skins_folder.cpp"><Filter>Source Files</Filter></ClCompile>
     <ClCompile Include="src\text_font.cpp"><Filter>Source Files</Filter></ClCompile>
     <ClCompile Include="src\ui_module.cpp"><Filter>Source Files</Filter></ClCompile>
     <ClCompile Include="src\visualizer.cpp"><Filter>Source Files</Filter></ClCompile>
     <ClCompile Include="3rdParty\miniz\miniz.c"><Filter>3rdParty</Filter></ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\balance_dsp.h"><Filter>Header Files</Filter></ClInclude>
     <ClInclude Include="src\canvas.h"><Filter>Header Files</Filter></ClInclude>
     <ClInclude Include="src\config.h"><Filter>Header Files</Filter></ClInclude>
     <ClInclude Include="src\controls.h"><Filter>Header Files</Filter></ClInclude>
@@ -33,6 +36,7 @@
     <ClInclude Include="src\skin.h"><Filter>Header Files</Filter></ClInclude>
     <ClInclude Include="src\skin_layout.h"><Filter>Header Files</Filter></ClInclude>
     <ClInclude Include="src\stdafx.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="src\skins_folder.h"><Filter>Header Files</Filter></ClInclude>
     <ClInclude Include="src\text_font.h"><Filter>Header Files</Filter></ClInclude>
     <ClInclude Include="src\version.h"><Filter>Header Files</Filter></ClInclude>
     <ClInclude Include="src\visualizer.h"><Filter>Header Files</Filter></ClInclude>

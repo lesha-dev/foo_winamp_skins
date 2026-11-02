@@ -11,10 +11,10 @@
 - [x] 8. Window: region.txt shape, double size, always on top, windowshade, minimize/close, edge snapping
 
 ## Backlog
-- [ ] Embed a default skin in the DLL (resource) so something renders when no skin is set or loading fails.
-      Needs a skin we may redistribute: Winamp's base skin is Nullsoft's copyright, so use a freely licensed one or draw our own.
-- [ ] Skins folder: scan a dedicated folder (e.g. `<profile>\winamp-skins`) and list its skins in the UI for selection.
-- [ ] Balance slider is visual only: fb2k core has no balance. Options: our own DSP, or hide the effect.
+- [x] ~~Embed a default skin~~ — decided: ship no skin (Winamp base skin isn't redistributable); the no-skin placeholder stays.
+- [x] Skins folder `<profile>\winamp-skins`, listed in the context menu (Skins submenu).
+- [ ] Preferences page (Display > Winamp Skins): skin list with preview, folder actions, visualizer/hotkey/balance options.
+- [x] Balance via own DSP ("Winamp Skins balance"), auto-inserted last in the chain on first off-centre use. Lags by the output buffer length.
 - [ ] EQ / PL buttons do nothing until the equalizer and playlist windows exist.
 - [ ] Visualizer tuning: dB range / falloff speeds are guesses; no Winamp vis options (fire/line bars, dot oscilloscope, falloff, refresh rate).
 - [ ] Main menu (File/Edit/...) is only reachable via right-click; consider Alt shortcuts / options button behaviour like Winamp.

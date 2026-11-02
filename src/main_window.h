@@ -91,7 +91,6 @@ private:
     Control m_pressed = Control::none; // control under mouse capture
     bool m_pressed_inside = false;
     double m_drag_value = 0;           // slider value while dragging (0..1, balance -1..1)
-    double m_balance = 0;              // visual only: fb2k core has no balance control
     pfc::string8 m_status;             // slider feedback shown instead of the title
     unsigned m_marquee_step = 0;
     int m_kbps = -1;

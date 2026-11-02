@@ -1,7 +1,9 @@
 #include "stdafx.h"
 #include "main_window.h"
+#include "balance_dsp.h"
 #include "config.h"
 #include "player.h"
+#include "skins_folder.h"
 #include "version.h"
 
 #include <cmath>
@@ -30,7 +32,15 @@ const MenuRoot menu_roots[] = {
     { &mainmenu_groups::help,     L"&Help" },
 };
 constexpr UINT menu_id_stride = 0x1000;
-enum : UINT { id_load_skin = 1, id_unload_skin, id_always_on_top, id_double_size, id_shade, id_vis_spectrum, id_vis_osc, id_vis_off };
+enum : UINT { id_load_skin = 1, id_unload_skin, id_always_on_top, id_double_size, id_shade, id_vis_spectrum, id_vis_osc, id_vis_off,
+    id_open_skins_folder,
+    id_skin_first = 0x100, id_skin_last = 0xFFF }; // must stay below menu_id_stride
+
+std::wstring menu_label(const std::wstring& s) {
+    std::wstring out;
+    for (wchar_t ch : s) { if (ch == L'&') out += L'&'; out += ch; }
+    return out;
+}
 
 void register_class(WNDPROC proc) {
     static bool registered = false;
@@ -122,6 +132,7 @@ HWND MainWindow::create(HookProc hook) {
     if (!path.is_empty()) load_skin(path, false);
     apply_geometry();
 
+    if (balance::get() != 0) balance::ensure_dsp();
     m_callbacks = std::make_unique<Callbacks>(*this);
     on_track_changed();
     SetTimer(m_wnd, marquee_timer_id, marquee_interval_ms, nullptr);
@@ -295,7 +306,7 @@ MainState MainWindow::build_state() {
     auto pc = playback_control::get();
     if (pc->is_playing()) st.play = pc->is_paused() ? PlayState::paused : PlayState::playing;
     st.volume = m_pressed == Control::volume ? m_drag_value : player::db_to_slider(pc->get_volume());
-    st.balance = m_balance;
+    st.balance = m_pressed == Control::balance ? m_drag_value : balance::get();
     st.seekable = pc->playback_can_seek();
 
     double length = 0, pos = 0;
@@ -379,6 +390,7 @@ void MainWindow::on_lbutton_up(POINT p) {
         if (pc->playback_can_seek() && pc->get_now_playing(track) && track->get_length() > 0)
             pc->playback_seek(m_drag_value * track->get_length());
     }
+    if (id == Control::balance && balance::get() != 0) balance::ensure_dsp();
     m_pressed = Control::none;
     m_pressed_inside = false;
     m_status.reset();
@@ -409,7 +421,8 @@ void MainWindow::update_slider(POINT p) {
     case Control::balance: {
         double b = ratio(L::pos_balance.x, L::balance_bg.w, L::balance_thumb.w) * 2.0 - 1.0;
         if (std::abs(b) < balance_snap) b = 0;
-        m_balance = m_drag_value = b;
+        m_drag_value = b;
+        balance::set(b);
         const int pct = static_cast<int>(std::abs(b) * 100 + 0.5);
         m_status = pct == 0 ? pfc::string8("Balance: Center") : pfc::format("Balance: ", pct, "% ", b < 0 ? "Left" : "Right");
         break;
@@ -500,8 +513,22 @@ bool MainWindow::on_key(WPARAM vk) {
 
 void MainWindow::show_context_menu(POINT pt) {
     HMENU menu = CreatePopupMenu();
-    AppendMenuW(menu, MF_STRING, id_load_skin, L"Load &skin...");
-    AppendMenuW(menu, MF_STRING | (m_skin ? 0 : MF_GRAYED), id_unload_skin, L"&Unload skin");
+
+    // Skins submenu: contents of the skins folder, then file-based actions.
+    const auto skins = skins_folder::list();
+    const std::wstring current = pfc::stringcvt::string_wide_from_utf8(config::skin_path.get()).get_ptr();
+    HMENU skins_menu = CreatePopupMenu();
+    const size_t max_skins = id_skin_last - id_skin_first + 1;
+    for (size_t i = 0; i < skins.size() && i < max_skins; ++i) {
+        const bool sel = m_skin && _wcsicmp(skins[i].path.c_str(), current.c_str()) == 0;
+        AppendMenuW(skins_menu, MF_STRING | (sel ? MF_CHECKED : 0), id_skin_first + i, menu_label(skins[i].name).c_str());
+    }
+    if (skins.empty()) AppendMenuW(skins_menu, MF_STRING | MF_GRAYED, 0, L"(skins folder is empty)");
+    AppendMenuW(skins_menu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(skins_menu, MF_STRING, id_open_skins_folder, L"&Open skins folder");
+    AppendMenuW(skins_menu, MF_STRING, id_load_skin, L"&Load skin from file...");
+    AppendMenuW(skins_menu, MF_STRING | (m_skin ? 0 : MF_GRAYED), id_unload_skin, L"&Unload skin");
+    AppendMenuW(menu, MF_POPUP | MF_STRING, reinterpret_cast<UINT_PTR>(skins_menu), L"&Skins");
     AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
     AppendMenuW(menu, MF_STRING | (m_always_on_top ? MF_CHECKED : 0), id_always_on_top, L"Always on &top\tCtrl+A");
     AppendMenuW(menu, MF_STRING | (m_scale == 2 ? MF_CHECKED : 0), id_double_size, L"&Double size\tCtrl+D");
@@ -536,8 +563,12 @@ void MainWindow::show_context_menu(POINT pt) {
     case id_vis_spectrum: set_vis_mode(VisMode::spectrum); break;
     case id_vis_osc: set_vis_mode(VisMode::oscilloscope); break;
     case id_vis_off: set_vis_mode(VisMode::off); break;
+    case id_open_skins_folder: skins_folder::open_in_explorer(); break;
     default:
-        if (cmd >= menu_id_stride) {
+        if (cmd >= id_skin_first && cmd <= id_skin_last) {
+            const size_t i = cmd - id_skin_first;
+            if (i < skins.size()) load_skin(pfc::stringcvt::string_utf8_from_wide(skins[i].path.c_str()), true);
+        } else if (cmd >= menu_id_stride) {
             const size_t idx = cmd / menu_id_stride - 1;
             if (idx < managers.size()) managers[idx]->execute_command(cmd - static_cast<UINT>((idx + 1) * menu_id_stride));
         }
@@ -740,8 +771,9 @@ bool MainWindow::load_skin(const char* path, bool interactive) {
 
 void MainWindow::browse_skin() {
     pfc::string8 path = config::skin_path.get();
+    const pfc::string8 dir = pfc::stringcvt::string_utf8_from_wide(skins_folder::path().c_str()).get_ptr();
     if (uGetOpenFileName(m_wnd, "Winamp skins (*.wsz;*.zip)|*.wsz;*.zip|All files|*.*", 0, "wsz",
-            "Load Winamp skin", nullptr, path, FALSE))
+            "Load Winamp skin", path.is_empty() ? dir.get_ptr() : nullptr, path, FALSE))
         load_skin(path, true);
 }
 
