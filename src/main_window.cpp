@@ -1,6 +1,9 @@
 #include "stdafx.h"
 #include "main_window.h"
 #include "config.h"
+#include "version.h"
+
+#include <cmath>
 
 namespace wsz {
 namespace {
@@ -19,6 +22,12 @@ const MenuRoot menu_roots[] = {
     { &mainmenu_groups::help,     L"&Help" },
 };
 constexpr UINT menu_id_stride = 0x1000;
+constexpr UINT id_load_skin = 1;
+constexpr UINT id_unload_skin = 2;
+constexpr UINT_PTR refresh_timer_id = 1;
+
+// Same curve as the SDK's VolumeMap (Default UI slider).
+double db_to_slider(double db) { return std::clamp(std::pow(2.0, db / 10.0), 0.0, 1.0); }
 
 void register_class(WNDPROC proc) {
     static bool registered = false;
@@ -55,6 +64,13 @@ HWND MainWindow::create(HookProc hook) {
         WS_POPUP | WS_SYSMENU | WS_MINIMIZEBOX | WS_CLIPCHILDREN,
         x, y, w, h, nullptr, nullptr, core_api::get_my_instance(), this);
     if (!m_wnd) throw exception_win32(GetLastError());
+
+    m_canvas.resize(base_width, base_height);
+    const pfc::string8 path = config::skin_path.get();
+    if (!path.is_empty()) load_skin(path, false);
+
+    // TEMP until playback callbacks are wired (plan step 5): poll state for repaint.
+    SetTimer(m_wnd, refresh_timer_id, 250, nullptr);
     return m_wnd;
 }
 
@@ -62,6 +78,7 @@ void MainWindow::destroy() {
     if (!m_wnd) return;
     save_position();
     HWND wnd = m_wnd;
+    KillTimer(wnd, refresh_timer_id);
     m_wnd = nullptr;
     SetWindowLongPtrW(wnd, GWLP_USERDATA, 0);
     DestroyWindow(wnd);
@@ -100,6 +117,13 @@ LRESULT MainWindow::wndproc(UINT msg, WPARAM wp, LPARAM lp) {
         show_context_menu(pt);
         return 0;
     }
+    case WM_TIMER:
+        if (wp == refresh_timer_id && m_skin) InvalidateRect(m_wnd, nullptr, FALSE);
+        return 0;
+    case WM_ACTIVATE:
+        m_active = LOWORD(wp) != WA_INACTIVE;
+        InvalidateRect(m_wnd, nullptr, FALSE);
+        break;
     case WM_EXITSIZEMOVE:
         save_position();
         return 0;
@@ -114,24 +138,53 @@ LRESULT MainWindow::wndproc(UINT msg, WPARAM wp, LPARAM lp) {
 void MainWindow::on_paint() {
     PAINTSTRUCT ps;
     HDC dc = BeginPaint(m_wnd, &ps);
-    RECT rc; GetClientRect(m_wnd, &rc);
+    if (m_skin) {
+        MainState st = query_state();
+        st.active = m_active;
+        render_main(m_canvas, *m_skin, st);
+        m_canvas.present(dc, m_scale);
+    } else {
+        paint_placeholder(dc);
+    }
+    EndPaint(m_wnd, &ps);
+}
 
-    // Placeholder until the skin renderer lands.
+void MainWindow::paint_placeholder(HDC dc) {
+    RECT rc; GetClientRect(m_wnd, &rc);
     HBRUSH bg = CreateSolidBrush(RGB(32, 32, 48));
     FillRect(dc, &rc, bg);
     DeleteObject(bg);
     RECT title = { 0, 0, rc.right, titlebar_height * m_scale };
-    HBRUSH tb = CreateSolidBrush(RGB(64, 64, 112));
+    HBRUSH tb = CreateSolidBrush(m_active ? RGB(64, 64, 128) : RGB(48, 48, 72));
     FillRect(dc, &title, tb);
     DeleteObject(tb);
 
     SetBkMode(dc, TRANSPARENT);
     SetTextColor(dc, RGB(0, 230, 0));
     RECT text = rc; text.top = title.bottom;
-    DrawTextW(dc, L"foo_winamp_skins\nno skin loaded\nright-click for menu", -1, &text,
-        DT_CENTER | DT_VCENTER | DT_NOPREFIX);
+    DrawTextW(dc, L"no skin loaded\nright-click \u2192 Load skin...", -1, &text, DT_CENTER | DT_VCENTER | DT_NOPREFIX);
+}
 
-    EndPaint(m_wnd, &ps);
+MainState MainWindow::query_state() const {
+    MainState st;
+    auto pc = playback_control::get();
+    if (pc->is_playing()) st.play = pc->is_paused() ? PlayState::paused : PlayState::playing;
+    st.volume = db_to_slider(pc->get_volume());
+    st.seekable = pc->playback_can_seek();
+
+    metadb_handle_ptr track;
+    if (st.play != PlayState::stopped && pc->get_now_playing(track)) {
+        const double len = track->get_length();
+        if (len > 0) st.position = pc->playback_get_position() / len;
+        metadb_info_container::ptr info;
+        if (track->get_info_ref(info)) st.channels = static_cast<int>(info->info().info_get_int("channels"));
+    }
+
+    auto pm = playlist_manager::get();
+    const pfc::string8 order = pm->playback_order_get_name(pm->playback_order_get_active());
+    st.shuffle = order.find_first("Shuffle") == 0 || order.find_first("Random") == 0;
+    st.repeat = order.find_first("Repeat") == 0;
+    return st;
 }
 
 LRESULT MainWindow::on_nchittest(LPARAM lp) {
@@ -143,6 +196,9 @@ LRESULT MainWindow::on_nchittest(LPARAM lp) {
 
 void MainWindow::show_context_menu(POINT pt) {
     HMENU menu = CreatePopupMenu();
+    AppendMenuW(menu, MF_STRING, id_load_skin, L"Load &skin...");
+    AppendMenuW(menu, MF_STRING | (m_skin ? 0 : MF_GRAYED), id_unload_skin, L"&Unload skin");
+    AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
     std::vector<mainmenu_manager::ptr> managers;
     for (size_t i = 0; i < std::size(menu_roots); ++i) {
         auto mgr = mainmenu_manager::get();
@@ -158,10 +214,41 @@ void MainWindow::show_context_menu(POINT pt) {
     const UINT cmd = TrackPopupMenu(menu, TPM_RETURNCMD | TPM_RIGHTBUTTON | TPM_NONOTIFY, pt.x, pt.y, 0, m_wnd, nullptr);
     DestroyMenu(menu);
 
-    if (cmd >= menu_id_stride) {
+    if (cmd == id_load_skin) browse_skin();
+    else if (cmd == id_unload_skin) unload_skin();
+    else if (cmd >= menu_id_stride) {
         const size_t idx = cmd / menu_id_stride - 1;
         if (idx < managers.size()) managers[idx]->execute_command(cmd - static_cast<UINT>((idx + 1) * menu_id_stride));
     }
+}
+
+bool MainWindow::load_skin(const char* path, bool interactive) {
+    try {
+        auto skin = Skin::load(path);
+        for (auto& w : skin->warnings()) FB2K_console_formatter() << COMPONENT_NAME ": " << path << ": " << w.c_str();
+        m_skin = std::move(skin);
+        config::skin_path = path;
+        InvalidateRect(m_wnd, nullptr, FALSE);
+        return true;
+    } catch (const std::exception& e) {
+        const pfc::string8 msg = pfc::format("Cannot load skin:\n", path, "\n\n", e.what());
+        FB2K_console_formatter() << COMPONENT_NAME ": " << msg;
+        if (interactive) popup_message::g_show(msg, COMPONENT_NAME, popup_message::icon_error);
+        return false;
+    }
+}
+
+void MainWindow::browse_skin() {
+    pfc::string8 path = config::skin_path.get();
+    if (uGetOpenFileName(m_wnd, "Winamp skins (*.wsz;*.zip)|*.wsz;*.zip|All files|*.*", 0, "wsz",
+            "Load Winamp skin", nullptr, path, FALSE))
+        load_skin(path, true);
+}
+
+void MainWindow::unload_skin() {
+    m_skin.reset();
+    config::skin_path = "";
+    InvalidateRect(m_wnd, nullptr, FALSE);
 }
 
 void MainWindow::save_position() {

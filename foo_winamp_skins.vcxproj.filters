@@ -4,20 +4,32 @@
     <Filter Include="Source Files"><UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier></Filter>
     <Filter Include="Header Files"><UniqueIdentifier>{93995380-89BD-4B04-88EB-625FBE52EBFB}</UniqueIdentifier></Filter>
     <Filter Include="Resource Files"><UniqueIdentifier>{67DA6AB6-F800-4C08-8B7A-83BB121AAD01}</UniqueIdentifier></Filter>
+    <Filter Include="3rdParty"><UniqueIdentifier>{0B6F2D7E-5C1A-4E3B-9F8D-2A4C6E8B1D3F}</UniqueIdentifier></Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\canvas.cpp"><Filter>Source Files</Filter></ClCompile>
     <ClCompile Include="src\component.cpp"><Filter>Source Files</Filter></ClCompile>
     <ClCompile Include="src\config.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClCompile Include="src\image.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClCompile Include="src\main_renderer.cpp"><Filter>Source Files</Filter></ClCompile>
     <ClCompile Include="src\main_window.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClCompile Include="src\skin.cpp"><Filter>Source Files</Filter></ClCompile>
     <ClCompile Include="src\ui_module.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClCompile Include="3rdParty\miniz\miniz.c"><Filter>3rdParty</Filter></ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\canvas.h"><Filter>Header Files</Filter></ClInclude>
     <ClInclude Include="src\config.h"><Filter>Header Files</Filter></ClInclude>
     <ClInclude Include="src\guids.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="src\image.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="src\main_renderer.h"><Filter>Header Files</Filter></ClInclude>
     <ClInclude Include="src\main_window.h"><Filter>Header Files</Filter></ClInclude>
     <ClInclude Include="src\resource.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="src\skin.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="src\skin_layout.h"><Filter>Header Files</Filter></ClInclude>
     <ClInclude Include="src\stdafx.h"><Filter>Header Files</Filter></ClInclude>
     <ClInclude Include="src\version.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="3rdParty\miniz\miniz.h"><Filter>3rdParty</Filter></ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="src\foo_winamp_skins.rc"><Filter>Resource Files</Filter></ResourceCompile>

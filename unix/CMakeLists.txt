@@ -3,7 +3,7 @@
 # Source lists are read from the .vcxproj files so both builds stay in sync.
 cmake_minimum_required(VERSION 3.25)
 set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type")
-project(foo_winamp_skins CXX RC)
+project(foo_winamp_skins C CXX RC)
 
 get_filename_component(REPO ${CMAKE_SOURCE_DIR}/.. ABSOLUTE)
 
@@ -59,10 +59,12 @@ endif()
 # --- the component ---
 vcxproj_sources(COMPONENT_SRCS ${REPO}/foo_winamp_skins.vcxproj)
 add_library(foo_winamp_skins SHARED ${COMPONENT_SRCS} ${REPO}/src/foo_winamp_skins.rc)
-target_include_directories(foo_winamp_skins PRIVATE ${REPO}/src)
+target_include_directories(foo_winamp_skins PRIVATE ${REPO}/src ${REPO}/3rdParty/miniz)
+target_compile_definitions(foo_winamp_skins PRIVATE MINIZ_NO_STDIO MINIZ_NO_ARCHIVE_WRITING_APIS MINIZ_NO_ZLIB_COMPATIBLE_NAMES)
+set_source_files_properties(${REPO}/3rdParty/miniz/miniz.c PROPERTIES COMPILE_OPTIONS "-Wno-everything")
 target_compile_options(foo_winamp_skins PRIVATE -W4 -Wno-unused-parameter
   -Wno-microsoft-include -Wno-pragma-pack -Wno-unknown-pragmas -Wno-nonportable-include-path -Wno-unused-command-line-argument)
 target_link_libraries(foo_winamp_skins PRIVATE
   foobar2000_component_client foobar2000_SDK pfc
   ${SDK}/foobar2000/shared/shared-${FB2K_PLATFORM}.lib
-  user32 gdi32 shell32 comctl32 comdlg32 ole32 uuid shlwapi winmm msimg32)
+  user32 gdi32 shell32 comctl32 comdlg32 ole32 uuid shlwapi winmm msimg32 windowscodecs)
