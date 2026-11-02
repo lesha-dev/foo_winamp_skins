@@ -1,0 +1,8 @@
+<Project>
+  <!-- VS 2026 ships only v145; VS 2022 has v143. Override with /p:WszToolset=... if needed. -->
+  <PropertyGroup>
+    <WszToolset Condition="'$(WszToolset)' == '' and '$(VisualStudioVersion)' == '17.0'">v143</WszToolset>
+    <WszToolset Condition="'$(WszToolset)' == ''">v145</WszToolset>
+    <PlatformToolset>$(WszToolset)</PlatformToolset>
+  </PropertyGroup>
+</Project>

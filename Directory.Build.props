@@ -1,0 +1,8 @@
+<Project>
+  <!-- Applies to every project in this tree, including the vendored SDK projects.
+       ForceImportBeforeCppProps runs after each vcxproj sets PlatformToolset, so it can override it
+       without editing the SDK project files. -->
+  <PropertyGroup>
+    <ForceImportBeforeCppProps>$(MSBuildThisFileDirectory)msbuild\toolset.props</ForceImportBeforeCppProps>
+  </PropertyGroup>
+</Project>

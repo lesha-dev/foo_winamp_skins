@@ -1,0 +1,3 @@
+SDKDDKVer.h
+MMReg.h
+Objbase.h
