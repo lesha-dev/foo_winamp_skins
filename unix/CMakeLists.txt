@@ -30,6 +30,7 @@ include_directories(SYSTEM ${WTL_INCLUDE})
 # Read <ClCompile Include="..."> entries from a vcxproj.
 function(vcxproj_sources out vcxproj)
   file(READ ${vcxproj} _xml)
+  set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${vcxproj})
   string(REGEX MATCHALL "<ClCompile Include=\"[^\"]+\"" _items "${_xml}")
   get_filename_component(_dir ${vcxproj} DIRECTORY)
   set(_srcs)

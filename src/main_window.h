@@ -1,6 +1,7 @@
 #pragma once
 
 #include "canvas.h"
+#include "controls.h"
 #include "main_renderer.h"
 #include "skin.h"
 
@@ -14,31 +15,79 @@ public:
     static constexpr int base_width = 275;
     static constexpr int base_height = 116;
 
+    MainWindow();
+    ~MainWindow();
+
     HWND create(HookProc hook);
     void destroy();
     HWND hwnd() const { return m_wnd; }
 
 private:
+    class Callbacks;
+    friend class Callbacks;
+
     static LRESULT CALLBACK s_wndproc(HWND wnd, UINT msg, WPARAM wp, LPARAM lp);
     LRESULT wndproc(UINT msg, WPARAM wp, LPARAM lp);
 
+    // painting
     void on_paint();
     void paint_placeholder(HDC dc);
+    MainState build_state();
+    pfc::string8 current_title();
+    void invalidate();
+
+    // input
+    POINT to_skin(POINT client) const;
+    const ControlRect* hit(POINT skin_pt) const;
     LRESULT on_nchittest(LPARAM lp);
+    void on_lbutton_down(POINT skin_pt);
+    void on_mouse_move(POINT skin_pt);
+    void on_lbutton_up(POINT skin_pt);
+    void cancel_drag();
+    void update_slider(POINT skin_pt);
+    void activate_control(Control id);
+    bool on_key(WPARAM vk);
     void show_context_menu(POINT pt_screen);
+
+    // playback events
+    void on_track_changed();
+    void on_playback_stopped();
+    void on_dynamic_info(const file_info& info);
+
+    // window modes
+    void set_shade(bool on);
+    void set_double_size(bool on);
+    void set_always_on_top(bool on);
+    void apply_geometry();
+    void apply_region();
+    void snap_to_work_area(WINDOWPOS* wp) const;
     void save_position();
 
+    // skins
     bool load_skin(const char* path, bool interactive);
     void browse_skin();
     void unload_skin();
-    MainState query_state() const;
 
     HWND m_wnd = nullptr;
     HookProc m_hook = nullptr;
-    int m_scale = 1;
-    bool m_active = false;
+    std::unique_ptr<Callbacks> m_callbacks;
     std::unique_ptr<Skin> m_skin;
     Canvas m_canvas;
+    titleformat_object::ptr m_title_script;
+
+    int m_scale = 1;
+    bool m_shade = false;
+    bool m_always_on_top = false;
+    bool m_active = false;
+
+    Control m_pressed = Control::none; // control under mouse capture
+    bool m_pressed_inside = false;
+    double m_drag_value = 0;           // slider value while dragging (0..1, balance -1..1)
+    double m_balance = 0;              // visual only: fb2k core has no balance control
+    pfc::string8 m_status;             // slider feedback shown instead of the title
+    unsigned m_marquee_step = 0;
+    int m_kbps = -1;
+    int m_khz = -1;
 };
 
 } // namespace wsz

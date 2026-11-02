@@ -6,6 +6,7 @@ namespace wsz {
 void Canvas::resize(int w, int h) {
     m_w = w; m_h = h;
     m_px.assign(size_t(w) * h, 0);
+    reset_clip();
 }
 
 void Canvas::clear(uint32_t bgrx) {
@@ -23,11 +24,11 @@ void Canvas::blit(const Image& src, int sx, int sy, int w, int h, int dx, int dy
     if (sy < 0) { h += sy; dy -= sy; sy = 0; }
     w = std::min(w, src.width - sx);
     h = std::min(h, src.height - sy);
-    // Clip to destination.
-    if (dx < 0) { w += dx; sx -= dx; dx = 0; }
-    if (dy < 0) { h += dy; sy -= dy; dy = 0; }
-    w = std::min(w, m_w - dx);
-    h = std::min(h, m_h - dy);
+    // Clip to destination clip rect.
+    if (dx < m_clip.left) { const int d = m_clip.left - dx; w -= d; sx += d; dx = m_clip.left; }
+    if (dy < m_clip.top) { const int d = m_clip.top - dy; h -= d; sy += d; dy = m_clip.top; }
+    w = std::min(w, static_cast<int>(m_clip.right) - dx);
+    h = std::min(h, static_cast<int>(m_clip.bottom) - dy);
     if (w <= 0 || h <= 0) return;
 
     for (int row = 0; row < h; ++row) {

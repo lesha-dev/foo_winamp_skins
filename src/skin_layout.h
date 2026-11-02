@@ -101,11 +101,49 @@ constexpr Pos pos_stop  {  85, 88 };
 constexpr Pos pos_next  { 108, 88 };
 constexpr Pos pos_eject { 136, 89 };
 
-// --- areas filled later (text, digits, visualizer) ---
+// --- clutter bar pressed/selected states (titlebar.bmp) ---
+constexpr Sprite clutter_o_on { 304, 47, 8, 8 };
+constexpr Sprite clutter_a_on { 312, 55, 8, 7 };
+constexpr Sprite clutter_i_on { 320, 62, 8, 7 };
+constexpr Sprite clutter_d_on { 328, 69, 8, 8 };
+constexpr Sprite clutter_v_on { 336, 77, 8, 7 };
+constexpr Pos pos_clutter_o { 10, 25 };
+constexpr Pos pos_clutter_a { 10, 33 };
+constexpr Pos pos_clutter_i { 10, 40 };
+constexpr Pos pos_clutter_d { 10, 47 };
+constexpr Pos pos_clutter_v { 10, 55 };
+
+// --- windowshade mode (titlebar.bmp), window is 275x14 ---
+constexpr int shade_height = 14;
+constexpr Sprite shade_bg                { 27, 42, 275, 14 };
+constexpr Sprite shade_bg_active         { 27, 29, 275, 14 };
+constexpr Sprite btn_shade_on            {  0, 27, 9, 9 };
+constexpr Sprite btn_shade_on_down       {  9, 27, 9, 9 };
+constexpr Sprite shade_posbar_bg         {  0, 36, 17, 7 };
+constexpr Sprite shade_posbar_thumb      { 20, 36, 3, 7 };
+constexpr Sprite shade_posbar_thumb_left { 17, 36, 3, 7 };
+constexpr Sprite shade_posbar_thumb_right{ 23, 36, 3, 7 };
+constexpr Pos pos_shade_posbar { 226, 4 };
+constexpr Pos pos_shade_time   { 127, 4 };
+
+// --- time display: numbers.bmp / nums_ex.bmp, 9x13 digits ---
+constexpr int digit_w = 9;
+constexpr int digit_h = 13;
+constexpr Sprite minus_numbers   { 20, 6, 5, 1 };   // numbers.bmp dash
+constexpr Sprite minus_nums_ex   { 99, 0, 9, 13 };
+constexpr Sprite no_minus_nums_ex{ 90, 0, 9, 13 };
+constexpr Pos pos_minus        { 38, 26 };
+constexpr Pos pos_minus_dash   { 38, 32 };
+constexpr Pos pos_digits[4] = { { 48, 26 }, { 60, 26 }, { 78, 26 }, { 90, 26 } };
+
+// --- text areas (text.bmp font) ---
+constexpr Pos pos_title_text { 111, 27 };
+constexpr int title_text_w = 154;
+constexpr int marquee_max_chars = 31;
+constexpr Pos pos_kbps { 111, 43 };
+constexpr Pos pos_khz  { 156, 43 };
+
+// --- not drawn yet ---
 constexpr Pos pos_visualizer { 24, 43 };   // 76x16
-constexpr Pos pos_time       { 39, 26 };
-constexpr Pos pos_title_text { 111, 27 };  // 154x6
-constexpr Pos pos_kbps       { 111, 43 };
-constexpr Pos pos_khz        { 156, 43 };
 
 } // namespace wsz::layout

@@ -92,14 +92,17 @@ exit /b 0</Command>
   <ItemGroup>
     <ClInclude Include="src\canvas.h" />
     <ClInclude Include="src\config.h" />
+    <ClInclude Include="src\controls.h" />
     <ClInclude Include="src\guids.h" />
     <ClInclude Include="src\image.h" />
     <ClInclude Include="src\main_renderer.h" />
     <ClInclude Include="src\main_window.h" />
+    <ClInclude Include="src\player.h" />
     <ClInclude Include="src\resource.h" />
     <ClInclude Include="src\skin.h" />
     <ClInclude Include="src\skin_layout.h" />
     <ClInclude Include="src\stdafx.h" />
+    <ClInclude Include="src\text_font.h" />
     <ClInclude Include="src\version.h" />
     <ClInclude Include="3rdParty\miniz\miniz.h" />
   </ItemGroup>
@@ -110,7 +113,9 @@ exit /b 0</Command>
     <ClCompile Include="src\image.cpp" />
     <ClCompile Include="src\main_renderer.cpp" />
     <ClCompile Include="src\main_window.cpp" />
+    <ClCompile Include="src\player.cpp" />
     <ClCompile Include="src\skin.cpp" />
+    <ClCompile Include="src\text_font.cpp" />
     <ClCompile Include="src\ui_module.cpp" />
     <ClCompile Include="3rdParty\miniz\miniz.c">
       <WarningLevel>TurnOffAllWarnings</WarningLevel>
