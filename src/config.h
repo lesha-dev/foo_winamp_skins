@@ -9,4 +9,5 @@ extern cfg_bool double_size;
 extern cfg_bool always_on_top;
 extern cfg_bool shade;
 extern cfg_bool repeat_with_shuffle; // repeat button state while a shuffle order is active
+extern cfg_int vis_mode;             // VisMode
 }

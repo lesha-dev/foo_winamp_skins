@@ -15,6 +15,11 @@ public:
     void blit(const Image& src, int sx, int sy, int w, int h, int dx, int dy);
 
     // Restricts subsequent blits to a rectangle (destination coords); reset_clip() restores the full canvas.
+    void fill_rect(int x, int y, int w, int h, uint32_t bgrx);
+    void set_pixel(int x, int y, uint32_t bgrx) {
+        if (x >= m_clip.left && x < m_clip.right && y >= m_clip.top && y < m_clip.bottom) m_px[size_t(y) * m_w + x] = bgrx;
+    }
+
     void set_clip(int x, int y, int w, int h) { m_clip = { x, y, x + w, y + h }; }
     void reset_clip() { m_clip = { 0, 0, m_w, m_h }; }
 

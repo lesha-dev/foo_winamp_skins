@@ -37,6 +37,13 @@ void Canvas::blit(const Image& src, int sx, int sy, int w, int h, int dx, int dy
     }
 }
 
+void Canvas::fill_rect(int x, int y, int w, int h, uint32_t bgrx) {
+    const int x0 = std::max<int>(x, m_clip.left), y0 = std::max<int>(y, m_clip.top);
+    const int x1 = std::min<int>(x + w, m_clip.right), y1 = std::min<int>(y + h, m_clip.bottom);
+    for (int row = y0; row < y1; ++row)
+        std::fill(&m_px[size_t(row) * m_w + x0], &m_px[size_t(row) * m_w + x0] + std::max(0, x1 - x0), bgrx);
+}
+
 void Canvas::present(HDC dc, int scale) const {
     if (m_px.empty()) return;
     BITMAPINFO bmi = {};

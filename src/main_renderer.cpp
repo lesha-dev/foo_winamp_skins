@@ -91,6 +91,8 @@ void render_shade(Canvas& c, const Skin& skin, const MainState& st) {
         const int x = L::pos_shade_posbar.x + static_cast<int>(p * (L::shade_posbar_bg.w - thumb.w) + 0.5);
         c.blit(title, thumb, { x, L::pos_shade_posbar.y });
     }
+
+    if (st.vis) st.vis->render(c, skin, L::pos_shade_visualizer, true);
 }
 
 } // namespace
@@ -136,6 +138,7 @@ void render_main(Canvas& c, const Skin& skin, const MainState& st) {
     }
 
     draw_time(c, skin, st);
+    if (st.vis) st.vis->render(c, skin, L::pos_visualizer, false);
     draw_marquee(c, font, st);
     draw_number(c, font, L::pos_kbps, st.kbps, 3);
     draw_number(c, font, L::pos_khz, st.khz, 2);

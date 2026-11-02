@@ -3,6 +3,7 @@
 #include "canvas.h"
 #include "controls.h"
 #include "skin.h"
+#include "visualizer.h"
 
 #include <string>
 
@@ -37,6 +38,8 @@ struct MainState {
     unsigned marquee_step = 0;   // scroll position in characters (only used for long text)
     int kbps = -1;               // -1 = blank
     int khz = -1;
+
+    const Visualizer* vis = nullptr; // drawn when non-null
 };
 
 // Canvas must be 275x116 (normal) or 275x14 (shade).

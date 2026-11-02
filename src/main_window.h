@@ -4,6 +4,7 @@
 #include "controls.h"
 #include "main_renderer.h"
 #include "skin.h"
+#include "visualizer.h"
 
 namespace wsz {
 
@@ -48,6 +49,13 @@ private:
     void activate_control(Control id);
     bool on_key(WPARAM vk);
     void show_context_menu(POINT pt_screen);
+    void show_vis_menu(POINT pt_screen);
+    void append_vis_items(HMENU menu);
+
+    // visualizer
+    void set_vis_mode(VisMode mode);
+    void update_vis_timer();
+    void on_vis_timer();
 
     // playback events
     void on_track_changed();
@@ -88,6 +96,9 @@ private:
     unsigned m_marquee_step = 0;
     int m_kbps = -1;
     int m_khz = -1;
+
+    Visualizer m_vis;
+    bool m_vis_running = false;
 };
 
 } // namespace wsz

@@ -145,5 +145,6 @@ constexpr Pos pos_khz  { 156, 43 };
 
 // --- not drawn yet ---
 constexpr Pos pos_visualizer { 24, 43 };   // 76x16
+constexpr Pos pos_shade_visualizer { 79, 5 }; // 38x5
 
 } // namespace wsz::layout

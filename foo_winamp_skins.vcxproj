@@ -104,6 +104,7 @@ exit /b 0</Command>
     <ClInclude Include="src\stdafx.h" />
     <ClInclude Include="src\text_font.h" />
     <ClInclude Include="src\version.h" />
+    <ClInclude Include="src\visualizer.h" />
     <ClInclude Include="3rdParty\miniz\miniz.h" />
   </ItemGroup>
   <ItemGroup>
@@ -117,6 +118,7 @@ exit /b 0</Command>
     <ClCompile Include="src\skin.cpp" />
     <ClCompile Include="src\text_font.cpp" />
     <ClCompile Include="src\ui_module.cpp" />
+    <ClCompile Include="src\visualizer.cpp" />
     <ClCompile Include="3rdParty\miniz\miniz.c">
       <WarningLevel>TurnOffAllWarnings</WarningLevel>
       <SDLCheck>false</SDLCheck>

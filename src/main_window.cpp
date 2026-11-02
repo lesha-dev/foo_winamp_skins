@@ -15,6 +15,8 @@ constexpr int titlebar_height = 14;
 constexpr int snap_distance = 10;
 constexpr UINT_PTR marquee_timer_id = 1;
 constexpr UINT marquee_interval_ms = 220;
+constexpr UINT_PTR vis_timer_id = 2;
+constexpr UINT vis_interval_ms = 25;
 constexpr double balance_snap = 0.25;
 
 // Top-level fb2k main menu groups, shown as submenus of the context menu.
@@ -28,7 +30,7 @@ const MenuRoot menu_roots[] = {
     { &mainmenu_groups::help,     L"&Help" },
 };
 constexpr UINT menu_id_stride = 0x1000;
-enum : UINT { id_load_skin = 1, id_unload_skin, id_always_on_top, id_double_size, id_shade };
+enum : UINT { id_load_skin = 1, id_unload_skin, id_always_on_top, id_double_size, id_shade, id_vis_spectrum, id_vis_osc, id_vis_off };
 
 void register_class(WNDPROC proc) {
     static bool registered = false;
@@ -69,11 +71,11 @@ public:
           playlist_callback_single_impl_base(flag_on_playback_order_changed | flag_on_item_focus_change | flag_on_playlist_switch),
           m_w(w) {}
 
-    void on_playback_starting(play_control::t_track_command, bool) override { m_w.invalidate(); }
+    void on_playback_starting(play_control::t_track_command, bool) override { m_w.update_vis_timer(); m_w.invalidate(); }
     void on_playback_new_track(metadb_handle_ptr) override { m_w.on_track_changed(); }
     void on_playback_stop(play_control::t_stop_reason) override { m_w.on_playback_stopped(); }
     void on_playback_seek(double) override { m_w.invalidate(); }
-    void on_playback_pause(bool) override { m_w.invalidate(); }
+    void on_playback_pause(bool) override { m_w.update_vis_timer(); m_w.invalidate(); }
     void on_playback_edited(metadb_handle_ptr) override { m_w.on_track_changed(); }
     void on_playback_dynamic_info(const file_info& info) override { m_w.on_dynamic_info(info); }
     void on_playback_dynamic_info_track(const file_info&) override { m_w.on_track_changed(); }
@@ -100,6 +102,7 @@ HWND MainWindow::create(HookProc hook) {
     m_scale = config::double_size.get() ? 2 : 1;
     m_shade = config::shade.get();
     m_always_on_top = config::always_on_top.get();
+    m_vis.set_mode(static_cast<VisMode>(std::clamp<int>(static_cast<int>(config::vis_mode.get()), 0, 2)));
     titleformat_compiler::get()->compile_safe(m_title_script, "[%artist% - ]%title%[ '('%length%')']");
 
     int x = static_cast<int>(config::window_x.get());
@@ -122,6 +125,7 @@ HWND MainWindow::create(HookProc hook) {
     m_callbacks = std::make_unique<Callbacks>(*this);
     on_track_changed();
     SetTimer(m_wnd, marquee_timer_id, marquee_interval_ms, nullptr);
+    update_vis_timer();
     return m_wnd;
 }
 
@@ -131,6 +135,9 @@ void MainWindow::destroy() {
     save_position();
     HWND wnd = m_wnd;
     KillTimer(wnd, marquee_timer_id);
+    KillTimer(wnd, vis_timer_id);
+    m_vis_running = false;
+    m_vis.release();
     m_wnd = nullptr;
     SetWindowLongPtrW(wnd, GWLP_USERDATA, 0);
     DestroyWindow(wnd);
@@ -184,6 +191,9 @@ LRESULT MainWindow::wndproc(UINT msg, WPARAM wp, LPARAM lp) {
         return 0;
     case WM_KEYDOWN:
         if (on_key(wp)) return 0;
+        [[fallthrough]];
+    case WM_SYSKEYDOWN:
+        if (keyboard_shortcut_manager::get()->on_keydown_auto(wp)) return 0;
         break;
     case WM_NCRBUTTONUP:
     case WM_CONTEXTMENU: {
@@ -199,8 +209,13 @@ LRESULT MainWindow::wndproc(UINT msg, WPARAM wp, LPARAM lp) {
         if (wp == marquee_timer_id && m_skin) {
             ++m_marquee_step;
             invalidate();
+        } else if (wp == vis_timer_id) {
+            on_vis_timer();
         }
         return 0;
+    case WM_SIZE:
+        update_vis_timer();
+        break;
     case WM_ACTIVATE:
         m_active = LOWORD(wp) != WA_INACTIVE;
         invalidate();
@@ -309,6 +324,7 @@ MainState MainWindow::build_state() {
         st.kbps = m_kbps;
         st.khz = m_khz;
     }
+    if (m_vis.mode() != VisMode::off && (st.play != PlayState::stopped || m_vis_running)) st.vis = &m_vis;
     return st;
 }
 
@@ -432,7 +448,14 @@ void MainWindow::activate_control(Control id) {
     case Control::clutter_a: set_always_on_top(!m_always_on_top); break;
     case Control::clutter_i: player::show_file_info(); break;
     case Control::clutter_d: set_double_size(m_scale == 1); break;
-    case Control::clutter_v: break; // visualizer menu: not implemented yet
+    case Control::clutter_v: {
+        const ControlRect* r = find_control(normal_controls, id);
+        POINT pt = { (r->x + r->w) * m_scale, r->y * m_scale };
+        ClientToScreen(m_wnd, &pt);
+        show_vis_menu(pt);
+        break;
+    }
+    case Control::vis: set_vis_mode(static_cast<VisMode>((static_cast<int>(m_vis.mode()) + 1) % 3)); break;
     case Control::prev: player::previous(); break;
     case Control::play: player::play(); break;
     case Control::pause: player::pause(); break;
@@ -483,6 +506,9 @@ void MainWindow::show_context_menu(POINT pt) {
     AppendMenuW(menu, MF_STRING | (m_always_on_top ? MF_CHECKED : 0), id_always_on_top, L"Always on &top\tCtrl+A");
     AppendMenuW(menu, MF_STRING | (m_scale == 2 ? MF_CHECKED : 0), id_double_size, L"&Double size\tCtrl+D");
     AppendMenuW(menu, MF_STRING | (m_shade ? MF_CHECKED : 0), id_shade, L"&Windowshade\tCtrl+W");
+    HMENU vis = CreatePopupMenu();
+    append_vis_items(vis);
+    AppendMenuW(menu, MF_POPUP | MF_STRING, reinterpret_cast<UINT_PTR>(vis), L"&Visualization");
     AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
 
     std::vector<mainmenu_manager::ptr> managers;
@@ -507,12 +533,77 @@ void MainWindow::show_context_menu(POINT pt) {
     case id_always_on_top: set_always_on_top(!m_always_on_top); break;
     case id_double_size: set_double_size(m_scale == 1); break;
     case id_shade: set_shade(!m_shade); break;
+    case id_vis_spectrum: set_vis_mode(VisMode::spectrum); break;
+    case id_vis_osc: set_vis_mode(VisMode::oscilloscope); break;
+    case id_vis_off: set_vis_mode(VisMode::off); break;
     default:
         if (cmd >= menu_id_stride) {
             const size_t idx = cmd / menu_id_stride - 1;
             if (idx < managers.size()) managers[idx]->execute_command(cmd - static_cast<UINT>((idx + 1) * menu_id_stride));
         }
     }
+}
+
+void MainWindow::append_vis_items(HMENU menu) {
+    const VisMode m = m_vis.mode();
+    AppendMenuW(menu, MF_STRING | (m == VisMode::spectrum ? MF_CHECKED : 0), id_vis_spectrum, L"&Spectrum analyzer");
+    AppendMenuW(menu, MF_STRING | (m == VisMode::oscilloscope ? MF_CHECKED : 0), id_vis_osc, L"&Oscilloscope");
+    AppendMenuW(menu, MF_STRING | (m == VisMode::off ? MF_CHECKED : 0), id_vis_off, L"O&ff");
+}
+
+void MainWindow::show_vis_menu(POINT pt) {
+    HMENU menu = CreatePopupMenu();
+    append_vis_items(menu);
+    SetForegroundWindow(m_wnd);
+    const UINT cmd = TrackPopupMenu(menu, TPM_RETURNCMD | TPM_RIGHTBUTTON | TPM_NONOTIFY, pt.x, pt.y, 0, m_wnd, nullptr);
+    DestroyMenu(menu);
+    switch (cmd) {
+    case id_vis_spectrum: set_vis_mode(VisMode::spectrum); break;
+    case id_vis_osc: set_vis_mode(VisMode::oscilloscope); break;
+    case id_vis_off: set_vis_mode(VisMode::off); break;
+    default: break;
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// visualizer
+
+void MainWindow::set_vis_mode(VisMode mode) {
+    m_vis.set_mode(mode);
+    config::vis_mode = static_cast<int>(mode);
+    if (mode == VisMode::off && m_vis_running) {
+        KillTimer(m_wnd, vis_timer_id);
+        m_vis_running = false;
+    }
+    update_vis_timer();
+    invalidate();
+}
+
+void MainWindow::update_vis_timer() {
+    if (!m_wnd) return;
+    auto pc = playback_control::get();
+    const bool playing = pc->is_playing() && !pc->is_paused();
+    if (IsIconic(m_wnd)) {
+        if (m_vis_running) KillTimer(m_wnd, vis_timer_id);
+        m_vis_running = false;
+        m_vis.reset();
+        return;
+    }
+    // Stopping is left to on_vis_timer() so bars can fall off after pause/stop.
+    if (playing && m_vis.mode() != VisMode::off && !m_vis_running) {
+        SetTimer(m_wnd, vis_timer_id, vis_interval_ms, nullptr);
+        m_vis_running = true;
+    }
+}
+
+void MainWindow::on_vis_timer() {
+    auto pc = playback_control::get();
+    if (!m_vis.tick(pc->is_playing() && !pc->is_paused())) {
+        KillTimer(m_wnd, vis_timer_id);
+        m_vis_running = false;
+        m_vis.reset();
+    }
+    invalidate();
 }
 
 // ---------------------------------------------------------------------------------------------

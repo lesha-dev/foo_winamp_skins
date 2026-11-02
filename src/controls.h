@@ -12,7 +12,7 @@ enum class Control {
     prev, play, pause, stop, next, eject,
     shuffle, repeat, eq, pl,
     posbar, volume, balance,
-    time,
+    time, vis,
 };
 
 struct ControlRect { Control id; int x, y, w, h; };
@@ -29,6 +29,7 @@ inline constexpr ControlRect normal_controls[] = {
     { Control::clutter_d, 10, 47,  8,  8 },
     { Control::clutter_v, 10, 55,  8,  7 },
     { Control::time,      36, 26, 63, 13 },
+    { Control::vis,       24, 43, 76, 16 },
     { Control::volume,   107, 57, 68, 13 },
     { Control::balance,  177, 57, 38, 13 },
     { Control::eq,       219, 58, 23, 12 },
@@ -50,6 +51,13 @@ inline constexpr ControlRect shade_controls[] = {
     { Control::shade,     254, 3,  9,  9 },
     { Control::close,     264, 3,  9,  9 },
     { Control::time,      127, 4, 25,  6 },
+    { Control::vis,       79,  5, 38,  5 },
+    { Control::prev,      169, 2,  7, 10 },
+    { Control::play,      176, 2, 10, 10 },
+    { Control::pause,     186, 2,  9, 10 },
+    { Control::stop,      195, 2,  9, 10 },
+    { Control::next,      204, 2, 10, 10 },
+    { Control::eject,     215, 2, 10, 10 },
     { Control::posbar,    226, 4, 17,  7 },
 };
 
