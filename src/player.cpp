@@ -7,18 +7,27 @@
 namespace wsz::player {
 namespace {
 
-constexpr char order_default[] = "Default";
-constexpr char order_repeat[] = "Repeat (playlist)";
-constexpr char order_shuffle[] = "Shuffle (tracks)";
-
 bool starts_with(const char* s, const char* prefix) { return strncmp(s, prefix, strlen(prefix)) == 0; }
 
 bool is_shuffle_order(const char* name) { return starts_with(name, "Shuffle") || starts_with(name, "Random"); }
 bool is_repeat_order(const char* name) { return starts_with(name, "Repeat"); }
 
-pfc::string8 active_order_name() {
+} // namespace
+
+pfc::string8 active_order() {
     auto pm = playlist_manager::get();
     return pm->playback_order_get_name(pm->playback_order_get_active());
+}
+
+std::vector<pfc::string8> orders(bool shuffle) {
+    std::vector<pfc::string8> out;
+    auto pm = playlist_manager::get();
+    const size_t n = pm->playback_order_get_count();
+    for (size_t i = 0; i < n; ++i) {
+        const char* name = pm->playback_order_get_name(i);
+        if (shuffle ? is_shuffle_order(name) : is_repeat_order(name)) out.emplace_back(name);
+    }
+    return out;
 }
 
 void set_order(const char* name) {
@@ -32,34 +41,12 @@ void set_order(const char* name) {
     }
 }
 
-} // namespace
-
 OrderState order_state() {
-    const pfc::string8 name = active_order_name();
+    const pfc::string8 name = active_order();
     OrderState st;
     st.shuffle = is_shuffle_order(name);
-    st.repeat = is_repeat_order(name) || (st.shuffle && config::repeat_with_shuffle.get());
+    st.repeat = is_repeat_order(name);
     return st;
-}
-
-void toggle_shuffle() {
-    const OrderState st = order_state();
-    if (st.shuffle) {
-        set_order(st.repeat ? order_repeat : order_default);
-    } else {
-        config::repeat_with_shuffle = st.repeat;
-        set_order(order_shuffle);
-    }
-}
-
-void toggle_repeat() {
-    const OrderState st = order_state();
-    if (st.shuffle) {
-        // fb2k has no "shuffle without repeat"; keep the button state ourselves.
-        config::repeat_with_shuffle = !config::repeat_with_shuffle.get();
-    } else {
-        set_order(st.repeat ? order_default : order_repeat);
-    }
 }
 
 double db_to_slider(double db) { return std::clamp(std::pow(2.0, db / 10.0), 0.0, 1.0); }

@@ -23,7 +23,7 @@
 - [x] Main window title bar shows wrong active/inactive colours when focus changes.
 - [x] Dragging the song title (marquee) scrolls the text by hand, like Winamp.
 - [ ] Tooltips on controls (main, EQ, playlist windows), like Winamp.
-- [ ] Decide on shuffle/repeat: integrate properly with fb2k playback orders (Shuffle albums/folders, Random, Repeat track; repeat is cosmetic while shuffling).
+- [x] Shuffle/repeat: buttons open menus of fb2k playback orders (None/Random/Shuffle tracks/albums/folders; None/Repeat playlist/track); lit when such an order is active.
 - [x] Winamp logo (lower right of the main window, Winamp opens About): opens Preferences -> Display -> Winamp Skins.
 - [ ] Options from Winamp's "Classic Skin Options" prefs tab, for the Winamp Skins page:
   - [x] Dim window titlebars when not in focus (Options page)

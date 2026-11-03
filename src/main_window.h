@@ -71,6 +71,7 @@ private:
     void activate_control(Control id);
     bool on_key(WPARAM vk);
     void show_vis_menu(POINT pt_screen);
+    void show_order_menu(bool shuffle);
     void append_vis_items(HMENU menu);
 
     // visualizer

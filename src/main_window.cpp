@@ -588,8 +588,8 @@ void MainWindow::activate_control(Control id) {
     case Control::stop: player::stop(); break;
     case Control::next: player::next(); break;
     case Control::eject: player::open_files(); break;
-    case Control::shuffle: player::toggle_shuffle(); break;
-    case Control::repeat: player::toggle_repeat(); break;
+    case Control::shuffle: show_order_menu(true); break;
+    case Control::repeat: show_order_menu(false); break;
     case Control::eq: toggle_eq(); break;
     case Control::pl: toggle_playlist(); break;
     case Control::about: ui_control::get()->show_preferences(guids::prefs_page); break;
@@ -701,6 +701,32 @@ void MainWindow::append_vis_items(HMENU menu) {
 void MainWindow::set_vis_options(const VisOptions& o) {
     config::set_vis_options(o);
     m_vis.set_options(o);
+    invalidate();
+}
+
+void MainWindow::show_order_menu(bool shuffle) {
+    // Menu of fb2k's matching playback orders, opened under the button.
+    const auto names = player::orders(shuffle);
+    const pfc::string8 active = player::active_order();
+    const bool any = shuffle ? player::order_state().shuffle : player::order_state().repeat;
+    HMENU menu = CreatePopupMenu();
+    AppendMenuW(menu, MF_STRING | (any ? 0 : MF_CHECKED), 1, L"None");
+    for (size_t i = 0; i < names.size(); ++i) {
+        const bool sel = strcmp(names[i], active) == 0;
+        AppendMenuW(menu, MF_STRING | (sel ? MF_CHECKED : 0), static_cast<UINT_PTR>(i + 2), pfc::stringcvt::string_wide_from_utf8(names[i]).get_ptr());
+    }
+    const L::Pos pos = shuffle ? L::pos_shuffle : L::pos_repeat;
+    const int h = shuffle ? L::shuffle_btn.h : L::repeat_btn.h;
+    POINT pt = { pos.x * m_scale, (pos.y + h) * m_scale };
+    ClientToScreen(m_wnd, &pt);
+    SetForegroundWindow(m_wnd);
+    const UINT cmd = TrackPopupMenu(menu, TPM_RETURNCMD | TPM_LEFTBUTTON | TPM_NONOTIFY, pt.x, pt.y, 0, m_wnd, nullptr);
+    DestroyMenu(menu);
+    if (cmd == 1) {
+        if (any) player::set_order("Default"); // only clears this button's kind of order
+    } else if (cmd >= 2 && cmd - 2 < names.size()) {
+        player::set_order(names[cmd - 2]);
+    }
     invalidate();
 }
 
