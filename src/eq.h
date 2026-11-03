@@ -38,7 +38,10 @@ struct Preset {
 // Winamp's built-in presets.
 const std::vector<Preset>& presets();
 
-// .eqf (Winamp EQ preset) import: returns false if the file isn't one. Uses the first preset in it.
-bool load_eqf(const char* path_utf8, Values& out, std::string& name);
+// foobar2000 .feq preset files (text, one dB value per line for its 18 bands). Read and written
+// through fb2k's Equalizer bands directly (exact round trip); our 10 sliders follow from them.
+// load_feq applies the preset itself. Main thread only.
+bool load_feq(const char* path_utf8);
+bool save_feq(const char* path_utf8);
 
 } // namespace wsz::eq

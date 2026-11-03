@@ -223,29 +223,34 @@ void EqWindow::on_wheel(int delta) {
 }
 
 void EqWindow::show_presets_menu() {
-    enum : UINT { id_reset = 1, id_load_eqf, id_preset_first = 0x100 };
+    enum : UINT { id_reset = 1, id_load_feq, id_save_feq, id_preset_first = 0x100 };
     HMENU load = CreatePopupMenu();
     const auto& list = eq::presets();
     for (size_t i = 0; i < list.size(); ++i)
         AppendMenuW(load, MF_STRING, id_preset_first + i, pfc::stringcvt::string_wide_from_utf8(list[i].name.c_str()));
     HMENU menu = CreatePopupMenu();
     AppendMenuW(menu, MF_POPUP | MF_STRING, reinterpret_cast<UINT_PTR>(load), L"&Load");
-    AppendMenuW(menu, MF_STRING, id_load_eqf, L"Load from &EQF file...");
+    AppendMenuW(menu, MF_STRING, id_load_feq, L"Load from &FEQ file...");
+    AppendMenuW(menu, MF_STRING, id_save_feq, L"&Save to FEQ file...");
     AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
     AppendMenuW(menu, MF_STRING, id_reset, L"&Reset");
     POINT pt = { (pos_presets.x) * m_scale, (pos_presets.y + presets_btn.h) * m_scale };
     ClientToScreen(m_wnd, &pt);
     const UINT cmd = TrackPopupMenu(menu, TPM_RETURNCMD | TPM_RIGHTBUTTON | TPM_NONOTIFY, pt.x, pt.y, 0, m_wnd, nullptr);
     DestroyMenu(menu);
+    static const char feq_filter[] = "foobar2000 EQ presets (*.feq)|*.feq|All files|*.*";
     if (cmd == id_reset) {
         eq::set(eq::Values{});
-    } else if (cmd == id_load_eqf) {
+    } else if (cmd == id_load_feq) {
         pfc::string8 path;
-        if (uGetOpenFileName(m_wnd, "Winamp EQ presets (*.eqf)|*.eqf|All files|*.*", 0, "eqf", "Load EQ preset", nullptr, path, FALSE)) {
-            eq::Values v;
-            std::string name;
-            if (eq::load_eqf(path, v, name)) eq::set(v);
-            else popup_message::g_show(pfc::format("Not a Winamp EQ preset file:\n", path), "Equalizer", popup_message::icon_error);
+        if (uGetOpenFileName(m_wnd, feq_filter, 0, "feq", "Load EQ preset", nullptr, path, FALSE)) {
+            if (!eq::load_feq(path)) popup_message::g_show(pfc::format("Not a foobar2000 EQ preset file:\n", path), "Equalizer", popup_message::icon_error);
+        }
+    } else if (cmd == id_save_feq) {
+        pfc::string8 path;
+        if (uGetOpenFileName(m_wnd, feq_filter, 0, "feq", "Save EQ preset", nullptr, path, TRUE)) {
+            if (!eq::save_feq(path))
+                popup_message::g_show(pfc::format("Cannot write file:\n", path), "Equalizer", popup_message::icon_error);
         }
     } else if (cmd >= id_preset_first && cmd < id_preset_first + list.size()) {
         eq::set(list[cmd - id_preset_first].values);

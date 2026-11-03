@@ -34,14 +34,14 @@ void load() {
     });
 }
 
-// .eqf / built-in preset band value (1..64, 1 = +12 dB at top... stored inverted) -> slider 0..100.
-int from_eqf(int v) { return std::clamp(static_cast<int>(std::lround((v - 1) / 63.0 * 100.0)), 0, 100); }
+// Built-in preset band value (1..64, 1 = +12 dB at top... stored inverted) -> slider 0..100.
+int from_preset(int v) { return std::clamp(static_cast<int>(std::lround((v - 1) / 63.0 * 100.0)), 0, 100); }
 
 Values make(int preamp, std::initializer_list<int> bands) {
     Values v;
-    v.preamp = from_eqf(preamp);
+    v.preamp = from_preset(preamp);
     int i = 0;
-    for (int b : bands) v.bands[i++] = from_eqf(b);
+    for (int b : bands) v.bands[i++] = from_preset(b);
     return v;
 }
 
@@ -53,14 +53,10 @@ constexpr std::array<double, builtin_count> builtin_hz = {
 constexpr double builtin_max_db = 20.0;
 using Data = std::array<uint8_t, builtin_count>;
 
-Data g_pushed{};          // last data we wrote, to tell our own changes from the user's
-bool g_pushed_valid = false;
 std::array<Data, 16> g_recent{};  // recent pushes: chain notifications may arrive late, after newer pushes
 size_t g_recent_count = 0, g_recent_next = 0;
 
 void remember(const Data& d) {
-    g_pushed = d;
-    g_pushed_valid = true;
     g_recent[g_recent_next] = d;
     g_recent_next = (g_recent_next + 1) % g_recent.size();
     g_recent_count = std::min(g_recent_count + 1, g_recent.size());
@@ -140,6 +136,15 @@ void push() {
     preset.set_owner(builtin_guid);
     preset.set_data(d.data(), d.size());
     mgr->core_enable_dsp(preset, dsp_config_manager::default_insert_last);
+}
+
+// Writes exact band data (e.g. from an .feq file) into the built-in EQ's chain entry.
+void write_builtin(const Data& d) {
+    remember(d);
+    dsp_preset_impl preset;
+    preset.set_owner(builtin_guid);
+    preset.set_data(d.data(), d.size());
+    dsp_config_manager::get()->core_enable_dsp(preset, dsp_config_manager::default_insert_last);
 }
 
 // Rebuilding the DSP chain is slow, so slider drags push at most every push_interval ms.
@@ -225,7 +230,7 @@ void sync() {
     const bool present = dsp_config_manager::get()->core_query_dsp(builtin_guid, cur);
     if (present) {
         Data d{};
-        if (read_data(cur, d) && d != to_builtin(get())) { g_pushed = d; g_pushed_valid = true; store(from_builtin(d)); }
+        if (read_data(cur, d) && d != to_builtin(get())) store(from_builtin(d));
     }
     g_on = present;
     config::eq_on = present;
@@ -268,28 +273,42 @@ const std::vector<Preset>& presets() {
     return list;
 }
 
-bool load_eqf(const char* path_utf8, Values& out, std::string& name) {
-    // Layout: "Winamp EQ library file v1.1\x1a!--" (31 bytes), then entries of 257-byte name + 11 bytes
-    // (10 bands, preamp), each 0..63 with 0 = +12 dB.
-    try {
-        file::ptr f;
-        filesystem::g_open_read(f, path_utf8, fb2k::noAbort);
-        uint8_t header[31];
-        if (f->read(header, sizeof(header), fb2k::noAbort) != sizeof(header)) return false;
-        if (memcmp(header, "Winamp EQ library file v1.1", 27) != 0) return false;
-        char n[257] = {};
-        uint8_t v[11];
-        if (f->read(n, sizeof(n), fb2k::noAbort) != sizeof(n)) return false;
-        if (f->read(v, sizeof(v), fb2k::noAbort) != sizeof(v)) return false;
-        n[256] = 0;
-        name = n;
-        auto conv = [](uint8_t x) { return from_eqf(64 - std::min<int>(x, 63)); };
-        for (int i = 0; i < band_count; ++i) out.bands[i] = conv(v[i]);
-        out.preamp = conv(v[10]);
-        return true;
-    } catch (const std::exception&) {
-        return false;
+bool load_feq(const char* path_utf8) {
+    FILE* f = nullptr;
+    if (_wfopen_s(&f, pfc::stringcvt::string_wide_from_utf8(path_utf8), L"rb") != 0 || !f) return false;
+    char buf[1024];
+    const size_t len = fread(buf, 1, sizeof(buf) - 1, f);
+    fclose(f);
+    buf[len] = 0;
+    Data d{};
+    int n = 0;
+    for (char* p = buf; n < builtin_count;) {
+        char* end = nullptr;
+        const long x = strtol(p, &end, 10);
+        if (end == p) break;
+        d[n++] = static_cast<uint8_t>(builtin_max_db - std::clamp<long>(x, -20, 20));
+        p = end;
     }
+    if (n != builtin_count) return false;
+    // The 18 bands go into fb2k's Equalizer as they are; our sliders follow from them.
+    load();
+    flush_push();
+    store(from_builtin(d));
+    if (g_on) write_builtin(d);
+    notify();
+    return true;
+}
+
+bool save_feq(const char* path_utf8) {
+    FILE* f = nullptr;
+    if (_wfopen_s(&f, pfc::stringcvt::string_wide_from_utf8(path_utf8), L"wb") != 0 || !f) return false;
+    // Save what fb2k's Equalizer actually has, so files round-trip exactly.
+    flush_push();
+    Data d = to_builtin(get());
+    dsp_preset_impl cur;
+    if (dsp_config_manager::get()->core_query_dsp(builtin_guid, cur)) read_data(cur, d);
+    for (uint8_t b : d) fprintf(f, "%d\r\n", static_cast<int>(builtin_max_db) - b);
+    return fclose(f) == 0;
 }
 
 } // namespace wsz::eq
