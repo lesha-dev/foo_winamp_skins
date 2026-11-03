@@ -17,6 +17,7 @@ struct MainState {
     bool shade = false;          // windowshade mode (275x14)
     bool always_on_top = false;
     bool double_size = false;
+    bool clutterbar = true;      // always shown; otherwise only while one of its buttons is pressed
     Control pressed = Control::none; // control drawn in its pressed state
 
     PlayState play = PlayState::stopped;

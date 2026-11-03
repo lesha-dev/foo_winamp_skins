@@ -94,8 +94,9 @@ private:
 
 PlaylistWindow::PlaylistWindow() {
     m_shade = config::pl_shade.get();
-    m_w_steps = std::clamp(static_cast<int>(config::pl_w.get()), 0, 100);
-    m_h_steps = std::clamp(static_cast<int>(config::pl_h.get()), 0, 100);
+    m_w_extra = std::clamp(config::pl_width.get() >= 0 ? static_cast<int>(config::pl_width.get()) : static_cast<int>(config::pl_w.get()) * step_w, 0, max_extra_w);
+    m_h_extra = std::clamp(config::pl_height.get() >= 0 ? static_cast<int>(config::pl_height.get()) : static_cast<int>(config::pl_h.get()) * step_h, 0, max_extra_h);
+    if (!config::smooth_resize.get()) { m_w_extra -= m_w_extra % step_w; m_h_extra -= m_h_extra % step_h; }
     titleformat_compiler::get()->compile_safe(m_title_script, "[%artist% - ]%title%");
 }
 
@@ -105,8 +106,8 @@ PlaylistWindow::~PlaylistWindow() {
     if (m_font) DeleteObject(m_font);
 }
 
-int PlaylistWindow::width() const { return min_width + m_w_steps * step_w; }
-int PlaylistWindow::height() const { return m_shade ? shade_height : min_height + m_h_steps * step_h; }
+int PlaylistWindow::width() const { return min_width + m_w_extra; }
+int PlaylistWindow::height() const { return m_shade ? shade_height : min_height + m_h_extra; }
 SIZE PlaylistWindow::skin_size() const { return { width(), height() }; }
 
 PlaylistWindow::Rc PlaylistWindow::list_rect() const {
@@ -166,16 +167,21 @@ void PlaylistWindow::update_font() {
     m_font = CreateFontIndirectW(&lf);
 }
 
-void PlaylistWindow::apply_size(int w_steps, int h_steps) {
-    w_steps = std::clamp(w_steps, 0, 100);
-    h_steps = std::clamp(h_steps, 0, 100);
-    if (w_steps == m_w_steps && h_steps == m_h_steps) return;
-    m_w_steps = w_steps;
-    m_h_steps = h_steps;
-    config::pl_w = w_steps;
-    config::pl_h = h_steps;
+void PlaylistWindow::apply_size(int w_extra, int h_extra) {
+    w_extra = std::clamp(w_extra, 0, max_extra_w);
+    h_extra = std::clamp(h_extra, 0, max_extra_h);
+    if (w_extra == m_w_extra && h_extra == m_h_extra) return;
+    m_w_extra = w_extra;
+    m_h_extra = h_extra;
+    config::pl_width = w_extra;
+    config::pl_height = h_extra;
     clamp_scroll();
     apply_geometry();
+}
+
+void PlaylistWindow::apply_resize_mode() {
+    if (config::smooth_resize.get()) return;
+    apply_size(m_w_extra - m_w_extra % step_w, m_h_extra - m_h_extra % step_h);
 }
 
 void PlaylistWindow::playlist_changed() {
@@ -299,7 +305,7 @@ void PlaylistWindow::on_mouse_down(POINT p, bool dbl) {
     }
     case Part::resize:
         GetCursorPos(&m_drag_origin);
-        m_drag_steps = { m_w_steps, m_h_steps };
+        m_drag_extra = { m_w_extra, m_h_extra };
         break;
     default:
         break;
@@ -339,9 +345,12 @@ void PlaylistWindow::on_mouse_move(POINT p) {
         POINT now;
         GetCursorPos(&now);
         const int dx = now.x - m_drag_origin.x, dy = now.y - m_drag_origin.y;
-        const int ws = m_drag_steps.cx + static_cast<int>(std::floor(dx / double(step_w) + 0.5));
-        const int hs = m_shade ? m_h_steps : m_drag_steps.cy + static_cast<int>(std::floor(dy / double(step_h) + 0.5));
-        apply_size(ws, hs);
+        // Steps of 25x29 px like Winamp, or per pixel with smooth resizing.
+        const bool smooth = config::smooth_resize.get();
+        auto step = [&](int d, int s) { return smooth ? d : static_cast<int>(std::floor(d / double(s) + 0.5)) * s; };
+        const int we = m_drag_extra.cx + step(dx, step_w);
+        const int he = m_shade ? m_h_extra : m_drag_extra.cy + step(dy, step_h);
+        apply_size(we, he);
         break;
     }
     case Part::menu_add: case Part::menu_rem: case Part::menu_sel: case Part::menu_misc: case Part::menu_list: {

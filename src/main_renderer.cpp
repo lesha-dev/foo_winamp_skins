@@ -120,12 +120,19 @@ void render_main(Canvas& c, const Skin& skin, const MainState& st) {
     draw_titlebar_buttons(c, title, st);
 
     // Clutter bar: background plus selected states for pressed buttons and active toggles.
-    c.blit(title, L::clutter_bar, L::pos_clutter);
-    if (is(Control::clutter_o)) c.blit(title, L::clutter_o_on, L::pos_clutter_o);
-    if (is(Control::clutter_a) || st.always_on_top) c.blit(title, L::clutter_a_on, L::pos_clutter_a);
-    if (is(Control::clutter_i)) c.blit(title, L::clutter_i_on, L::pos_clutter_i);
-    if (is(Control::clutter_d) || st.double_size) c.blit(title, L::clutter_d_on, L::pos_clutter_d);
-    if (is(Control::clutter_v)) c.blit(title, L::clutter_v_on, L::pos_clutter_v);
+    // When not always shown, Winamp draws its blank variant until a button is pressed.
+    const bool clutter_pressed = is(Control::clutter_o) || is(Control::clutter_a) || is(Control::clutter_i)
+        || is(Control::clutter_d) || is(Control::clutter_v);
+    if (!st.clutterbar && !clutter_pressed) {
+        c.blit(title, L::clutter_bar_hidden, L::pos_clutter);
+    } else {
+        c.blit(title, L::clutter_bar, L::pos_clutter);
+        if (is(Control::clutter_o)) c.blit(title, L::clutter_o_on, L::pos_clutter_o);
+        if (is(Control::clutter_a) || st.always_on_top) c.blit(title, L::clutter_a_on, L::pos_clutter_a);
+        if (is(Control::clutter_i)) c.blit(title, L::clutter_i_on, L::pos_clutter_i);
+        if (is(Control::clutter_d) || st.double_size) c.blit(title, L::clutter_d_on, L::pos_clutter_d);
+        if (is(Control::clutter_v)) c.blit(title, L::clutter_v_on, L::pos_clutter_v);
+    }
 
     switch (st.play) {
     case PlayState::playing:

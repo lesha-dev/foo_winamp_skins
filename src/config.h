@@ -15,6 +15,11 @@ extern cfg_float balance;            // use wsz::balance, which caches it for th
 extern cfg_bool winamp_hotkeys;       // Z X C V B L, arrows, Ctrl+D/A/W in the main window
 extern cfg_bool balance_dsp;          // use wsz::balance::set_enabled()
 extern cfg_bool dim_titlebars;        // inactive windows show the dimmed titlebar
+extern cfg_bool clutterbar;           // always show the clutterbar (else only while pressed)
+extern cfg_bool snap;                 // dock windows to each other / screen edges (Shift inverts while dragging)
+extern cfg_int snap_distance;         // px
+extern cfg_bool smooth_resize;        // playlist resizes per pixel instead of 25x29 steps
+extern cfg_bool eq_double_size;       // double size applies to the equalizer too
 extern cfg_int balance_snap;          // percent around centre that snaps to 0
 extern cfg_int vis_mode;
 // Winamp classic vis options (Winamp defaults): analyzer style 0 normal / 1 fire / 2 line; scope style
@@ -38,6 +43,7 @@ extern cfg_string eq_values;          // "preamp,b1..b10" slider values 0..100 (
 
 extern cfg_bool pl_visible;
 extern cfg_int pl_x, pl_y;
-extern cfg_int pl_w, pl_h;            // size steps beyond the 275x116 minimum (25 / 29 px each)
+extern cfg_int pl_w, pl_h;            // legacy: size steps beyond the 275x116 minimum (25 / 29 px each)
+extern cfg_int pl_width, pl_height;   // px beyond the 275x116 minimum; -1 = take the legacy steps
 extern cfg_bool pl_shade;             // VisMode
 }

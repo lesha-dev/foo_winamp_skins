@@ -36,6 +36,7 @@ public:
     bool load_skin(const char* path, bool interactive);
     void invalidate();
     void invalidate_all(); // main + eq + playlist
+    void apply_display_options(); // after the Options page changed
     void on_eq_changed();
     void set_status(const char* text);  // slider feedback in the title area; empty/null restores the title
     void show_context_menu(POINT pt_screen, HWND owner = nullptr); // owner: the clicked window (default: main)

@@ -1,12 +1,11 @@
 #include "stdafx.h"
 #include "docking.h"
+#include "config.h"
 
 #include <algorithm>
 
 namespace wsz::docking {
 namespace {
-
-constexpr int snap_distance = 10;
 
 std::vector<HWND> g_windows;
 HWND g_leader = nullptr;
@@ -28,7 +27,7 @@ bool touching(const RECT& a, const RECT& b) {
 
 // Snaps one coordinate: moves `pos` (edge at pos, other edge at pos + size) so that one of its edges
 // lands on `line` when close enough. Returns true if snapped.
-bool snap_axis(int& pos, int size, int line, int& best) {
+bool snap_axis(int& pos, int size, int line, int& best, int snap_distance) {
     const int d1 = line - pos, d2 = line - (pos + size);
     const int d = std::abs(d1) <= std::abs(d2) ? d1 : d2;
     if (std::abs(d) < snap_distance && std::abs(d) < std::abs(best)) { best = d; return true; }
@@ -50,6 +49,10 @@ void remove(HWND wnd) {
 
 void snap(HWND wnd, WINDOWPOS* wp) {
     if ((wp->flags & SWP_NOMOVE) || g_suppress) return;
+    // Shift inverts the docking setting while dragging, like Winamp.
+    const bool shift = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
+    if (config::snap.get() == shift) return;
+    const int snap_distance = std::clamp(static_cast<int>(config::snap_distance.get()), 1, 99);
     const bool leading = g_leader == wnd;
     if (g_leader && !leading && std::find(g_group.begin(), g_group.end(), wnd) != g_group.end()) return; // moved by its leader
     const RECT cur = rect_of(wnd);
@@ -74,10 +77,10 @@ void snap(HWND wnd, WINDOWPOS* wp) {
         MONITORINFO mi = {};
         mi.cbSize = sizeof(mi);
         if (GetMonitorInfoW(MonitorFromRect(&m, MONITOR_DEFAULTTONEAREST), &mi)) {
-            snap_axis(x, mw, mi.rcWork.left, best_x);
-            snap_axis(x, mw, mi.rcWork.right, best_x);
-            snap_axis(y, mh, mi.rcWork.top, best_y);
-            snap_axis(y, mh, mi.rcWork.bottom, best_y);
+            snap_axis(x, mw, mi.rcWork.left, best_x, snap_distance);
+            snap_axis(x, mw, mi.rcWork.right, best_x, snap_distance);
+            snap_axis(y, mh, mi.rcWork.top, best_y, snap_distance);
+            snap_axis(y, mh, mi.rcWork.bottom, best_y, snap_distance);
         }
         for (HWND other : g_windows) {
             if (other == wnd || !IsWindowVisible(other) || IsIconic(other)) continue;
@@ -85,12 +88,12 @@ void snap(HWND wnd, WINDOWPOS* wp) {
             const RECT o = rect_of(other);
             // Only snap to windows that are near on the other axis.
             if (overlaps(m.top - snap_distance, m.bottom + snap_distance, o.top, o.bottom)) {
-                snap_axis(x, mw, o.left, best_x);
-                snap_axis(x, mw, o.right, best_x);
+                snap_axis(x, mw, o.left, best_x, snap_distance);
+                snap_axis(x, mw, o.right, best_x, snap_distance);
             }
             if (overlaps(m.left - snap_distance, m.right + snap_distance, o.left, o.right)) {
-                snap_axis(y, mh, o.top, best_y);
-                snap_axis(y, mh, o.bottom, best_y);
+                snap_axis(y, mh, o.top, best_y, snap_distance);
+                snap_axis(y, mh, o.bottom, best_y, snap_distance);
             }
         }
     }

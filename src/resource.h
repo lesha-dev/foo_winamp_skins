@@ -14,6 +14,11 @@
 #define IDC_BALANCE_DSP     1010
 #define IDC_BALANCE_SNAP    1011
 #define IDC_DIM_TITLEBARS   1012
+#define IDC_SNAP            1013
+#define IDC_SNAP_PX         1014
+#define IDC_SMOOTH_RESIZE   1015
+#define IDC_EQ_DSIZE        1016
+#define IDC_CLUTTERBAR      1017
 
 #define IDC_VIS_SPECTRUM    1101
 #define IDC_VIS_SCOPE       1102

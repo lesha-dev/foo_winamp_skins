@@ -19,6 +19,7 @@ constexpr Sprite btn_shade_down     {  9, 18, 9, 9 };
 constexpr Sprite btn_close          { 18,  0, 9, 9 };
 constexpr Sprite btn_close_down     { 18,  9, 9, 9 };
 constexpr Sprite clutter_bar        {304,  0, 8, 43 };
+constexpr Sprite clutter_bar_hidden {312,  0, 8, 43 };
 constexpr Pos pos_title_bar { 0, 0 };
 constexpr Pos pos_options   { 6, 3 };
 constexpr Pos pos_minimize  { 244, 3 };

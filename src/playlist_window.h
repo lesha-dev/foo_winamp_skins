@@ -11,11 +11,13 @@ public:
 
     static constexpr int min_width = 275, min_height = 116, shade_height = 14;
     static constexpr int step_w = 25, step_h = 29;
+    static constexpr int max_extra_w = 100 * step_w, max_extra_h = 100 * step_h;
 
     void set_shade(bool on);
     bool shade() const { return m_shade; }
     void save_position();
     void on_skin_changed();
+    void apply_resize_mode(); // smooth resize turned off: snap the size to 25x29 steps
 
 protected:
     SIZE skin_size() const override;
@@ -57,7 +59,7 @@ private:
     void run_menu_action(Part menu, int item);
     void playlist_changed();
     void recompute_lengths();
-    void apply_size(int w_steps, int h_steps);
+    void apply_size(int w_extra, int h_extra); // px beyond the minimum size
     void update_font();
 
     void render_normal(Canvas& c);
@@ -70,7 +72,7 @@ private:
     HFONT m_font = nullptr;
 
     bool m_shade = false;
-    int m_w_steps = 0, m_h_steps = 4;
+    int m_w_extra = 0, m_h_extra = 4 * step_h; // px beyond the minimum size
     size_t m_scroll = 0;          // first visible row
     size_t m_anchor = SIZE_MAX;   // shift-select anchor
 
@@ -78,7 +80,7 @@ private:
     bool m_inside = false;
     int m_menu_hover = -1;        // hovered item in an open sprite menu
     POINT m_drag_origin = {};
-    SIZE m_drag_steps = {};
+    SIZE m_drag_extra = {};
     int m_drag_row = -1;          // reorder drag: row under the cursor last time
     bool m_drag_reorder = false;
     int m_thumb_grab = 0;         // scrollbar: cursor offset within the thumb

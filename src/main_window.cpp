@@ -147,7 +147,7 @@ HWND MainWindow::create(HookProc hook) {
     RECT mrc{};
     GetWindowRect(m_wnd, &mrc);
     m_eq = std::make_unique<EqWindow>();
-    m_eq->set_double_size(m_scale == 2);
+    m_eq->set_double_size(m_scale == 2 && config::eq_double_size.get());
     if (config::eq_shade.get()) m_eq->set_shade(true);
     m_eq->create(m_wnd, L"Winamp Equalizer", static_cast<int>(config::eq_x.get()), static_cast<int>(config::eq_y.get()));
     m_eq->set_skin(m_skin.get());
@@ -306,6 +306,12 @@ void MainWindow::invalidate() {
     if (m_eq && m_eq->visible() && m_eq->shade()) m_eq->invalidate(); // shows volume/balance
 }
 
+void MainWindow::apply_display_options() {
+    if (m_eq) m_eq->set_double_size(m_scale == 2 && config::eq_double_size.get());
+    if (m_pl) m_pl->apply_resize_mode();
+    invalidate_all();
+}
+
 void MainWindow::invalidate_all() {
     invalidate();
     if (m_eq) m_eq->invalidate();
@@ -386,6 +392,7 @@ pfc::string8 MainWindow::current_title() {
 MainState MainWindow::build_state() {
     MainState st;
     st.active = m_active || !config::dim_titlebars.get();
+    st.clutterbar = config::clutterbar.get();
     st.shade = m_shade;
     st.always_on_top = m_always_on_top;
     st.double_size = m_scale == 2;
@@ -792,7 +799,7 @@ void MainWindow::set_double_size(bool on) {
     m_scale = scale;
     config::double_size = on;
     apply_geometry();
-    if (m_eq) m_eq->set_double_size(on);
+    if (m_eq) m_eq->set_double_size(on && config::eq_double_size.get());
 }
 
 void MainWindow::set_always_on_top(bool on) {
