@@ -27,7 +27,6 @@ constexpr S right_tile      { 31, 42, 20, 29 };
 constexpr S bottom_tile     { 179, 0, 25, 38 };
 constexpr S bottom_left     { 0, 72, 125, 38 };
 constexpr S bottom_right    { 126, 72, 150, 38 };
-constexpr S vis_bg          { 205, 0, 75, 38 };
 constexpr S scroll_handle   { 52, 53, 8, 18 };
 constexpr S scroll_handle_down { 61, 53, 8, 18 };
 constexpr S close_down      { 52, 42, 9, 9 };
@@ -598,7 +597,6 @@ void PlaylistWindow::render_normal(Canvas& c) {
 
     // Bottom.
     c.tile(img, bottom_tile, 125, h - bottom_h, w - 275, bottom_h);
-    if (w >= 350) c.blit(img, vis_bg, { w - 150 - 75, h - bottom_h });
     c.blit(img, bottom_left, { 0, h - bottom_h });
     c.blit(img, bottom_right, { w - 150, h - bottom_h });
 
