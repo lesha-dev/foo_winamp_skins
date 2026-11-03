@@ -33,6 +33,8 @@ Select it in *Preferences → Display → User interface module*.
 
 VS 2026, workload *Desktop development with C++* + *C++ ATL for v145*.
 Open `foo_winamp_skins.sln`, build Release x64 and Release x86, then `scripts\package.ps1`.
+
+`scripts\redeploy.bat [x64|x86]` closes the portable foobar2000, copies the newest build (WSL or VS) into it and restarts it.
 Post-build copies the DLL into `..\foobar2000_x64` / `..\foobar2000_x32` portable installs if present;
 F5 launches that foobar2000.
 
