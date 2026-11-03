@@ -4,6 +4,7 @@
 #include "config.h"
 #include "docking.h"
 #include "eq.h"
+#include "guids.h"
 #include "eq_window.h"
 #include "playlist_window.h"
 #include "player.h"
@@ -554,6 +555,7 @@ void MainWindow::activate_control(Control id) {
     case Control::repeat: player::toggle_repeat(); break;
     case Control::eq: toggle_eq(); break;
     case Control::pl: toggle_playlist(); break;
+    case Control::about: ui_control::get()->show_preferences(guids::prefs_page); break;
     case Control::time: config::time_remaining = !config::time_remaining.get(); break;
     default: break;
     }

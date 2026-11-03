@@ -24,6 +24,6 @@
 - [ ] Consider removing Winamp hotkeys (z x c v b l, arrows, Ctrl+D/A/W) entirely and relying on fb2k's keyboard shortcuts only.
 - [ ] Decide on shuffle/repeat: integrate properly with fb2k playback orders (Shuffle albums/folders, Random, Repeat track; repeat is cosmetic while shuffling).
 - [ ] Support Winamp Modern skins (.wal: XML + MAKI scripts, freeform layouts) — essentially a separate engine.
-- [ ] Winamp logo (lower right of the main window, Winamp opens About): open Preferences -> Display -> Winamp Skins instead.
+- [x] Winamp logo (lower right of the main window, Winamp opens About): opens Preferences -> Display -> Winamp Skins.
 - [ ] Versioning: decide on a scheme and bump `src/version.h` per release.
 - [ ] Credits: Webamp (sprite layout, EQ presets data), miniz, foobar2000 SDK; show in README / About.
