@@ -47,33 +47,48 @@ void remove(HWND wnd) {
 
 void snap(HWND wnd, WINDOWPOS* wp) {
     if ((wp->flags & SWP_NOMOVE) || g_suppress) return;
-    if (g_leader && std::find(g_group.begin(), g_group.end(), wnd) != g_group.end()) return; // moved by its leader
+    const bool leading = g_leader == wnd;
+    if (g_leader && !leading && std::find(g_group.begin(), g_group.end(), wnd) != g_group.end()) return; // moved by its leader
     const RECT cur = rect_of(wnd);
     const int w = (wp->flags & SWP_NOSIZE) ? cur.right - cur.left : wp->cx;
     const int h = (wp->flags & SWP_NOSIZE) ? cur.bottom - cur.top : wp->cy;
-    RECT target = { wp->x, wp->y, wp->x + w, wp->y + h };
+
+    // Moving rects at the proposed position: the window itself plus, for a group move, its docked windows.
+    std::vector<RECT> moving = { { wp->x, wp->y, wp->x + w, wp->y + h } };
+    if (leading) {
+        const int dx = wp->x - cur.left, dy = wp->y - cur.top;
+        for (HWND g : g_group) {
+            RECT r = rect_of(g);
+            OffsetRect(&r, dx, dy);
+            moving.push_back(r);
+        }
+    }
 
     int best_x = snap_distance, best_y = snap_distance;
-    MONITORINFO mi = {};
-    mi.cbSize = sizeof(mi);
-    if (GetMonitorInfoW(MonitorFromRect(&target, MONITOR_DEFAULTTONEAREST), &mi)) {
-        snap_axis(wp->x, w, mi.rcWork.left, best_x);
-        snap_axis(wp->x, w, mi.rcWork.right, best_x);
-        snap_axis(wp->y, h, mi.rcWork.top, best_y);
-        snap_axis(wp->y, h, mi.rcWork.bottom, best_y);
-    }
-    for (HWND other : g_windows) {
-        if (other == wnd || !IsWindowVisible(other) || IsIconic(other)) continue;
-        if (g_leader == wnd && std::find(g_group.begin(), g_group.end(), other) != g_group.end()) continue;
-        const RECT o = rect_of(other);
-        // Only snap to windows that are near on the other axis.
-        if (overlaps(target.top - snap_distance, target.bottom + snap_distance, o.top, o.bottom)) {
-            snap_axis(wp->x, w, o.left, best_x);
-            snap_axis(wp->x, w, o.right, best_x);
+    for (const RECT& m : moving) {
+        int x = m.left, y = m.top;
+        const int mw = m.right - m.left, mh = m.bottom - m.top;
+        MONITORINFO mi = {};
+        mi.cbSize = sizeof(mi);
+        if (GetMonitorInfoW(MonitorFromRect(&m, MONITOR_DEFAULTTONEAREST), &mi)) {
+            snap_axis(x, mw, mi.rcWork.left, best_x);
+            snap_axis(x, mw, mi.rcWork.right, best_x);
+            snap_axis(y, mh, mi.rcWork.top, best_y);
+            snap_axis(y, mh, mi.rcWork.bottom, best_y);
         }
-        if (overlaps(target.left - snap_distance, target.right + snap_distance, o.left, o.right)) {
-            snap_axis(wp->y, h, o.top, best_y);
-            snap_axis(wp->y, h, o.bottom, best_y);
+        for (HWND other : g_windows) {
+            if (other == wnd || !IsWindowVisible(other) || IsIconic(other)) continue;
+            if (leading && std::find(g_group.begin(), g_group.end(), other) != g_group.end()) continue;
+            const RECT o = rect_of(other);
+            // Only snap to windows that are near on the other axis.
+            if (overlaps(m.top - snap_distance, m.bottom + snap_distance, o.top, o.bottom)) {
+                snap_axis(x, mw, o.left, best_x);
+                snap_axis(x, mw, o.right, best_x);
+            }
+            if (overlaps(m.left - snap_distance, m.right + snap_distance, o.left, o.right)) {
+                snap_axis(y, mh, o.top, best_y);
+                snap_axis(y, mh, o.bottom, best_y);
+            }
         }
     }
     if (std::abs(best_x) < snap_distance) wp->x += best_x;
