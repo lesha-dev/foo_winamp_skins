@@ -17,8 +17,9 @@ void draw_slider(Canvas& c, const Image& img, L::Sprite bg, L::Sprite thumb, L::
                  L::Pos pos, double frame_t, double thumb_t) {
     const int f = frame_for(frame_t);
     c.blit(img, bg.x, f * L::slider_frame_step, bg.w, L::slider_frame_h, pos.x, pos.y);
-    // Skins without a thumb row (bitmap shorter than 433px) just show the background.
-    if (img.height >= thumb.y + thumb.h) {
+    // Skins without a thumb row just show the background. A partial row (e.g. 430px tall) is drawn
+    // clipped, like Winamp does.
+    if (img.height > thumb.y) {
         const int x = pos.x + static_cast<int>(std::clamp(thumb_t, 0.0, 1.0) * (bg.w - thumb.w) + 0.5);
         c.blit(img, pressed ? thumb_down : thumb, { x, pos.y + L::slider_thumb_dy });
     }
