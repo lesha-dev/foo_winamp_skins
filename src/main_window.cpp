@@ -426,6 +426,7 @@ MainState MainWindow::build_state() {
     st.show_time = st.play != PlayState::stopped && !blink_off;
     st.time_negative = config::time_remaining.get() && length > 0;
     st.time_seconds = static_cast<int>(st.time_negative ? std::max(0.0, length - pos) : pos);
+    if (m_pl) m_pl->set_time(st.show_time, st.time_negative, st.time_seconds);
 
     st.marquee = !m_status.is_empty() ? m_status.get_ptr() : current_title().get_ptr();
     st.marquee_step = m_status.is_empty() ? m_marquee_step : 0;

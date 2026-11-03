@@ -149,6 +149,14 @@ void PlaylistWindow::on_visibility_changed(bool visible) {
     if (MainWindow* w = MainWindow::instance()) w->invalidate();
 }
 
+void PlaylistWindow::set_time(bool show, bool negative, int seconds) {
+    if (show == m_time_show && negative == m_time_negative && seconds == m_time_seconds) return;
+    m_time_show = show;
+    m_time_negative = negative;
+    m_time_seconds = seconds;
+    if (visible() && !m_shade) invalidate();
+}
+
 void PlaylistWindow::on_skin_changed() {
     update_font();
     invalidate();
@@ -628,19 +636,17 @@ void PlaylistWindow::render_normal(Canvas& c) {
     draw_text(c, font, bx + 7, by + 10, running);
     c.reset_clip();
 
-    auto pc = playback_control::get();
-    if (pc->is_playing()) {
-        const double pos = pc->playback_get_position();
-        metadb_handle_ptr track;
-        const double len = pc->get_now_playing(track) ? track->get_length() : 0;
-        const bool remaining = config::time_remaining.get() && len > 0;
-        const bool blink_off = pc->is_paused() && (GetTickCount64() / 1000) % 2 == 1;
-        if (!blink_off) {
-            const pfc::string8 t = time_str(remaining ? std::max(0.0, len - pos) : pos, false);
-            char buf[16];
-            snprintf(buf, sizeof(buf), "%c%5s", remaining ? '-' : ' ', t.c_str());
-            draw_text(c, font, bx + 66 - font_char_w, by + 23, buf + (strlen(buf) > 6 ? strlen(buf) - 6 : 0));
-        }
+    // Mini time, laid out like Winamp around the colon printed in pledit.bmp: [-][m][m][m] : [s][s].
+    if (m_time_show) {
+        const int x = w - 86, y = h - 15;
+        const int m = std::min(m_time_seconds / 60, 999), s = m_time_seconds % 60;
+        auto digit = [&](int d, int dx) { c.blit(font, 5 * d, 6, 5, 6, x + dx, y); };
+        if (m_time_negative) c.blit(font, 75, 6, 3, 6, x + (m >= 100 ? 0 : 4), y);
+        if (m >= 100) digit(m / 100, 4);
+        digit(m / 10 % 10, 9);
+        digit(m % 10, 14);
+        digit(s / 10, 23);
+        digit(s % 10, 28);
     }
 
     render_menu(c);

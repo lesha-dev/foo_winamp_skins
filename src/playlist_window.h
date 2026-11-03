@@ -17,6 +17,8 @@ public:
     bool shade() const { return m_shade; }
     void save_position();
     void on_skin_changed();
+    // Mini time display, fed by the main window so both always show the same value.
+    void set_time(bool show, bool negative, int seconds);
     void apply_resize_mode(); // smooth resize turned off: snap the size to 25x29 steps
 
 protected:
@@ -84,6 +86,9 @@ private:
     int m_drag_row = -1;          // reorder drag: row under the cursor last time
     bool m_drag_reorder = false;
     int m_thumb_grab = 0;         // scrollbar: cursor offset within the thumb
+
+    bool m_time_show = false, m_time_negative = false;
+    int m_time_seconds = 0;
 
     bool m_lengths_dirty = true;
     double m_total_len = 0, m_sel_len = 0;
