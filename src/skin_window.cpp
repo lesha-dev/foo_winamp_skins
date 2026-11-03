@@ -128,7 +128,7 @@ void SkinWindow::paint() {
 }
 
 void SkinWindow::on_right_click(POINT screen_pt) {
-    if (MainWindow* w = MainWindow::instance()) w->show_context_menu(screen_pt);
+    if (MainWindow* w = MainWindow::instance()) w->show_context_menu(screen_pt, m_wnd);
 }
 
 LRESULT CALLBACK SkinWindow::s_wndproc(HWND wnd, UINT msg, WPARAM wp, LPARAM lp) {
@@ -142,6 +142,11 @@ LRESULT CALLBACK SkinWindow::s_wndproc(HWND wnd, UINT msg, WPARAM wp, LPARAM lp)
     return self->wndproc(msg, wp, lp);
 }
 
+void SkinWindow::save_window_position() {
+    RECT rc;
+    if (GetWindowRect(m_wnd, &rc)) on_position_saved(rc.left, rc.top);
+}
+
 LRESULT SkinWindow::wndproc(UINT msg, WPARAM wp, LPARAM lp) {
     LRESULT ret = 0;
     if (on_message(msg, wp, lp, ret)) return ret;
@@ -151,29 +156,31 @@ LRESULT SkinWindow::wndproc(UINT msg, WPARAM wp, LPARAM lp) {
         return 0;
     case WM_ERASEBKGND:
         return 1;
-    case WM_NCHITTEST: {
-        POINT pt = { GET_X_LPARAM(lp), GET_Y_LPARAM(lp) };
-        ScreenToClient(m_wnd, &pt);
-        if (!m_skin) return HTCAPTION;
-        return is_control(to_skin(pt)) ? HTCLIENT : HTCAPTION;
-    }
-    case WM_NCLBUTTONDBLCLK:
-        if (wp == HTCAPTION) on_caption_dblclick();
-        return 0;
     case WM_LBUTTONDOWN:
-    case WM_LBUTTONDBLCLK:
+    case WM_LBUTTONDBLCLK: {
         SetFocus(m_wnd);
+        const POINT p = to_skin({ GET_X_LPARAM(lp), GET_Y_LPARAM(lp) });
+        // Everything that isn't a control drags the window, like Winamp.
+        if (!m_skin || !is_control(p)) {
+            if (msg == WM_LBUTTONDBLCLK) on_caption_dblclick();
+            else docking::begin_move(m_wnd, false);
+            return 0;
+        }
         SetCapture(m_wnd);
-        on_mouse_down(to_skin({ GET_X_LPARAM(lp), GET_Y_LPARAM(lp) }), msg == WM_LBUTTONDBLCLK);
+        on_mouse_down(p, msg == WM_LBUTTONDBLCLK);
         return 0;
+    }
     case WM_MOUSEMOVE:
+        if (docking::moving(m_wnd)) { docking::move_to_cursor(m_wnd); return 0; }
         on_mouse_move(to_skin({ GET_X_LPARAM(lp), GET_Y_LPARAM(lp) }));
         return 0;
     case WM_LBUTTONUP:
+        if (docking::end_move(m_wnd)) { save_window_position(); return 0; }
         on_mouse_up(to_skin({ GET_X_LPARAM(lp), GET_Y_LPARAM(lp) }));
         if (GetCapture() == m_wnd) ReleaseCapture();
         return 0;
     case WM_CAPTURECHANGED:
+        if (docking::end_move(m_wnd)) { save_window_position(); return 0; }
         if (reinterpret_cast<HWND>(lp) != m_wnd) on_mouse_leave_capture();
         return 0;
     case WM_MOUSEWHEEL:
@@ -186,7 +193,6 @@ LRESULT SkinWindow::wndproc(UINT msg, WPARAM wp, LPARAM lp) {
     case WM_SYSKEYDOWN:
         if (keyboard_shortcut_manager::get()->on_keydown_auto(wp)) return 0;
         break;
-    case WM_NCRBUTTONUP:
     case WM_CONTEXTMENU: {
         POINT pt = { GET_X_LPARAM(lp), GET_Y_LPARAM(lp) };
         if (msg == WM_CONTEXTMENU && pt.x == -1 && pt.y == -1) {
@@ -203,11 +209,9 @@ LRESULT SkinWindow::wndproc(UINT msg, WPARAM wp, LPARAM lp) {
     case WM_WINDOWPOSCHANGING:
         docking::snap(m_wnd, reinterpret_cast<WINDOWPOS*>(lp));
         break;
-    case WM_EXITSIZEMOVE: {
-        RECT rc;
-        if (GetWindowRect(m_wnd, &rc)) on_position_saved(rc.left, rc.top);
+    case WM_EXITSIZEMOVE:
+        save_window_position();
         return 0;
-    }
     case WM_CLOSE:
         show(false);
         return 0;

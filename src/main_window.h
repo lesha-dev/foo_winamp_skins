@@ -38,7 +38,7 @@ public:
     void invalidate();
     void on_eq_changed();
     void set_status(const char* text);  // slider feedback in the title area; empty/null restores the title
-    void show_context_menu(POINT pt_screen);
+    void show_context_menu(POINT pt_screen, HWND owner = nullptr); // owner: the clicked window (default: main)
     void set_vis_mode(VisMode mode);
     void set_vis_options(const VisOptions& o); // also stored in config
     // Winamp hotkeys, also used by the EQ and playlist windows. Returns true if handled.
@@ -62,7 +62,6 @@ private:
     // input
     POINT to_skin(POINT client) const;
     const ControlRect* hit(POINT skin_pt) const;
-    LRESULT on_nchittest(LPARAM lp);
     void on_lbutton_down(POINT skin_pt);
     void on_mouse_move(POINT skin_pt);
     void on_lbutton_up(POINT skin_pt);
@@ -89,6 +88,7 @@ private:
     void apply_geometry();
     void apply_region();
     void save_position();
+    void save_positions(); // main + eq + playlist
 
     // skins
     void browse_skin();

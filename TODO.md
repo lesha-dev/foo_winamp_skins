@@ -19,9 +19,8 @@
 - [ ] EQ: AUTO button is a toggle only (no per-track presets); no preset saving.
 - [ ] Playlist: no playlist switching in the window (shows fb2k's active playlist); no double size.
 - [x] Visualizer matches Winamp's classic analyser/scope (verified against recordings); Winamp vis options on the Preferences > Display > Winamp Skins > Visualization page (mode, analyzer style, thin/thick bands, peaks, scope style, refresh rate, falloffs).
-- [ ] Main menu (File/Edit/...) is only reachable via right-click; consider Alt shortcuts / options button behaviour like Winamp.
 - [ ] Skin cursors (*.cur) are ignored.
-- [ ] Main window title bar shows wrong active/inactive colours when focus changes.
+- [x] Main window title bar shows wrong active/inactive colours when focus changes.
 - [ ] Dragging the song title (marquee) scrolls the text by hand, like Winamp.
 - [ ] Tooltips on controls (main, EQ, playlist windows), like Winamp.
 - [ ] Double click on the visualizer: Winamp opens MilkDrop; decide what fb2k should open (e.g. a vis component / Spectrum popup).

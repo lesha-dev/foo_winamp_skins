@@ -13,6 +13,8 @@ HWND g_leader = nullptr;
 RECT g_leader_rect = {};
 std::vector<HWND> g_group;
 bool g_suppress = false; // programmatic moves: no snapping
+HWND g_move_wnd = nullptr; // window being dragged by hand
+POINT g_grab = {};         // cursor offset from its top-left corner
 
 RECT rect_of(HWND w) { RECT rc{}; GetWindowRect(w, &rc); return rc; }
 
@@ -43,6 +45,7 @@ void remove(HWND wnd) {
     g_windows.erase(std::remove(g_windows.begin(), g_windows.end(), wnd), g_windows.end());
     g_group.erase(std::remove(g_group.begin(), g_group.end(), wnd), g_group.end());
     if (g_leader == wnd) end_group_move();
+    if (g_move_wnd == wnd) g_move_wnd = nullptr;
 }
 
 void snap(HWND wnd, WINDOWPOS* wp) {
@@ -141,6 +144,34 @@ void group_moved(HWND leader) {
 void end_group_move() {
     g_leader = nullptr;
     g_group.clear();
+}
+
+void begin_move(HWND wnd, bool group) {
+    POINT pt{};
+    GetCursorPos(&pt);
+    const RECT rc = rect_of(wnd);
+    g_move_wnd = wnd;
+    g_grab = { pt.x - rc.left, pt.y - rc.top };
+    if (group) begin_group_move(wnd);
+    SetCapture(wnd);
+}
+
+bool moving(HWND wnd) { return wnd && g_move_wnd == wnd; }
+
+void move_to_cursor(HWND wnd) {
+    if (!moving(wnd)) return;
+    POINT pt{};
+    GetCursorPos(&pt);
+    SetWindowPos(wnd, nullptr, pt.x - g_grab.x, pt.y - g_grab.y, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+    group_moved(wnd);
+}
+
+bool end_move(HWND wnd) {
+    if (!moving(wnd)) return false;
+    g_move_wnd = nullptr;
+    if (g_leader == wnd) end_group_move();
+    if (GetCapture() == wnd) ReleaseCapture();
+    return true;
 }
 
 void resized(HWND wnd, const RECT& before, const RECT& after, const std::vector<HWND>& docked_before) {

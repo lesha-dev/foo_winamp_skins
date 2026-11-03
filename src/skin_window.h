@@ -54,6 +54,7 @@ private:
     static LRESULT CALLBACK s_wndproc(HWND, UINT, WPARAM, LPARAM);
     LRESULT wndproc(UINT msg, WPARAM wp, LPARAM lp);
     void apply_region();
+    void save_window_position();
     void paint();
 };
 

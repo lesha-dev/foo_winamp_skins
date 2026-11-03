@@ -25,13 +25,15 @@ void draw_slider(Canvas& c, const Image& img, L::Sprite bg, L::Sprite thumb, L::
     }
 }
 
+// Unpressed buttons come from the title bar background itself (active or inactive row), like Winamp.
 void draw_titlebar_buttons(Canvas& c, const Image& title, const MainState& st) {
-    auto is = [&](Control id) { return st.pressed == id; };
-    c.blit(title, is(Control::options) ? L::btn_options_down : L::btn_options, L::pos_options);
-    c.blit(title, is(Control::minimize) ? L::btn_minimize_down : L::btn_minimize, L::pos_minimize);
-    if (st.shade) c.blit(title, is(Control::shade) ? L::btn_shade_on_down : L::btn_shade_on, L::pos_shade);
-    else c.blit(title, is(Control::shade) ? L::btn_shade_down : L::btn_shade, L::pos_shade);
-    c.blit(title, is(Control::close) ? L::btn_close_down : L::btn_close, L::pos_close);
+    switch (st.pressed) {
+    case Control::options:  c.blit(title, L::btn_options_down, L::pos_options); break;
+    case Control::minimize: c.blit(title, L::btn_minimize_down, L::pos_minimize); break;
+    case Control::shade:    c.blit(title, st.shade ? L::btn_shade_on_down : L::btn_shade_down, L::pos_shade); break;
+    case Control::close:    c.blit(title, L::btn_close_down, L::pos_close); break;
+    default: break;
+    }
 }
 
 void draw_time(Canvas& c, const Skin& skin, const MainState& st) {

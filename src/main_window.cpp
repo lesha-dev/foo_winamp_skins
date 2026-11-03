@@ -207,25 +207,28 @@ LRESULT MainWindow::wndproc(UINT msg, WPARAM wp, LPARAM lp) {
         return 0;
     case WM_ERASEBKGND:
         return 1;
-    case WM_NCHITTEST:
-        return on_nchittest(lp);
-    case WM_NCLBUTTONDBLCLK: {
-        POINT pt = { GET_X_LPARAM(lp), GET_Y_LPARAM(lp) };
-        ScreenToClient(m_wnd, &pt);
-        if (wp == HTCAPTION && to_skin(pt).y < titlebar_height) set_shade(!m_shade);
+    case WM_LBUTTONDOWN:
+    case WM_LBUTTONDBLCLK: {
+        const POINT p = to_skin({ GET_X_LPARAM(lp), GET_Y_LPARAM(lp) });
+        // Everything that isn't a control drags the window, like Winamp; double-click on the title bar toggles shade.
+        if (m_skin && !hit(p)) {
+            if (msg == WM_LBUTTONDBLCLK && p.y < titlebar_height) set_shade(!m_shade);
+            else docking::begin_move(m_wnd, true);
+            return 0;
+        }
+        on_lbutton_down(p);
         return 0;
     }
-    case WM_LBUTTONDOWN:
-    case WM_LBUTTONDBLCLK:
-        on_lbutton_down(to_skin({ GET_X_LPARAM(lp), GET_Y_LPARAM(lp) }));
-        return 0;
     case WM_MOUSEMOVE:
+        if (docking::moving(m_wnd)) { docking::move_to_cursor(m_wnd); return 0; }
         on_mouse_move(to_skin({ GET_X_LPARAM(lp), GET_Y_LPARAM(lp) }));
         return 0;
     case WM_LBUTTONUP:
+        if (docking::end_move(m_wnd)) { save_positions(); return 0; }
         on_lbutton_up(to_skin({ GET_X_LPARAM(lp), GET_Y_LPARAM(lp) }));
         return 0;
     case WM_CAPTURECHANGED:
+        if (docking::end_move(m_wnd)) { save_positions(); return 0; }
         if (reinterpret_cast<HWND>(lp) != m_wnd) cancel_drag();
         return 0;
     case WM_MOUSEWHEEL:
@@ -240,7 +243,6 @@ LRESULT MainWindow::wndproc(UINT msg, WPARAM wp, LPARAM lp) {
         if (handle_key(wp, true)) return 0;
         if (keyboard_shortcut_manager::get()->on_keydown_auto(wp)) return 0;
         break;
-    case WM_NCRBUTTONUP:
     case WM_CONTEXTMENU: {
         POINT pt = { GET_X_LPARAM(lp), GET_Y_LPARAM(lp) };
         if (msg == WM_CONTEXTMENU && pt.x == -1 && pt.y == -1) {
@@ -286,9 +288,7 @@ LRESULT MainWindow::wndproc(UINT msg, WPARAM wp, LPARAM lp) {
         break;
     case WM_EXITSIZEMOVE:
         docking::end_group_move();
-        save_position();
-        if (m_eq) m_eq->save_position();
-        if (m_pl) m_pl->save_position();
+        save_positions();
         return 0;
     case WM_CLOSE:
         // Core runs the shutdown sequence, which calls user_interface::shutdown() -> destroy().
@@ -436,11 +436,10 @@ const ControlRect* MainWindow::hit(POINT p) const {
     return m_shade ? hit_test(shade_controls, p.x, p.y) : hit_test(normal_controls, p.x, p.y);
 }
 
-LRESULT MainWindow::on_nchittest(LPARAM lp) {
-    POINT pt = { GET_X_LPARAM(lp), GET_Y_LPARAM(lp) };
-    ScreenToClient(m_wnd, &pt);
-    // Controls get mouse input; everything else drags the window, like Winamp.
-    return hit(to_skin(pt)) ? HTCLIENT : HTCAPTION;
+void MainWindow::save_positions() {
+    save_position();
+    if (m_eq) m_eq->save_position();
+    if (m_pl) m_pl->save_position();
 }
 
 void MainWindow::on_lbutton_down(POINT p) {
@@ -599,7 +598,8 @@ bool MainWindow::on_key(WPARAM vk) {
     return false;
 }
 
-void MainWindow::show_context_menu(POINT pt) {
+void MainWindow::show_context_menu(POINT pt, HWND owner) {
+    if (!owner) owner = m_wnd;
     HMENU menu = CreatePopupMenu();
 
     // Skins submenu: contents of the skins folder, then file-based actions.
@@ -639,8 +639,8 @@ void MainWindow::show_context_menu(POINT pt) {
         managers.push_back(std::move(mgr));
     }
 
-    SetForegroundWindow(m_wnd);
-    const UINT cmd = TrackPopupMenu(menu, TPM_RETURNCMD | TPM_RIGHTBUTTON | TPM_NONOTIFY, pt.x, pt.y, 0, m_wnd, nullptr);
+    SetForegroundWindow(owner);
+    const UINT cmd = TrackPopupMenu(menu, TPM_RETURNCMD | TPM_RIGHTBUTTON | TPM_NONOTIFY, pt.x, pt.y, 0, owner, nullptr);
     DestroyMenu(menu);
 
     switch (cmd) {
