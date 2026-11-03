@@ -265,6 +265,17 @@ bool PlaylistWindow::is_control(POINT p) const {
 static int menu_index(int part, int first) { return part - first; }
 
 void PlaylistWindow::on_mouse_down(POINT p, bool dbl) {
+    if (m_menu_open) {
+        // Second click of click mode: pick the item under the cursor, or close the menu.
+        const Part part = m_pressed;
+        const int hover = menu_hover_at(p);
+        m_menu_open = false;
+        m_pressed = Part::none;
+        m_menu_hover = -1;
+        invalidate();
+        if (hover >= 0) run_menu_action(part, hover);
+        return;
+    }
     m_pressed = hit(p);
     m_inside = true;
     m_menu_hover = -1;
@@ -361,14 +372,9 @@ void PlaylistWindow::on_mouse_move(POINT p) {
         apply_size(we, he);
         break;
     }
-    case Part::menu_add: case Part::menu_rem: case Part::menu_sel: case Part::menu_misc: case Part::menu_list: {
-        const MenuDef& d = menu_def(menu_index(static_cast<int>(m_pressed), static_cast<int>(Part::menu_add)));
-        const int x = d.from_right ? width() - d.x_from_left : d.x_from_left;
-        const int n = static_cast<int>(d.items.size());
-        const int top = height() - 12 - 18 * n;
-        m_menu_hover = (p.x >= x && p.x < x + 22 && p.y >= top && p.y < top + 18 * n) ? (p.y - top) / 18 : -1;
+    case Part::menu_add: case Part::menu_rem: case Part::menu_sel: case Part::menu_misc: case Part::menu_list:
+        m_menu_hover = menu_hover_at(p);
         break;
-    }
     default:
         m_inside = hit(p) == m_pressed;
         break;
@@ -376,7 +382,22 @@ void PlaylistWindow::on_mouse_move(POINT p) {
     invalidate();
 }
 
+int PlaylistWindow::menu_hover_at(POINT p) const {
+    const MenuDef& d = menu_def(menu_index(static_cast<int>(m_pressed), static_cast<int>(Part::menu_add)));
+    const int x = d.from_right ? width() - d.x_from_left : d.x_from_left;
+    const int n = static_cast<int>(d.items.size());
+    const int top = height() - 12 - 18 * n;
+    return (p.x >= x && p.x < x + 22 && p.y >= top && p.y < top + 18 * n) ? (p.y - top) / 18 : -1;
+}
+
 void PlaylistWindow::on_mouse_up(POINT p) {
+    // Click mode (Winamp's default): releasing the button leaves the menu open; the next click picks.
+    if (m_pressed >= Part::menu_add && m_pressed <= Part::menu_list && !m_menu_open && !config::oldschool_pl_buttons.get()) {
+        m_menu_open = true;
+        m_menu_hover = menu_hover_at(p);
+        invalidate();
+        return;
+    }
     const Part part = m_pressed;
     m_pressed = Part::none;
     const bool inside = hit(p) == part;
@@ -405,6 +426,7 @@ void PlaylistWindow::on_mouse_up(POINT p) {
 }
 
 void PlaylistWindow::on_mouse_leave_capture() {
+    m_menu_open = false;
     m_pressed = Part::none;
     m_menu_hover = -1;
     invalidate();

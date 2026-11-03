@@ -164,7 +164,7 @@ LRESULT SkinWindow::wndproc(UINT msg, WPARAM wp, LPARAM lp) {
         SetFocus(m_wnd);
         const POINT p = to_skin({ GET_X_LPARAM(lp), GET_Y_LPARAM(lp) });
         // Everything that isn't a control drags the window, like Winamp.
-        if (!m_skin || !is_control(p)) {
+        if (!holds_mouse() && (!m_skin || !is_control(p))) {
             if (msg == WM_LBUTTONDBLCLK) on_caption_dblclick();
             else docking::begin_move(m_wnd, false);
             return 0;
@@ -180,7 +180,7 @@ LRESULT SkinWindow::wndproc(UINT msg, WPARAM wp, LPARAM lp) {
     case WM_LBUTTONUP:
         if (docking::end_move(m_wnd)) { save_window_position(); return 0; }
         on_mouse_up(to_skin({ GET_X_LPARAM(lp), GET_Y_LPARAM(lp) }));
-        if (GetCapture() == m_wnd) ReleaseCapture();
+        if (GetCapture() == m_wnd && !holds_mouse()) ReleaseCapture();
         return 0;
     case WM_CAPTURECHANGED:
         if (docking::end_move(m_wnd)) { save_window_position(); return 0; }

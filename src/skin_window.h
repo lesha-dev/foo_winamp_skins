@@ -31,6 +31,8 @@ protected:
     virtual void on_mouse_move(POINT) {}
     virtual void on_mouse_up(POINT) {}
     virtual void on_mouse_leave_capture() {}
+    // While true, the window keeps the mouse captured after button-up and gets every click (open popup).
+    virtual bool holds_mouse() const { return false; }
     virtual void on_right_click(POINT screen_pt);
     virtual void on_wheel(int /*delta*/) {}
     virtual bool on_key(WPARAM /*vk*/) { return false; }

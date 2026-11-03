@@ -15,6 +15,7 @@ extern cfg_bool winamp_hotkeys;       // Z X C V B L, arrows, Ctrl+D/A/W in the 
 extern cfg_bool balance_dsp;          // use wsz::balance::set_enabled()
 extern cfg_bool dim_titlebars;        // inactive windows show the dimmed titlebar
 extern cfg_bool clutterbar;           // always show the clutterbar (else only while pressed)
+extern cfg_bool oldschool_pl_buttons; // playlist menus: hold, pick on release (else click to open, click to pick)
 extern cfg_bool snap;                 // dock windows to each other / screen edges (Shift inverts while dragging)
 extern cfg_int snap_distance;         // px
 extern cfg_bool smooth_resize;        // playlist resizes per pixel instead of 25x29 steps

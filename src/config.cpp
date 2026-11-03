@@ -16,6 +16,7 @@ cfg_bool balance_dsp(guids::cfg_balance_dsp, true);
 cfg_int balance_snap(guids::cfg_balance_snap, 25);
 cfg_bool dim_titlebars(guids::cfg_dim_titlebars, true);
 cfg_bool clutterbar(guids::cfg_clutterbar, true);
+cfg_bool oldschool_pl_buttons(guids::cfg_oldschool_pl_buttons, false);
 cfg_bool snap(guids::cfg_snap, true);
 cfg_int snap_distance(guids::cfg_snap_distance, 10);
 cfg_bool smooth_resize(guids::cfg_smooth_resize, false);

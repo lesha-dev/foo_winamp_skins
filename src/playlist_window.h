@@ -29,6 +29,7 @@ protected:
     void on_mouse_move(POINT p) override;
     void on_mouse_up(POINT p) override;
     void on_mouse_leave_capture() override;
+    bool holds_mouse() const override { return m_menu_open; }
     void on_right_click(POINT screen_pt) override;
     void on_wheel(int delta) override;
     bool on_key(WPARAM vk) override;
@@ -81,6 +82,8 @@ private:
     Part m_pressed = Part::none;
     bool m_inside = false;
     int m_menu_hover = -1;        // hovered item in an open sprite menu
+    bool m_menu_open = false;     // click mode: menu stays open after release until the next click
+    int menu_hover_at(POINT p) const;
     POINT m_drag_origin = {};
     SIZE m_drag_extra = {};
     int m_drag_row = -1;          // reorder drag: row under the cursor last time
