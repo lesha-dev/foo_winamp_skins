@@ -21,6 +21,10 @@
 - [ ] Visualizer tuning: dB range / falloff speeds are guesses; no Winamp vis options (fire/line bars, dot oscilloscope, falloff, refresh rate).
 - [ ] Main menu (File/Edit/...) is only reachable via right-click; consider Alt shortcuts / options button behaviour like Winamp.
 - [ ] Skin cursors (*.cur) are ignored.
+- [ ] Main window title bar shows wrong active/inactive colours when focus changes.
+- [ ] Dragging the song title (marquee) scrolls the text by hand, like Winamp.
+- [ ] Tooltips on controls (main, EQ, playlist windows), like Winamp.
+- [ ] Double click on the visualizer: Winamp opens MilkDrop; decide what fb2k should open (e.g. a vis component / Spectrum popup).
 - [ ] Consider removing Winamp hotkeys (z x c v b l, arrows, Ctrl+D/A/W) entirely and relying on fb2k's keyboard shortcuts only.
 - [ ] Decide on shuffle/repeat: integrate properly with fb2k playback orders (Shuffle albums/folders, Random, Repeat track; repeat is cosmetic while shuffling).
 - [ ] Support Winamp Modern skins (.wal: XML + MAKI scripts, freeform layouts) — essentially a separate engine.
