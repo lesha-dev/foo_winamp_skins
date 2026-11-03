@@ -15,10 +15,15 @@
 - [x] Skins folder `<profile>\winamp-skins`, listed in the context menu (Skins submenu).
 - [x] Preferences page (Display > Winamp Skins): skin list with preview, folder actions, hotkeys / balance DSP / centre snap options.
 - [x] Balance via own DSP ("Winamp Skins balance"), auto-inserted last in the chain on first off-centre use. Lags by the output buffer length.
-- [ ] EQ / PL buttons do nothing until the equalizer and playlist windows exist.
+- [x] Equalizer window (drives fb2k's built-in Equalizer: 10 Winamp bands + preamp mapped onto its 18 bands, synced both ways; built-in presets, .eqf import) and playlist editor (active fb2k playlist).
+- [ ] EQ: AUTO button is a toggle only (no per-track presets); no preset saving.
+- [ ] Playlist: no playlist switching in the window (shows fb2k's active playlist); no double size.
 - [ ] Visualizer tuning: dB range / falloff speeds are guesses; no Winamp vis options (fire/line bars, dot oscilloscope, falloff, refresh rate).
 - [ ] Main menu (File/Edit/...) is only reachable via right-click; consider Alt shortcuts / options button behaviour like Winamp.
 - [ ] Skin cursors (*.cur) are ignored.
 - [ ] Consider removing Winamp hotkeys (z x c v b l, arrows, Ctrl+D/A/W) entirely and relying on fb2k's keyboard shortcuts only.
 - [ ] Decide on shuffle/repeat: integrate properly with fb2k playback orders (Shuffle albums/folders, Random, Repeat track; repeat is cosmetic while shuffling).
 - [ ] Support Winamp Modern skins (.wal: XML + MAKI scripts, freeform layouts) — essentially a separate engine.
+- [ ] Winamp logo (lower right of the main window, Winamp opens About): open Preferences -> Display -> Winamp Skins instead.
+- [ ] Versioning: decide on a scheme and bump `src/version.h` per release.
+- [ ] Credits: Webamp (sprite layout, EQ presets data), miniz, foobar2000 SDK; show in README / About.

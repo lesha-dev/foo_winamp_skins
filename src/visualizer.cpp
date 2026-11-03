@@ -13,8 +13,6 @@ constexpr float db_ceil = -6.0f;       // bar height full
 constexpr float bar_fall = 0.06f;      // per frame
 constexpr float peak_gravity = 0.0015f; // peak drop = gravity * frames^2 (Webamp-like)
 
-uint32_t to_bgrx(COLORREF c) { return (GetRValue(c) << 16) | (GetGValue(c) << 8) | GetBValue(c); }
-
 // Bin index bounds for each bar: first bar 0..200 Hz, then log-spaced up to Nyquist (Webamp's layout).
 struct Bands { std::array<unsigned, Visualizer::bar_count + 1> edge; };
 

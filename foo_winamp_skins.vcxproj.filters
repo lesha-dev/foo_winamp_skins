@@ -9,6 +9,11 @@
   <ItemGroup>
     <ClCompile Include="src\balance_dsp.cpp"><Filter>Source Files</Filter></ClCompile>
     <ClCompile Include="src\canvas.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClCompile Include="src\docking.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClCompile Include="src\eq.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClCompile Include="src\eq_window.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClCompile Include="src\playlist_window.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClCompile Include="src\skin_window.cpp"><Filter>Source Files</Filter></ClCompile>
     <ClCompile Include="src\component.cpp"><Filter>Source Files</Filter></ClCompile>
     <ClCompile Include="src\config.cpp"><Filter>Source Files</Filter></ClCompile>
     <ClCompile Include="src\image.cpp"><Filter>Source Files</Filter></ClCompile>
@@ -26,6 +31,11 @@
   <ItemGroup>
     <ClInclude Include="src\balance_dsp.h"><Filter>Header Files</Filter></ClInclude>
     <ClInclude Include="src\canvas.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="src\docking.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="src\eq.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="src\eq_window.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="src\playlist_window.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="src\skin_window.h"><Filter>Header Files</Filter></ClInclude>
     <ClInclude Include="src\config.h"><Filter>Header Files</Filter></ClInclude>
     <ClInclude Include="src\controls.h"><Filter>Header Files</Filter></ClInclude>
     <ClInclude Include="src\guids.h"><Filter>Header Files</Filter></ClInclude>

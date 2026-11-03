@@ -6,7 +6,12 @@
 #include "skin.h"
 #include "visualizer.h"
 
+#include <memory>
+
 namespace wsz {
+
+class EqWindow;
+class PlaylistWindow;
 
 // The skinned Winamp main window. Owned by the UI module; lives on the main thread.
 class MainWindow {
@@ -18,6 +23,8 @@ public:
 
     MainWindow();
     ~MainWindow();
+    MainWindow(const MainWindow&) = delete;
+    MainWindow& operator=(const MainWindow&) = delete;
 
     HWND create(HookProc hook);
     void destroy();
@@ -29,6 +36,13 @@ public:
     bool load_skin(const char* path, bool interactive);
     void unload_skin();
     void invalidate();
+    void on_eq_changed();
+    void set_status(const char* text);  // slider feedback in the title area; empty/null restores the title
+    void show_context_menu(POINT pt_screen);
+    // Winamp hotkeys, also used by the EQ and playlist windows. Returns true if handled.
+    bool handle_key(WPARAM vk, bool alt = false);
+    void toggle_eq();
+    void toggle_playlist();
 
 private:
     class Callbacks;
@@ -54,7 +68,6 @@ private:
     void update_slider(POINT skin_pt);
     void activate_control(Control id);
     bool on_key(WPARAM vk);
-    void show_context_menu(POINT pt_screen);
     void show_vis_menu(POINT pt_screen);
     void append_vis_items(HMENU menu);
 
@@ -74,7 +87,6 @@ private:
     void set_always_on_top(bool on);
     void apply_geometry();
     void apply_region();
-    void snap_to_work_area(WINDOWPOS* wp) const;
     void save_position();
 
     // skins
@@ -103,6 +115,8 @@ private:
     int m_khz = -1;
 
     Visualizer m_vis;
+    std::unique_ptr<EqWindow> m_eq;
+    std::unique_ptr<PlaylistWindow> m_pl;
     bool m_vis_running = false;
 };
 

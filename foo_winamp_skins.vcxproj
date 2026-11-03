@@ -92,6 +92,11 @@ exit /b 0</Command>
   <ItemGroup>
     <ClInclude Include="src\balance_dsp.h" />
     <ClInclude Include="src\canvas.h" />
+    <ClInclude Include="src\docking.h" />
+    <ClInclude Include="src\eq.h" />
+    <ClInclude Include="src\eq_window.h" />
+    <ClInclude Include="src\playlist_window.h" />
+    <ClInclude Include="src\skin_window.h" />
     <ClInclude Include="src\config.h" />
     <ClInclude Include="src\controls.h" />
     <ClInclude Include="src\guids.h" />
@@ -112,6 +117,11 @@ exit /b 0</Command>
   <ItemGroup>
     <ClCompile Include="src\balance_dsp.cpp" />
     <ClCompile Include="src\canvas.cpp" />
+    <ClCompile Include="src\docking.cpp" />
+    <ClCompile Include="src\eq.cpp" />
+    <ClCompile Include="src\eq_window.cpp" />
+    <ClCompile Include="src\playlist_window.cpp" />
+    <ClCompile Include="src\skin_window.cpp" />
     <ClCompile Include="src\component.cpp" />
     <ClCompile Include="src\config.cpp" />
     <ClCompile Include="src\image.cpp" />

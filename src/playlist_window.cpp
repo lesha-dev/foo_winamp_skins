@@ -1,0 +1,742 @@
+#include "stdafx.h"
+#include "playlist_window.h"
+#include "config.h"
+#include "main_window.h"
+#include "player.h"
+#include "text_font.h"
+
+#include <shellapi.h>
+#include <cmath>
+
+namespace wsz {
+namespace {
+
+using S = layout::Sprite;
+
+// pledit.bmp frame
+constexpr S top_tile        { 127, 21, 25, 20 };
+constexpr S top_left        { 0, 21, 25, 20 };
+constexpr S top_title       { 26, 21, 100, 20 };
+constexpr S top_right       { 153, 21, 25, 20 };
+constexpr S top_tile_sel    { 127, 0, 25, 20 };
+constexpr S top_left_sel    { 0, 0, 25, 20 };
+constexpr S top_title_sel   { 26, 0, 100, 20 };
+constexpr S top_right_sel   { 153, 0, 25, 20 };
+constexpr S left_tile       { 0, 42, 12, 29 };
+constexpr S right_tile      { 31, 42, 20, 29 };
+constexpr S bottom_tile     { 179, 0, 25, 38 };
+constexpr S bottom_left     { 0, 72, 125, 38 };
+constexpr S bottom_right    { 126, 72, 150, 38 };
+constexpr S vis_bg          { 205, 0, 75, 38 };
+constexpr S scroll_handle   { 52, 53, 8, 18 };
+constexpr S scroll_handle_down { 61, 53, 8, 18 };
+constexpr S close_down      { 52, 42, 9, 9 };
+constexpr S collapse_down   { 62, 42, 9, 9 };
+constexpr S expand_down     { 150, 42, 9, 9 };
+// windowshade
+constexpr S shade_left      { 72, 42, 25, 14 };
+constexpr S shade_tile      { 72, 57, 25, 14 };
+constexpr S shade_right     { 99, 57, 50, 14 };
+constexpr S shade_right_sel { 99, 42, 50, 14 };
+
+constexpr int top_h = 20, bottom_h = 38, left_w = 12, right_w = 20, row_h = 13, list_pad = 3;
+
+// Sprite menus: items top to bottom.
+struct MenuItem { S normal, hover; };
+struct MenuDef { int x_from_left; bool from_right; S bar; std::vector<MenuItem> items; };
+const MenuDef& menu_def(int idx) {
+    static const MenuDef defs[] = {
+        { 14, false, { 48, 111, 3, 54 }, { { { 0, 111, 22, 18 }, { 23, 111, 22, 18 } }, { { 0, 130, 22, 18 }, { 23, 130, 22, 18 } }, { { 0, 149, 22, 18 }, { 23, 149, 22, 18 } } } },
+        { 43, false, { 100, 111, 3, 72 }, { { { 54, 168, 22, 18 }, { 77, 168, 22, 18 } }, { { 54, 111, 22, 18 }, { 77, 111, 22, 18 } }, { { 54, 130, 22, 18 }, { 77, 130, 22, 18 } }, { { 54, 149, 22, 18 }, { 77, 149, 22, 18 } } } },
+        { 72, false, { 150, 111, 3, 54 }, { { { 104, 111, 22, 18 }, { 127, 111, 22, 18 } }, { { 104, 130, 22, 18 }, { 127, 130, 22, 18 } }, { { 104, 149, 22, 18 }, { 127, 149, 22, 18 } } } },
+        { 101, false, { 200, 111, 3, 54 }, { { { 154, 111, 22, 18 }, { 177, 111, 22, 18 } }, { { 154, 130, 22, 18 }, { 177, 130, 22, 18 } }, { { 154, 149, 22, 18 }, { 177, 149, 22, 18 } } } },
+        { 44, true, { 250, 111, 3, 54 }, { { { 204, 111, 22, 18 }, { 227, 111, 22, 18 } }, { { 204, 130, 22, 18 }, { 227, 130, 22, 18 } }, { { 204, 149, 22, 18 }, { 227, 149, 22, 18 } } } },
+    };
+    return defs[idx];
+}
+
+pfc::string8 time_str(double seconds, bool hours) {
+    const long s = std::max(0L, static_cast<long>(seconds + 0.5));
+    if (hours && s >= 3600) return pfc::format(s / 3600, ":", pfc::format_int((s / 60) % 60, 2), ":", pfc::format_int(s % 60, 2));
+    return pfc::format(s / 60, ":", pfc::format_int(s % 60, 2));
+}
+
+std::wstring wide(const char* s) { return pfc::stringcvt::string_wide_from_utf8(s).get_ptr(); }
+
+} // namespace
+
+// ---------------------------------------------------------------------------------------------
+
+class PlaylistWindow::Callbacks : public playlist_callback_single_impl_base, public play_callback_impl_base {
+public:
+    explicit Callbacks(PlaylistWindow& w) : playlist_callback_single_impl_base(flag_all), m_w(w) {}
+
+    void on_items_added(t_size, metadb_handle_list_cref, const bit_array&) override { m_w.playlist_changed(); }
+    void on_items_reordered(const t_size*, t_size) override { m_w.playlist_changed(); }
+    void on_items_removed(const bit_array&, t_size, t_size) override { m_w.playlist_changed(); }
+    void on_items_selection_change(const bit_array&, const bit_array&) override { m_w.m_lengths_dirty = true; m_w.invalidate(); }
+    void on_item_focus_change(t_size, t_size to) override {
+        if (to != SIZE_MAX) m_w.ensure_visible(to);
+        m_w.invalidate();
+    }
+    void on_items_modified(const bit_array&) override { m_w.playlist_changed(); }
+    void on_items_replaced(const bit_array&, const pfc::list_base_const_t<playlist_callback::t_on_items_replaced_entry>&) override { m_w.playlist_changed(); }
+    void on_playlist_switch() override { m_w.m_scroll = 0; m_w.m_anchor = SIZE_MAX; m_w.playlist_changed(); }
+    void on_playlist_renamed(const char*, t_size) override {}
+
+    void on_playback_new_track(metadb_handle_ptr) override { m_w.invalidate(); }
+    void on_playback_stop(play_control::t_stop_reason) override { m_w.invalidate(); }
+    void on_playback_pause(bool) override { m_w.invalidate(); }
+    void on_playback_time(double) override { m_w.invalidate(); }
+
+private:
+    PlaylistWindow& m_w;
+};
+
+PlaylistWindow::PlaylistWindow() {
+    m_shade = config::pl_shade.get();
+    m_w_steps = std::clamp(static_cast<int>(config::pl_w.get()), 0, 100);
+    m_h_steps = std::clamp(static_cast<int>(config::pl_h.get()), 0, 100);
+    titleformat_compiler::get()->compile_safe(m_title_script, "[%artist% - ]%title%");
+}
+
+PlaylistWindow::~PlaylistWindow() {
+    m_callbacks.reset();
+    destroy();
+    if (m_font) DeleteObject(m_font);
+}
+
+int PlaylistWindow::width() const { return min_width + m_w_steps * step_w; }
+int PlaylistWindow::height() const { return m_shade ? shade_height : min_height + m_h_steps * step_h; }
+SIZE PlaylistWindow::skin_size() const { return { width(), height() }; }
+
+PlaylistWindow::Rc PlaylistWindow::list_rect() const {
+    return { left_w, top_h + list_pad, width() - left_w - right_w, height() - top_h - bottom_h - 2 * list_pad };
+}
+
+int PlaylistWindow::visible_rows() const { return std::max(1, list_rect().h / row_h); }
+
+int PlaylistWindow::row_at(POINT p) const {
+    const Rc r = list_rect();
+    if (p.y < r.y) return -1;
+    const size_t row = m_scroll + static_cast<size_t>((p.y - r.y) / row_h);
+    const size_t count = playlist_manager::get()->activeplaylist_get_item_count();
+    return row < count ? static_cast<int>(row) : -1;
+}
+
+void PlaylistWindow::set_shade(bool on) {
+    m_shade = on;
+    config::pl_shade = on;
+    m_pressed = Part::none;
+    apply_geometry();
+}
+
+void PlaylistWindow::save_position() {
+    RECT rc;
+    if (m_wnd && GetWindowRect(m_wnd, &rc)) on_position_saved(rc.left, rc.top);
+}
+
+void PlaylistWindow::on_position_saved(int x, int y) {
+    config::pl_x = x;
+    config::pl_y = y;
+}
+
+void PlaylistWindow::on_visibility_changed(bool visible) {
+    config::pl_visible = visible;
+    if (visible && !m_callbacks) m_callbacks = std::make_unique<Callbacks>(*this);
+    if (!visible) m_callbacks.reset();
+    m_lengths_dirty = true;
+    if (MainWindow* w = MainWindow::instance()) w->invalidate();
+}
+
+void PlaylistWindow::on_skin_changed() {
+    update_font();
+    invalidate();
+}
+
+void PlaylistWindow::update_font() {
+    if (m_font) DeleteObject(m_font);
+    m_font = nullptr;
+    const std::wstring face = wide(m_skin ? m_skin->playlist_colors().font.c_str() : "Arial");
+    LOGFONTW lf = {};
+    lf.lfHeight = -10;
+    lf.lfWeight = FW_NORMAL;
+    lf.lfCharSet = DEFAULT_CHARSET;
+    lf.lfQuality = NONANTIALIASED_QUALITY;
+    wcsncpy_s(lf.lfFaceName, face.c_str(), _TRUNCATE);
+    m_font = CreateFontIndirectW(&lf);
+}
+
+void PlaylistWindow::apply_size(int w_steps, int h_steps) {
+    w_steps = std::clamp(w_steps, 0, 100);
+    h_steps = std::clamp(h_steps, 0, 100);
+    if (w_steps == m_w_steps && h_steps == m_h_steps) return;
+    m_w_steps = w_steps;
+    m_h_steps = h_steps;
+    config::pl_w = w_steps;
+    config::pl_h = h_steps;
+    clamp_scroll();
+    apply_geometry();
+}
+
+void PlaylistWindow::playlist_changed() {
+    m_lengths_dirty = true;
+    clamp_scroll();
+    invalidate();
+}
+
+void PlaylistWindow::clamp_scroll() {
+    const size_t count = playlist_manager::get()->activeplaylist_get_item_count();
+    const size_t rows = static_cast<size_t>(visible_rows());
+    const size_t max = count > rows ? count - rows : 0;
+    m_scroll = std::min(m_scroll, max);
+}
+
+void PlaylistWindow::ensure_visible(size_t item) {
+    const size_t rows = static_cast<size_t>(visible_rows());
+    if (item < m_scroll) m_scroll = item;
+    else if (item >= m_scroll + rows) m_scroll = item - rows + 1;
+    clamp_scroll();
+}
+
+void PlaylistWindow::recompute_lengths() {
+    m_lengths_dirty = false;
+    m_total_len = m_sel_len = 0;
+    auto pm = playlist_manager::get();
+    const size_t n = pm->activeplaylist_get_item_count();
+    pfc::bit_array_bittable sel(n);
+    pm->activeplaylist_get_selection_mask(sel);
+    for (size_t i = 0; i < n; ++i) {
+        const double len = std::max(0.0, pm->activeplaylist_get_item_handle(i)->get_length());
+        m_total_len += len;
+        if (sel.get(i)) m_sel_len += len;
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// hit testing
+
+PlaylistWindow::Part PlaylistWindow::hit(POINT p) const {
+    const int w = width(), h = height();
+    if (Rc{ w - 11, 3, 9, 9 }.in(p)) return Part::close;
+    if (Rc{ w - 21, 3, 9, 9 }.in(p)) return Part::shade;
+    if (m_shade) {
+        if (Rc{ w - 29, 3, 9, 9 }.in(p)) return Part::resize;
+        return Part::none;
+    }
+    if (list_rect().in(p)) return Part::list;
+    if (Rc{ w - 15, top_h, 8, h - top_h - bottom_h }.in(p)) return Part::scrollbar;
+    if (Rc{ w - 20, h - 20, 20, 20 }.in(p)) return Part::resize;
+    const int by = h - bottom_h, bx = w - 150;
+    for (int i = 0; i < 5; ++i) {
+        const MenuDef& d = menu_def(i);
+        const int x = d.from_right ? w - d.x_from_left : d.x_from_left;
+        if (Rc{ x, h - 30, 22, 18 }.in(p)) return static_cast<Part>(static_cast<int>(Part::menu_add) + i);
+    }
+    static constexpr Part buttons[] = { Part::prev, Part::play, Part::pause, Part::stop, Part::next, Part::eject };
+    for (int i = 0; i < 6; ++i)
+        if (Rc{ bx + 3 + i * 10, by + 22, 10, 10 }.in(p)) return buttons[i];
+    if (Rc{ w - 15, by + 2, 8, 5 }.in(p)) return Part::scroll_up;
+    if (Rc{ w - 15, by + 8, 8, 5 }.in(p)) return Part::scroll_down;
+    if (Rc{ bx + 66, by + 23, 25, 6 }.in(p)) return Part::mini_time;
+    return Part::none;
+}
+
+bool PlaylistWindow::is_control(POINT p) const {
+    return m_pressed != Part::none || hit(p) != Part::none;
+}
+
+// ---------------------------------------------------------------------------------------------
+// mouse
+
+static int menu_index(int part, int first) { return part - first; }
+
+void PlaylistWindow::on_mouse_down(POINT p, bool dbl) {
+    m_pressed = hit(p);
+    m_inside = true;
+    m_menu_hover = -1;
+    m_drag_reorder = false;
+    auto pm = playlist_manager::get();
+    switch (m_pressed) {
+    case Part::list: {
+        const int row = row_at(p);
+        if (row < 0) {
+            pm->activeplaylist_clear_selection();
+            m_pressed = Part::none;
+            break;
+        }
+        const size_t item = static_cast<size_t>(row);
+        if (dbl) {
+            pm->activeplaylist_execute_default_action(item);
+            m_pressed = Part::none;
+            break;
+        }
+        const bool ctrl = GetKeyState(VK_CONTROL) < 0, shift = GetKeyState(VK_SHIFT) < 0;
+        const size_t count = pm->activeplaylist_get_item_count();
+        if (shift && m_anchor < count) {
+            const size_t a = std::min(m_anchor, item), b = std::max(m_anchor, item);
+            pm->activeplaylist_set_selection(pfc::bit_array_true(), pfc::bit_array_range(a, b - a + 1));
+        } else if (ctrl) {
+            pm->activeplaylist_set_selection_single(item, !pm->activeplaylist_is_item_selected(item));
+            m_anchor = item;
+        } else {
+            if (!pm->activeplaylist_is_item_selected(item))
+                pm->activeplaylist_set_selection(pfc::bit_array_true(), pfc::bit_array_one(item));
+            m_anchor = item;
+            m_drag_row = row;
+            m_drag_reorder = true;
+        }
+        pm->activeplaylist_set_focus_item(item);
+        break;
+    }
+    case Part::scrollbar: {
+        const int track_h = height() - top_h - bottom_h - scroll_handle.h;
+        const size_t count = pm->activeplaylist_get_item_count();
+        const size_t rows = static_cast<size_t>(visible_rows());
+        const int thumb_y = top_h + (count > rows ? static_cast<int>(track_h * double(m_scroll) / double(count - rows)) : 0);
+        m_thumb_grab = (p.y >= thumb_y && p.y < thumb_y + scroll_handle.h) ? p.y - thumb_y : scroll_handle.h / 2;
+        scroll_to_thumb(p.y);
+        break;
+    }
+    case Part::resize:
+        GetCursorPos(&m_drag_origin);
+        m_drag_steps = { m_w_steps, m_h_steps };
+        break;
+    default:
+        break;
+    }
+    invalidate();
+}
+
+void PlaylistWindow::scroll_to_thumb(int y) {
+    const int track_h = height() - top_h - bottom_h - scroll_handle.h;
+    const size_t count = playlist_manager::get()->activeplaylist_get_item_count();
+    const size_t rows = static_cast<size_t>(visible_rows());
+    if (count <= rows || track_h <= 0) { m_scroll = 0; return; }
+    const double t = std::clamp((y - m_thumb_grab - top_h) / double(track_h), 0.0, 1.0);
+    m_scroll = static_cast<size_t>(std::lround(t * double(count - rows)));
+}
+
+void PlaylistWindow::on_mouse_move(POINT p) {
+    switch (m_pressed) {
+    case Part::none:
+        return;
+    case Part::list: {
+        if (!m_drag_reorder) return;
+        const Rc r = list_rect();
+        const int count = static_cast<int>(playlist_manager::get()->activeplaylist_get_item_count());
+        const int row = std::clamp(static_cast<int>(m_scroll) + static_cast<int>((p.y - r.y) / row_h) - (p.y < r.y ? 1 : 0), 0, std::max(0, count - 1));
+        if (row != m_drag_row) {
+            playlist_manager::get()->activeplaylist_move_selection(row - m_drag_row);
+            m_drag_row = row;
+            ensure_visible(static_cast<size_t>(row));
+        }
+        break;
+    }
+    case Part::scrollbar:
+        scroll_to_thumb(p.y);
+        break;
+    case Part::resize: {
+        POINT now;
+        GetCursorPos(&now);
+        const int dx = now.x - m_drag_origin.x, dy = now.y - m_drag_origin.y;
+        const int ws = m_drag_steps.cx + static_cast<int>(std::floor(dx / double(step_w) + 0.5));
+        const int hs = m_shade ? m_h_steps : m_drag_steps.cy + static_cast<int>(std::floor(dy / double(step_h) + 0.5));
+        apply_size(ws, hs);
+        break;
+    }
+    case Part::menu_add: case Part::menu_rem: case Part::menu_sel: case Part::menu_misc: case Part::menu_list: {
+        const MenuDef& d = menu_def(menu_index(static_cast<int>(m_pressed), static_cast<int>(Part::menu_add)));
+        const int x = d.from_right ? width() - d.x_from_left : d.x_from_left;
+        const int n = static_cast<int>(d.items.size());
+        const int top = height() - 12 - 18 * n;
+        m_menu_hover = (p.x >= x && p.x < x + 22 && p.y >= top && p.y < top + 18 * n) ? (p.y - top) / 18 : -1;
+        break;
+    }
+    default:
+        m_inside = hit(p) == m_pressed;
+        break;
+    }
+    invalidate();
+}
+
+void PlaylistWindow::on_mouse_up(POINT p) {
+    const Part part = m_pressed;
+    m_pressed = Part::none;
+    const bool inside = hit(p) == part;
+    const int hover = m_menu_hover;
+    m_menu_hover = -1;
+    invalidate();
+    switch (part) {
+    case Part::close: if (inside) show(false); break;
+    case Part::shade: if (inside) set_shade(!m_shade); break;
+    case Part::prev: if (inside) player::previous(); break;
+    case Part::play: if (inside) player::play(); break;
+    case Part::pause: if (inside) player::pause(); break;
+    case Part::stop: if (inside) player::stop(); break;
+    case Part::next: if (inside) player::next(); break;
+    case Part::eject: if (inside) player::open_files(); break;
+    case Part::mini_time: if (inside) config::time_remaining = !config::time_remaining.get(); break;
+    case Part::scroll_up: if (inside) { m_scroll = m_scroll > 0 ? m_scroll - 1 : 0; } break;
+    case Part::scroll_down: if (inside) { ++m_scroll; clamp_scroll(); } break;
+    case Part::resize: save_position(); break;
+    case Part::menu_add: case Part::menu_rem: case Part::menu_sel: case Part::menu_misc: case Part::menu_list:
+        if (hover >= 0) run_menu_action(part, hover);
+        break;
+    default: break;
+    }
+    if (MainWindow* w = MainWindow::instance()) w->invalidate();
+}
+
+void PlaylistWindow::on_mouse_leave_capture() {
+    m_pressed = Part::none;
+    m_menu_hover = -1;
+    invalidate();
+}
+
+void PlaylistWindow::on_wheel(int delta) {
+    const int lines = delta > 0 ? -3 : 3;
+    if (lines < 0) m_scroll = m_scroll > size_t(-lines) ? m_scroll + lines : 0;
+    else m_scroll += size_t(lines);
+    clamp_scroll();
+    invalidate();
+}
+
+void PlaylistWindow::on_right_click(POINT screen_pt) {
+    POINT client = screen_pt;
+    ScreenToClient(m_wnd, &client);
+    const POINT p = to_skin(client);
+    if (!m_shade && list_rect().in(p)) {
+        const int row = row_at(p);
+        auto pm = playlist_manager::get();
+        if (row >= 0 && !pm->activeplaylist_is_item_selected(static_cast<size_t>(row))) {
+            pm->activeplaylist_set_selection(pfc::bit_array_true(), pfc::bit_array_one(static_cast<size_t>(row)));
+            pm->activeplaylist_set_focus_item(static_cast<size_t>(row));
+        }
+        metadb_handle_list items;
+        pm->activeplaylist_get_selected_items(items);
+        if (items.get_count()) contextmenu_manager::win32_run_menu_context(m_wnd, items, &screen_pt);
+        return;
+    }
+    SkinWindow::on_right_click(screen_pt);
+}
+
+void PlaylistWindow::run_menu_action(Part menu, int item) {
+    auto pm = playlist_manager::get();
+    const size_t n = pm->activeplaylist_get_item_count();
+    switch (menu) {
+    case Part::menu_add:
+        if (item == 0) standard_commands::main_add_location();
+        else if (item == 1) standard_commands::main_add_directory();
+        else standard_commands::main_add_files();
+        break;
+    case Part::menu_rem:
+        if (item == 0) {
+            enum : UINT { id_dead = 1, id_dupes };
+            HMENU m = CreatePopupMenu();
+            AppendMenuW(m, MF_STRING, id_dead, L"Remove &dead items");
+            AppendMenuW(m, MF_STRING, id_dupes, L"Remove d&uplicates");
+            POINT pt; GetCursorPos(&pt);
+            const UINT cmd = TrackPopupMenu(m, TPM_RETURNCMD | TPM_RIGHTBUTTON | TPM_NONOTIFY, pt.x, pt.y, 0, m_wnd, nullptr);
+            DestroyMenu(m);
+            if (cmd == id_dead) standard_commands::main_remove_dead_entries();
+            else if (cmd == id_dupes) standard_commands::main_remove_duplicates();
+        } else if (item == 1) pm->activeplaylist_clear();
+        else if (item == 2) pm->activeplaylist_remove_selection(true);
+        else pm->activeplaylist_remove_selection(false);
+        break;
+    case Part::menu_sel:
+        if (item == 0) {
+            pfc::bit_array_bittable sel(n);
+            pm->activeplaylist_get_selection_mask(sel);
+            pm->activeplaylist_set_selection(pfc::bit_array_true(), pfc::bit_array_not(sel));
+        } else if (item == 1) pm->activeplaylist_clear_selection();
+        else pm->activeplaylist_set_selection(pfc::bit_array_true(), pfc::bit_array_true());
+        break;
+    case Part::menu_misc:
+        if (item == 0) {
+            enum : UINT { id_title = 1, id_file, id_path, id_reverse, id_random };
+            HMENU m = CreatePopupMenu();
+            AppendMenuW(m, MF_STRING, id_title, L"Sort list by &title");
+            AppendMenuW(m, MF_STRING, id_file, L"Sort list by &filename");
+            AppendMenuW(m, MF_STRING, id_path, L"Sort list by &path and filename");
+            AppendMenuW(m, MF_SEPARATOR, 0, nullptr);
+            AppendMenuW(m, MF_STRING, id_reverse, L"&Reverse list");
+            AppendMenuW(m, MF_STRING, id_random, L"R&andomize list");
+            POINT pt; GetCursorPos(&pt);
+            const UINT cmd = TrackPopupMenu(m, TPM_RETURNCMD | TPM_RIGHTBUTTON | TPM_NONOTIFY, pt.x, pt.y, 0, m_wnd, nullptr);
+            DestroyMenu(m);
+            if (cmd == id_title) pm->activeplaylist_sort_by_format("%title%", false);
+            else if (cmd == id_file) pm->activeplaylist_sort_by_format("%filename_ext%", false);
+            else if (cmd == id_path) pm->activeplaylist_sort_by_format("%path%", false);
+            else if (cmd == id_random) pm->activeplaylist_sort_by_format(nullptr, false);
+            else if (cmd == id_reverse && n > 1) {
+                std::vector<size_t> order(n);
+                for (size_t i = 0; i < n; ++i) order[i] = n - 1 - i;
+                pm->activeplaylist_reorder_items(order.data(), n);
+            }
+        } else if (item == 1) {
+            metadb_handle_list items;
+            pm->activeplaylist_get_selected_items(items);
+            if (items.get_count()) standard_commands::context_file_properties(items);
+        } else {
+            POINT pt; GetCursorPos(&pt);
+            contextmenu_manager::win32_run_menu_context_playlist(m_wnd, &pt);
+        }
+        break;
+    case Part::menu_list:
+        if (item == 0) standard_commands::main_create_playlist();
+        else if (item == 1) standard_commands::main_save_playlist();
+        else standard_commands::main_load_playlist();
+        break;
+    default:
+        break;
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// keyboard / messages
+
+void PlaylistWindow::move_focus(int delta, bool extend) {
+    auto pm = playlist_manager::get();
+    const size_t n = pm->activeplaylist_get_item_count();
+    if (!n) return;
+    size_t focus = pm->activeplaylist_get_focus_item();
+    if (focus >= n) focus = 0;
+    const long long target = std::clamp<long long>(static_cast<long long>(focus) + delta, 0, static_cast<long long>(n) - 1);
+    const size_t item = static_cast<size_t>(target);
+    if (extend) {
+        if (m_anchor >= n) m_anchor = focus;
+        const size_t a = std::min(m_anchor, item), b = std::max(m_anchor, item);
+        pm->activeplaylist_set_selection(pfc::bit_array_true(), pfc::bit_array_range(a, b - a + 1));
+    } else {
+        pm->activeplaylist_set_selection(pfc::bit_array_true(), pfc::bit_array_one(item));
+        m_anchor = item;
+    }
+    pm->activeplaylist_set_focus_item(item);
+    ensure_visible(item);
+    invalidate();
+}
+
+bool PlaylistWindow::on_key(WPARAM vk) {
+    const bool shift = GetKeyState(VK_SHIFT) < 0, ctrl = GetKeyState(VK_CONTROL) < 0;
+    auto pm = playlist_manager::get();
+    const int page = std::max(1, visible_rows() - 1);
+    switch (vk) {
+    case VK_UP: move_focus(-1, shift); return true;
+    case VK_DOWN: move_focus(1, shift); return true;
+    case VK_PRIOR: move_focus(-page, shift); return true;
+    case VK_NEXT: move_focus(page, shift); return true;
+    case VK_HOME: move_focus(-0x3fffffff, shift); return true;
+    case VK_END: move_focus(0x3fffffff, shift); return true;
+    case VK_RETURN: {
+        const size_t focus = pm->activeplaylist_get_focus_item();
+        if (focus < pm->activeplaylist_get_item_count()) pm->activeplaylist_execute_default_action(focus);
+        return true;
+    }
+    case VK_DELETE: pm->activeplaylist_remove_selection(false); return true;
+    case 'A':
+        if (!ctrl) return false;
+        pm->activeplaylist_set_selection(pfc::bit_array_true(), pfc::bit_array_true());
+        return true;
+    }
+    return false;
+}
+
+bool PlaylistWindow::on_message(UINT msg, WPARAM wp, LPARAM, LRESULT& ret) {
+    if (msg == WM_CREATE) {
+        DragAcceptFiles(m_wnd, TRUE);
+        return false;
+    }
+    if (msg == WM_DROPFILES) {
+        HDROP drop = reinterpret_cast<HDROP>(wp);
+        const UINT count = DragQueryFileW(drop, 0xFFFFFFFF, nullptr, 0);
+        pfc::list_t<pfc::string8> paths;
+        for (UINT i = 0; i < count; ++i) {
+            const UINT len = DragQueryFileW(drop, i, nullptr, 0);
+            std::wstring buf(len + 1, L'\0');
+            DragQueryFileW(drop, i, buf.data(), len + 1);
+            buf.resize(len);
+            paths.add_item(pfc::stringcvt::string_utf8_from_wide(buf.c_str()).get_ptr());
+        }
+        DragFinish(drop);
+        pfc::list_t<const char*> ptrs;
+        for (size_t i = 0; i < paths.get_count(); ++i) ptrs.add_item(paths[i].get_ptr());
+        if (ptrs.get_count()) playlist_manager::get()->activeplaylist_add_locations(ptrs, true, m_wnd);
+        ret = 0;
+        return true;
+    }
+    return false;
+}
+
+// ---------------------------------------------------------------------------------------------
+// rendering
+
+void PlaylistWindow::render(Canvas& c) {
+    if (!m_font) update_font();
+    if (m_shade) render_shade(c);
+    else render_normal(c);
+}
+
+void PlaylistWindow::render_normal(Canvas& c) {
+    const Image& img = m_skin->bitmap(SkinBitmap::pledit);
+    const int w = width(), h = height();
+    const bool a = m_active;
+    c.clear(0);
+
+    // Top: corners, title centred, tiles between.
+    c.tile(img, a ? top_tile_sel : top_tile, 25, 0, w - 50, top_h);
+    c.blit(img, a ? top_left_sel : top_left, { 0, 0 });
+    c.blit(img, a ? top_title_sel : top_title, { (w - 100) / 2, 0 });
+    c.blit(img, a ? top_right_sel : top_right, { w - 25, 0 });
+    if (m_pressed == Part::close && m_inside) c.blit(img, close_down, { w - 11, 3 });
+    if (m_pressed == Part::shade && m_inside) c.blit(img, collapse_down, { w - 21, 3 });
+
+    // Sides.
+    c.tile(img, left_tile, 0, top_h, left_w, h - top_h - bottom_h);
+    c.tile(img, right_tile, w - right_w, top_h, right_w, h - top_h - bottom_h);
+
+    // Bottom.
+    c.tile(img, bottom_tile, 125, h - bottom_h, w - 275, bottom_h);
+    if (w >= 350) c.blit(img, vis_bg, { w - 150 - 75, h - bottom_h });
+    c.blit(img, bottom_left, { 0, h - bottom_h });
+    c.blit(img, bottom_right, { w - 150, h - bottom_h });
+
+    render_list(c);
+
+    // Scrollbar thumb.
+    auto pm = playlist_manager::get();
+    const size_t count = pm->activeplaylist_get_item_count();
+    const size_t rows = static_cast<size_t>(visible_rows());
+    const int track_h = h - top_h - bottom_h - scroll_handle.h;
+    const int thumb_y = top_h + (count > rows ? static_cast<int>(track_h * double(m_scroll) / double(count - rows)) : 0);
+    c.blit(img, m_pressed == Part::scrollbar ? scroll_handle_down : scroll_handle, { w - 15, thumb_y });
+
+    // Running time (selected/total) and mini time, in the skin's text font.
+    const Image& font = m_skin->bitmap(SkinBitmap::text);
+    if (m_lengths_dirty) recompute_lengths();
+    const int bx = w - 150, by = h - bottom_h;
+    const pfc::string8 running = pfc::format(time_str(m_sel_len, true), "/", time_str(m_total_len, true));
+    c.set_clip(bx + 7, by + 10, 60, font_char_h);
+    draw_text(c, font, bx + 7, by + 10, running);
+    c.reset_clip();
+
+    auto pc = playback_control::get();
+    if (pc->is_playing()) {
+        const double pos = pc->playback_get_position();
+        metadb_handle_ptr track;
+        const double len = pc->get_now_playing(track) ? track->get_length() : 0;
+        const bool remaining = config::time_remaining.get() && len > 0;
+        const bool blink_off = pc->is_paused() && (GetTickCount64() / 1000) % 2 == 1;
+        if (!blink_off) {
+            const pfc::string8 t = time_str(remaining ? std::max(0.0, len - pos) : pos, false);
+            char buf[16];
+            snprintf(buf, sizeof(buf), "%c%5s", remaining ? '-' : ' ', t.c_str());
+            draw_text(c, font, bx + 66 - font_char_w, by + 23, buf + (strlen(buf) > 6 ? strlen(buf) - 6 : 0));
+        }
+    }
+
+    render_menu(c);
+}
+
+void PlaylistWindow::render_list(Canvas& c) {
+    const PlaylistColors& col = m_skin->playlist_colors();
+    const Rc r = list_rect();
+    c.fill_rect(r.x, r.y - list_pad, r.w, r.h + 2 * list_pad, to_bgrx(col.normal_bg));
+
+    auto pm = playlist_manager::get();
+    const size_t count = pm->activeplaylist_get_item_count();
+    size_t playing_pl = SIZE_MAX, playing_idx = SIZE_MAX;
+    pm->get_playing_item_location(&playing_pl, &playing_idx);
+    const bool playing_here = playing_pl == pm->get_active_playlist();
+    const size_t focus = pm->activeplaylist_get_focus_item();
+    const size_t rows = static_cast<size_t>(visible_rows());
+
+    HDC dc = c.dc();
+    c.set_clip(r.x, r.y, r.w, rows * row_h);
+    HGDIOBJ old_font = SelectObject(dc, m_font);
+    SetBkMode(dc, TRANSPARENT);
+    const bool has_focus = GetFocus() == m_wnd;
+    for (size_t i = 0; i < rows && m_scroll + i < count; ++i) {
+        const size_t item = m_scroll + i;
+        const int y = r.y + static_cast<int>(i) * row_h;
+        const bool selected = pm->activeplaylist_is_item_selected(item);
+        if (selected) {
+            GdiFlush();
+            c.fill_rect(r.x, y, r.w, row_h, to_bgrx(col.selected_bg));
+        }
+        pfc::string8 title;
+        pm->activeplaylist_item_format_title(item, nullptr, title, m_title_script, nullptr, playback_control::display_level_titles);
+        const double len = pm->activeplaylist_get_item_handle(item)->get_length();
+        const std::wstring left = wide(pfc::format(item + 1, ". ", title));
+        const std::wstring right = len > 0 ? wide(time_str(len, true)) : std::wstring();
+
+        SetTextColor(dc, playing_here && item == playing_idx ? col.current : col.normal);
+        RECT tr = { r.x + 1, y, r.x + r.w - 3, y + row_h };
+        SIZE rs = {};
+        if (!right.empty()) {
+            GetTextExtentPoint32W(dc, right.c_str(), static_cast<int>(right.size()), &rs);
+            DrawTextW(dc, right.c_str(), static_cast<int>(right.size()), &tr, DT_RIGHT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
+        }
+        RECT lr = { tr.left, y, tr.right - (rs.cx ? rs.cx + 4 : 0), y + row_h };
+        DrawTextW(dc, left.c_str(), static_cast<int>(left.size()), &lr, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
+        if (item == focus && has_focus) {
+            RECT fr = { r.x, y, r.x + r.w, y + row_h };
+            SetTextColor(dc, col.normal);
+            DrawFocusRect(dc, &fr);
+        }
+    }
+    SelectObject(dc, old_font);
+    GdiFlush();
+    c.reset_clip();
+}
+
+void PlaylistWindow::render_menu(Canvas& c) {
+    if (m_pressed < Part::menu_add || m_pressed > Part::menu_list) return;
+    const Image& img = m_skin->bitmap(SkinBitmap::pledit);
+    const MenuDef& d = menu_def(menu_index(static_cast<int>(m_pressed), static_cast<int>(Part::menu_add)));
+    const int x = d.from_right ? width() - d.x_from_left : d.x_from_left;
+    const int n = static_cast<int>(d.items.size());
+    const int top = height() - 12 - 18 * n;
+    c.blit(img, d.bar, { x - 3, top });
+    for (int i = 0; i < n; ++i) c.blit(img, i == m_menu_hover ? d.items[i].hover : d.items[i].normal, { x, top + 18 * i });
+}
+
+void PlaylistWindow::render_shade(Canvas& c) {
+    const Image& img = m_skin->bitmap(SkinBitmap::pledit);
+    const Image& font = m_skin->bitmap(SkinBitmap::text);
+    const int w = width();
+    c.clear(0);
+    c.tile(img, shade_tile, 25, 0, w - 75, shade_height);
+    c.blit(img, shade_left, { 0, 0 });
+    c.blit(img, m_active ? shade_right_sel : shade_right, { w - 50, 0 });
+    if (m_pressed == Part::close && m_inside) c.blit(img, close_down, { w - 11, 3 });
+    if (m_pressed == Part::shade && m_inside) c.blit(img, expand_down, { w - 21, 3 });
+
+    // Current (or focused) track and its time.
+    auto pc = playback_control::get();
+    auto pm = playlist_manager::get();
+    pfc::string8 title;
+    double len = 0;
+    metadb_handle_ptr track;
+    if (pc->get_now_playing(track)) {
+        pc->playback_format_title(nullptr, title, m_title_script, nullptr, playback_control::display_level_titles);
+        len = track->get_length();
+    } else {
+        const size_t focus = pm->activeplaylist_get_focus_item();
+        if (focus < pm->activeplaylist_get_item_count()) {
+            pm->activeplaylist_item_format_title(focus, nullptr, title, m_title_script, nullptr, playback_control::display_level_none);
+            len = pm->activeplaylist_get_item_handle(focus)->get_length();
+        }
+    }
+    const int time_x = w - 30 - 5 * font_char_w;
+    c.set_clip(5, 4, time_x - 8, font_char_h);
+    draw_text(c, font, 5, 4, title);
+    c.reset_clip();
+    if (len > 0) {
+        const pfc::string8 t = time_str(len, false);
+        draw_text(c, font, time_x + static_cast<int>(5 - std::min<size_t>(5, t.length())) * font_char_w, 4, t);
+    }
+}
+
+} // namespace wsz

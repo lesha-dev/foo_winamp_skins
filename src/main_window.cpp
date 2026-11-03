@@ -2,6 +2,10 @@
 #include "main_window.h"
 #include "balance_dsp.h"
 #include "config.h"
+#include "docking.h"
+#include "eq.h"
+#include "eq_window.h"
+#include "playlist_window.h"
 #include "player.h"
 #include "skins_folder.h"
 #include "version.h"
@@ -14,7 +18,6 @@ namespace {
 
 constexpr wchar_t window_class[] = L"foo_winamp_skins_main";
 constexpr int titlebar_height = 14;
-constexpr int snap_distance = 10;
 constexpr UINT_PTR marquee_timer_id = 1;
 constexpr UINT marquee_interval_ms = 220;
 constexpr UINT_PTR vis_timer_id = 2;
@@ -32,7 +35,7 @@ const MenuRoot menu_roots[] = {
 };
 constexpr UINT menu_id_stride = 0x1000;
 enum : UINT { id_load_skin = 1, id_unload_skin, id_always_on_top, id_double_size, id_shade, id_vis_spectrum, id_vis_osc, id_vis_off,
-    id_open_skins_folder,
+    id_open_skins_folder, id_toggle_eq, id_toggle_pl,
     id_skin_first = 0x100, id_skin_last = 0xFFF }; // must stay below menu_id_stride
 
 std::wstring menu_label(const std::wstring& s) {
@@ -135,6 +138,26 @@ HWND MainWindow::create(HookProc hook) {
     apply_geometry();
 
     if (balance::get() != 0) balance::ensure_dsp();
+    eq::sync();
+    docking::add(m_wnd);
+
+    // Equalizer and playlist: default below the main window, stacked.
+    RECT mrc{};
+    GetWindowRect(m_wnd, &mrc);
+    m_eq = std::make_unique<EqWindow>();
+    m_eq->set_double_size(m_scale == 2);
+    if (config::eq_shade.get()) m_eq->set_shade(true);
+    m_eq->create(m_wnd, L"Winamp Equalizer", static_cast<int>(config::eq_x.get()), static_cast<int>(config::eq_y.get()));
+    m_eq->set_skin(m_skin.get());
+    m_pl = std::make_unique<PlaylistWindow>();
+    int px = static_cast<int>(config::pl_x.get()), py = static_cast<int>(config::pl_y.get());
+    if (px == CW_USEDEFAULT) { px = mrc.left; py = mrc.bottom + EqWindow::height * m_scale; }
+    m_pl->create(m_wnd, L"Winamp Playlist Editor", px, py);
+    m_pl->set_skin(m_skin.get());
+    m_pl->on_skin_changed();
+    if (config::eq_visible.get()) m_eq->show(true);
+    if (config::pl_visible.get()) m_pl->show(true);
+
     m_callbacks = std::make_unique<Callbacks>(*this);
     on_track_changed();
     SetTimer(m_wnd, marquee_timer_id, marquee_interval_ms, nullptr);
@@ -144,9 +167,13 @@ HWND MainWindow::create(HookProc hook) {
 
 void MainWindow::destroy() {
     if (!m_wnd) return;
-    s_instance = nullptr;
     m_callbacks.reset();
     save_position();
+    // Keep the visibility flags: hiding during teardown would clear them.
+    if (m_eq) { m_eq->save_position(); m_eq->destroy(); m_eq.reset(); }
+    if (m_pl) { m_pl->save_position(); m_pl->destroy(); m_pl.reset(); }
+    s_instance = nullptr;
+    docking::remove(m_wnd);
     HWND wnd = m_wnd;
     KillTimer(wnd, marquee_timer_id);
     KillTimer(wnd, vis_timer_id);
@@ -205,8 +232,10 @@ LRESULT MainWindow::wndproc(UINT msg, WPARAM wp, LPARAM lp) {
         return 0;
     case WM_KEYDOWN:
         if (on_key(wp)) return 0;
-        [[fallthrough]];
+        if (keyboard_shortcut_manager::get()->on_keydown_auto(wp)) return 0;
+        break;
     case WM_SYSKEYDOWN:
+        if (handle_key(wp, true)) return 0;
         if (keyboard_shortcut_manager::get()->on_keydown_auto(wp)) return 0;
         break;
     case WM_NCRBUTTONUP:
@@ -223,6 +252,7 @@ LRESULT MainWindow::wndproc(UINT msg, WPARAM wp, LPARAM lp) {
         if (wp == marquee_timer_id && m_skin) {
             ++m_marquee_step;
             invalidate();
+            if (m_pl && m_pl->visible() && playback_control::get()->is_paused()) m_pl->invalidate();
         } else if (wp == vis_timer_id) {
             on_vis_timer();
         }
@@ -235,10 +265,19 @@ LRESULT MainWindow::wndproc(UINT msg, WPARAM wp, LPARAM lp) {
         invalidate();
         break;
     case WM_WINDOWPOSCHANGING:
-        snap_to_work_area(reinterpret_cast<WINDOWPOS*>(lp));
+        docking::snap(m_wnd, reinterpret_cast<WINDOWPOS*>(lp));
+        break;
+    case WM_ENTERSIZEMOVE:
+        docking::begin_group_move(m_wnd);
+        return 0;
+    case WM_MOVE:
+        docking::group_moved(m_wnd);
         break;
     case WM_EXITSIZEMOVE:
+        docking::end_group_move();
         save_position();
+        if (m_eq) m_eq->save_position();
+        if (m_pl) m_pl->save_position();
         return 0;
     case WM_CLOSE:
         // Core runs the shutdown sequence, which calls user_interface::shutdown() -> destroy().
@@ -253,6 +292,36 @@ LRESULT MainWindow::wndproc(UINT msg, WPARAM wp, LPARAM lp) {
 
 void MainWindow::invalidate() {
     if (m_wnd) InvalidateRect(m_wnd, nullptr, FALSE);
+    if (m_eq && m_eq->visible() && m_eq->shade()) m_eq->invalidate(); // shows volume/balance
+}
+
+void MainWindow::set_status(const char* text) {
+    m_status = text ? text : "";
+    invalidate();
+}
+
+void MainWindow::on_eq_changed() {
+    if (m_eq) m_eq->invalidate();
+}
+
+void MainWindow::toggle_eq() {
+    if (m_eq) m_eq->show(!m_eq->visible());
+    invalidate();
+}
+
+void MainWindow::toggle_playlist() {
+    if (m_pl) m_pl->show(!m_pl->visible());
+    invalidate();
+}
+
+bool MainWindow::handle_key(WPARAM vk, bool alt) {
+    if (alt) {
+        if (!config::winamp_hotkeys.get()) return false;
+        if (vk == 'G') { toggle_eq(); return true; }
+        if (vk == 'E') { toggle_playlist(); return true; }
+        return false;
+    }
+    return on_key(vk);
 }
 
 void MainWindow::on_paint() {
@@ -325,6 +394,8 @@ MainState MainWindow::build_state() {
     const auto order = player::order_state();
     st.shuffle = order.shuffle;
     st.repeat = order.repeat;
+    st.eq_on = m_eq && m_eq->visible();
+    st.pl_on = m_pl && m_pl->visible();
 
     // Time: hidden while stopped; blinks while paused.
     const bool blink_off = st.play == PlayState::paused && (GetTickCount64() / 1000) % 2 == 1;
@@ -481,8 +552,8 @@ void MainWindow::activate_control(Control id) {
     case Control::eject: player::open_files(); break;
     case Control::shuffle: player::toggle_shuffle(); break;
     case Control::repeat: player::toggle_repeat(); break;
-    case Control::eq: break; // equalizer window: not in v1
-    case Control::pl: break; // playlist window: not in v1
+    case Control::eq: toggle_eq(); break;
+    case Control::pl: toggle_playlist(); break;
     case Control::time: config::time_remaining = !config::time_remaining.get(); break;
     default: break;
     }
@@ -538,6 +609,8 @@ void MainWindow::show_context_menu(POINT pt) {
     AppendMenuW(menu, MF_STRING | (m_always_on_top ? MF_CHECKED : 0), id_always_on_top, L"Always on &top\tCtrl+A");
     AppendMenuW(menu, MF_STRING | (m_scale == 2 ? MF_CHECKED : 0), id_double_size, L"&Double size\tCtrl+D");
     AppendMenuW(menu, MF_STRING | (m_shade ? MF_CHECKED : 0), id_shade, L"&Windowshade\tCtrl+W");
+    AppendMenuW(menu, MF_STRING | (m_eq && m_eq->visible() ? MF_CHECKED : 0), id_toggle_eq, L"&Equalizer\tAlt+G");
+    AppendMenuW(menu, MF_STRING | (m_pl && m_pl->visible() ? MF_CHECKED : 0), id_toggle_pl, L"&Playlist editor\tAlt+E");
     HMENU vis = CreatePopupMenu();
     append_vis_items(vis);
     AppendMenuW(menu, MF_POPUP | MF_STRING, reinterpret_cast<UINT_PTR>(vis), L"&Visualization");
@@ -569,6 +642,8 @@ void MainWindow::show_context_menu(POINT pt) {
     case id_vis_osc: set_vis_mode(VisMode::oscilloscope); break;
     case id_vis_off: set_vis_mode(VisMode::off); break;
     case id_open_skins_folder: skins_folder::open_in_explorer(); break;
+    case id_toggle_eq: toggle_eq(); break;
+    case id_toggle_pl: toggle_playlist(); break;
     default:
         if (cmd >= id_skin_first && cmd <= id_skin_last) {
             const size_t i = cmd - id_skin_first;
@@ -690,6 +765,7 @@ void MainWindow::set_double_size(bool on) {
     m_scale = scale;
     config::double_size = on;
     apply_geometry();
+    if (m_eq) m_eq->set_double_size(on);
 }
 
 void MainWindow::set_always_on_top(bool on) {
@@ -702,7 +778,13 @@ void MainWindow::set_always_on_top(bool on) {
 void MainWindow::apply_geometry() {
     const int h = m_shade ? L::shade_height : base_height;
     m_canvas.resize(base_width, h);
+    RECT before{};
+    GetWindowRect(m_wnd, &before);
+    const auto docked = docking::docked_to(m_wnd);
     SetWindowPos(m_wnd, nullptr, 0, 0, base_width * m_scale, h * m_scale, SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
+    RECT after{};
+    GetWindowRect(m_wnd, &after);
+    docking::resized(m_wnd, before, after, docked);
     apply_region();
     invalidate();
 }
@@ -728,23 +810,6 @@ void MainWindow::apply_region() {
     if (rgn && !SetWindowRgn(m_wnd, rgn, TRUE)) DeleteObject(rgn); // on success the system owns rgn
 }
 
-void MainWindow::snap_to_work_area(WINDOWPOS* wp) const {
-    if (wp->flags & SWP_NOMOVE) return;
-    RECT rc;
-    GetWindowRect(m_wnd, &rc);
-    const int w = (wp->flags & SWP_NOSIZE) ? rc.right - rc.left : wp->cx;
-    const int h = (wp->flags & SWP_NOSIZE) ? rc.bottom - rc.top : wp->cy;
-    RECT target = { wp->x, wp->y, wp->x + w, wp->y + h };
-    MONITORINFO mi = {};
-    mi.cbSize = sizeof(mi);
-    if (!GetMonitorInfoW(MonitorFromRect(&target, MONITOR_DEFAULTTONEAREST), &mi)) return;
-    const RECT& wa = mi.rcWork;
-    if (std::abs(target.left - wa.left) < snap_distance) wp->x = wa.left;
-    else if (std::abs(target.right - wa.right) < snap_distance) wp->x = wa.right - w;
-    if (std::abs(target.top - wa.top) < snap_distance) wp->y = wa.top;
-    else if (std::abs(target.bottom - wa.bottom) < snap_distance) wp->y = wa.bottom - h;
-}
-
 void MainWindow::save_position() {
     if (!m_wnd || IsIconic(m_wnd)) return;
     RECT rc;
@@ -763,6 +828,8 @@ bool MainWindow::load_skin(const char* path, bool interactive) {
         for (auto& w : skin->warnings()) FB2K_console_formatter() << COMPONENT_NAME ": " << path << ": " << w.c_str();
         m_skin = std::move(skin);
         config::skin_path = path;
+        if (m_eq) m_eq->set_skin(m_skin.get());
+        if (m_pl) { m_pl->set_skin(m_skin.get()); m_pl->on_skin_changed(); }
         apply_region();
         invalidate();
         return true;
@@ -783,6 +850,8 @@ void MainWindow::browse_skin() {
 }
 
 void MainWindow::unload_skin() {
+    if (m_eq) m_eq->set_skin(nullptr);
+    if (m_pl) m_pl->set_skin(nullptr);
     m_skin.reset();
     config::skin_path = "";
     cancel_drag();
