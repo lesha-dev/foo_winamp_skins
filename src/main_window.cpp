@@ -38,7 +38,8 @@ const MenuRoot menu_roots[] = {
 constexpr UINT menu_id_stride = 0x1000;
 enum : UINT { id_always_on_top = 1, id_double_size, id_shade, id_vis_spectrum, id_vis_osc, id_vis_off,
     id_open_skins_folder, id_toggle_eq, id_toggle_pl,
-    id_skin_first = 0x100, id_skin_last = 0xFFF }; // must stay below menu_id_stride
+    id_skin_first = 0x100, id_skin_last = 0x7FF,
+    id_playlist_first = 0x800, id_playlist_last = 0xFFF }; // must stay below menu_id_stride
 
 std::wstring menu_label(const std::wstring& s) {
     std::wstring out;
@@ -649,6 +650,19 @@ void MainWindow::show_context_menu(POINT pt, HWND owner) {
     AppendMenuW(menu, MF_STRING | (m_shade ? MF_CHECKED : 0), id_shade, L"&Windowshade\tCtrl+W");
     AppendMenuW(menu, MF_STRING | (m_eq && m_eq->visible() ? MF_CHECKED : 0), id_toggle_eq, L"&Equalizer\tAlt+G");
     AppendMenuW(menu, MF_STRING | (m_pl && m_pl->visible() ? MF_CHECKED : 0), id_toggle_pl, L"&Playlist editor\tAlt+E");
+    // Playlists submenu: fb2k's playlists; picking one makes it active (shown in the playlist editor).
+    auto pm = playlist_manager::get();
+    HMENU playlists = CreatePopupMenu();
+    const size_t pl_count = std::min<size_t>(pm->get_playlist_count(), id_playlist_last - id_playlist_first + 1);
+    const size_t pl_active = pm->get_active_playlist();
+    for (size_t i = 0; i < pl_count; ++i) {
+        pfc::string8 name;
+        pm->playlist_get_name(i, name);
+        const std::wstring label = menu_label(pfc::stringcvt::string_wide_from_utf8(name).get_ptr());
+        AppendMenuW(playlists, MF_STRING | (i == pl_active ? MF_CHECKED : 0), id_playlist_first + i, label.c_str());
+    }
+    if (!pl_count) AppendMenuW(playlists, MF_STRING | MF_GRAYED, 0, L"(no playlists)");
+    AppendMenuW(menu, MF_POPUP | MF_STRING, reinterpret_cast<UINT_PTR>(playlists), L"P&laylists");
     HMENU vis = CreatePopupMenu();
     append_vis_items(vis);
     AppendMenuW(menu, MF_POPUP | MF_STRING, reinterpret_cast<UINT_PTR>(vis), L"&Visualization");
@@ -681,7 +695,10 @@ void MainWindow::show_context_menu(POINT pt, HWND owner) {
     case id_toggle_eq: toggle_eq(); break;
     case id_toggle_pl: toggle_playlist(); break;
     default:
-        if (cmd >= id_skin_first && cmd <= id_skin_last) {
+        if (cmd >= id_playlist_first && cmd <= id_playlist_last) {
+            const size_t i = cmd - id_playlist_first;
+            if (i < playlist_manager::get()->get_playlist_count()) playlist_manager::get()->set_active_playlist(i);
+        } else if (cmd >= id_skin_first && cmd <= id_skin_last) {
             const size_t i = cmd - id_skin_first;
             if (i < skins.size()) load_skin(pfc::stringcvt::string_utf8_from_wide(skins[i].path.c_str()), true);
         } else if (cmd >= menu_id_stride) {

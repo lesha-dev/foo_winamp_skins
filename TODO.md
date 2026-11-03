@@ -17,7 +17,7 @@
 - [x] Balance via own DSP ("Winamp Skins balance"), auto-inserted last in the chain on first off-centre use. Lags by the output buffer length.
 - [x] Equalizer window (drives fb2k's built-in Equalizer: 10 Winamp bands + preamp mapped onto its 18 bands, synced both ways; built-in presets) and playlist editor (active fb2k playlist).
 - [ ] EQ: AUTO button is a toggle only (no per-track presets); no preset saving.
-- [ ] Playlist: no playlist switching in the window (shows fb2k's active playlist); no double size.
+- [x] Playlist switching: Playlists submenu in the context menu (sets fb2k's active playlist). No double size for the playlist (Winamp never had it).
 - [x] Visualizer matches Winamp's classic analyser/scope (verified against recordings); Winamp vis options on the Preferences > Display > Winamp Skins > Visualization page (mode, analyzer style, thin/thick bands, peaks, scope style, refresh rate, falloffs).
 - [ ] Skin cursors (*.cur) are ignored.
 - [x] Main window title bar shows wrong active/inactive colours when focus changes.
