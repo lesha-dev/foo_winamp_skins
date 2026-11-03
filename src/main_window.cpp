@@ -9,6 +9,7 @@
 #include "playlist_window.h"
 #include "player.h"
 #include "skins_folder.h"
+#include "text_font.h"
 #include "version.h"
 
 #include <cmath>
@@ -263,7 +264,11 @@ LRESULT MainWindow::wndproc(UINT msg, WPARAM wp, LPARAM lp) {
     }
     case WM_TIMER:
         if (wp == marquee_timer_id && m_skin) {
-            ++m_marquee_step;
+            // 5 px per tick like Winamp; paused while the title is dragged and for 10 ticks after.
+            if (m_pressed != Control::marquee) {
+                if (m_marquee_hold > 0) --m_marquee_hold;
+                else m_marquee_px += font_char_w;
+            }
             invalidate();
             if (m_pl && m_pl->visible() && playback_control::get()->is_paused()) m_pl->invalidate();
         } else if (wp == vis_timer_id) {
@@ -429,7 +434,7 @@ MainState MainWindow::build_state() {
     if (m_pl) m_pl->set_time(st.show_time, st.time_negative, st.time_seconds);
 
     st.marquee = !m_status.is_empty() ? m_status.get_ptr() : current_title().get_ptr();
-    st.marquee_step = m_status.is_empty() ? m_marquee_step : 0;
+    st.marquee_px = m_status.is_empty() ? m_marquee_px : 0;
     if (st.play != PlayState::stopped) {
         st.kbps = m_kbps;
         st.khz = m_khz;
@@ -465,11 +470,19 @@ void MainWindow::on_lbutton_down(POINT p) {
     m_pressed_inside = true;
     SetCapture(m_wnd);
     if (m_pressed == Control::volume || m_pressed == Control::balance || m_pressed == Control::posbar) update_slider(p);
+    if (m_pressed == Control::marquee) m_marquee_drag_x = p.x;
     invalidate();
 }
 
 void MainWindow::on_mouse_move(POINT p) {
     if (m_pressed == Control::none) return;
+    if (m_pressed == Control::marquee) {
+        // Dragging the title scrolls it by hand, like Winamp.
+        m_marquee_px -= p.x - m_marquee_drag_x;
+        m_marquee_drag_x = p.x;
+        invalidate();
+        return;
+    }
     if (m_pressed == Control::volume || m_pressed == Control::balance || m_pressed == Control::posbar) {
         update_slider(p);
     } else {
@@ -490,6 +503,7 @@ void MainWindow::on_lbutton_up(POINT p) {
             pc->playback_seek(m_drag_value * track->get_length());
     }
     if (id == Control::balance && balance::get() != 0) balance::ensure_dsp();
+    if (id == Control::marquee) m_marquee_hold = 10;
     m_pressed = Control::none;
     m_pressed_inside = false;
     m_status.reset();
@@ -766,13 +780,15 @@ void MainWindow::on_track_changed() {
         pc->playback_format_title(nullptr, title, m_title_script, nullptr, playback_control::display_level_titles);
         uSetWindowText(m_wnd, pfc::format(title, " - foobar2000"));
     }
-    m_marquee_step = 0;
+    m_marquee_px = 0;
+    m_marquee_hold = 0;
     invalidate();
 }
 
 void MainWindow::on_playback_stopped() {
     m_kbps = m_khz = -1;
-    m_marquee_step = 0;
+    m_marquee_px = 0;
+    m_marquee_hold = 0;
     uSetWindowText(m_wnd, "foobar2000");
     invalidate();
 }

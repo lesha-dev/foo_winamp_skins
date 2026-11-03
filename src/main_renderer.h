@@ -36,7 +36,7 @@ struct MainState {
     bool time_negative = false;  // remaining-time mode
 
     std::string marquee;         // title or slider feedback text
-    unsigned marquee_step = 0;   // scroll position in characters (only used for long text)
+    int marquee_px = 0;          // scroll position in pixels (only used for long text; wraps)
     int kbps = -1;               // -1 = blank
     int khz = -1;
 

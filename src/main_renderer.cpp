@@ -57,8 +57,8 @@ void draw_marquee(Canvas& c, const Image& font, const MainState& st) {
 
     c.set_clip(L::pos_title_text.x, L::pos_title_text.y, L::title_text_w, font_char_h);
     if (len >= static_cast<size_t>(L::marquee_max_chars)) {
-        const size_t loop = len + (std::size(separator) - 1);
-        const int offset = static_cast<int>(st.marquee_step % loop) * font_char_w;
+        const int loop = static_cast<int>(len + (std::size(separator) - 1)) * font_char_w;
+        const int offset = (st.marquee_px % loop + loop) % loop;
         const std::string looped = st.marquee + separator + st.marquee;
         draw_text(c, font, L::pos_title_text.x - offset, L::pos_title_text.y, looped.c_str());
     } else {

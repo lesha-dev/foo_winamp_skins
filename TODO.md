@@ -21,7 +21,7 @@
 - [x] Visualizer matches Winamp's classic analyser/scope (verified against recordings); Winamp vis options on the Preferences > Display > Winamp Skins > Visualization page (mode, analyzer style, thin/thick bands, peaks, scope style, refresh rate, falloffs).
 - [ ] Skin cursors (*.cur) are ignored.
 - [x] Main window title bar shows wrong active/inactive colours when focus changes.
-- [ ] Dragging the song title (marquee) scrolls the text by hand, like Winamp.
+- [x] Dragging the song title (marquee) scrolls the text by hand, like Winamp.
 - [ ] Tooltips on controls (main, EQ, playlist windows), like Winamp.
 - [ ] Decide on shuffle/repeat: integrate properly with fb2k playback orders (Shuffle albums/folders, Random, Repeat track; repeat is cosmetic while shuffling).
 - [x] Winamp logo (lower right of the main window, Winamp opens About): opens Preferences -> Display -> Winamp Skins.

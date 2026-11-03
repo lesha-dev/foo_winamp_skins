@@ -111,7 +111,9 @@ private:
     bool m_pressed_inside = false;
     double m_drag_value = 0;           // slider value while dragging (0..1, balance -1..1)
     pfc::string8 m_status;             // slider feedback shown instead of the title
-    unsigned m_marquee_step = 0;
+    int m_marquee_px = 0;              // title scroll position (px)
+    int m_marquee_hold = 0;            // timer ticks before auto-scroll resumes after a drag
+    int m_marquee_drag_x = 0;          // last cursor x while dragging the title
     int m_kbps = -1;
     int m_khz = -1;
 
