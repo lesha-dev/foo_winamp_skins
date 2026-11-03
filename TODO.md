@@ -42,5 +42,4 @@
   - [ ] Use skinned font for main window title display (+ alternative font style when 'Double size' is enabled)
   - [ ] Oldschool playlist button behavior
   - [ ] Litestep VWM compatible mode (no screen snap) / Always on Litestep Virtual Desktops: probably skip
-- [ ] Visualization prefs page: lay out like Winamp's "Classic Visualization" tab (refresh rate shown as fps, Slow..Fast falloff sliders).
 - [ ] Credits: Webamp (sprite layout, EQ presets data), miniz, foobar2000 SDK; show in README / About.
