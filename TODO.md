@@ -30,4 +30,17 @@
 - [ ] Support Winamp Modern skins (.wal: XML + MAKI scripts, freeform layouts) — essentially a separate engine.
 - [x] Winamp logo (lower right of the main window, Winamp opens About): opens Preferences -> Display -> Winamp Skins.
 - [ ] Versioning: decide on a scheme and bump `src/version.h` per release.
+- [ ] Options from Winamp's "Classic Skin Options" prefs tab, for the Winamp Skins page:
+  - [ ] Dim window titlebars when not in focus
+  - [ ] Dock skinned windows at N pixels (snap distance; currently fixed)
+  - [ ] Enable smooth window resizing for resizeable skinned windows
+  - [ ] Display tooltips in Winamp's windows (see tooltips item)
+  - [ ] Use skinned mouse cursors (see *.cur item)
+  - [ ] Display playlist position in the song scroller
+  - [ ] Always show Winamp "Clutterbar" in main window
+  - [ ] Use doublesize setting on equalizer as well as main window
+  - [ ] Use skinned font for main window title display (+ alternative font style when 'Double size' is enabled)
+  - [ ] Oldschool playlist button behavior
+  - [ ] Litestep VWM compatible mode (no screen snap) / Always on Litestep Virtual Desktops: probably skip
+- [ ] Visualization prefs page: lay out like Winamp's "Classic Visualization" tab (refresh rate shown as fps, Slow..Fast falloff sliders).
 - [ ] Credits: Webamp (sprite layout, EQ presets data), miniz, foobar2000 SDK; show in README / About.
