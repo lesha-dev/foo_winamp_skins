@@ -16,6 +16,7 @@
     <ClCompile Include="src\main_window.cpp"><Filter>Source Files</Filter></ClCompile>
     <ClCompile Include="src\player.cpp"><Filter>Source Files</Filter></ClCompile>
     <ClCompile Include="src\skin.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClCompile Include="src\prefs_page.cpp"><Filter>Source Files</Filter></ClCompile>
     <ClCompile Include="src\skins_folder.cpp"><Filter>Source Files</Filter></ClCompile>
     <ClCompile Include="src\text_font.cpp"><Filter>Source Files</Filter></ClCompile>
     <ClCompile Include="src\ui_module.cpp"><Filter>Source Files</Filter></ClCompile>

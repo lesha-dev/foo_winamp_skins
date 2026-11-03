@@ -65,7 +65,17 @@ void set(double value) {
     config::balance = value;
 }
 
+bool enabled() { return config::balance_dsp.get(); }
+
+void set_enabled(bool on) {
+    config::balance_dsp = on;
+    if (on) return; // re-inserted on the next off-centre slider release
+    set(0);
+    dsp_config_manager::get()->core_disable_dsp(guids::balance_dsp);
+}
+
 void ensure_dsp() {
+    if (!enabled()) return;
     auto mgr = dsp_config_manager::get();
     dsp_preset_impl preset;
     if (mgr->core_query_dsp(guids::balance_dsp, preset)) return;

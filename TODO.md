@@ -13,7 +13,7 @@
 ## Backlog
 - [x] ~~Embed a default skin~~ — decided: ship no skin (Winamp base skin isn't redistributable); the no-skin placeholder stays.
 - [x] Skins folder `<profile>\winamp-skins`, listed in the context menu (Skins submenu).
-- [ ] Preferences page (Display > Winamp Skins): skin list with preview, folder actions, visualizer/hotkey/balance options.
+- [x] Preferences page (Display > Winamp Skins): skin list with preview, folder actions, hotkeys / balance DSP / centre snap options.
 - [x] Balance via own DSP ("Winamp Skins balance"), auto-inserted last in the chain on first off-centre use. Lags by the output buffer length.
 - [ ] EQ / PL buttons do nothing until the equalizer and playlist windows exist.
 - [ ] Visualizer tuning: dB range / falloff speeds are guesses; no Winamp vis options (fire/line bars, dot oscilloscope, falloff, refresh rate).
@@ -21,3 +21,4 @@
 - [ ] Skin cursors (*.cur) are ignored.
 - [ ] Consider removing Winamp hotkeys (z x c v b l, arrows, Ctrl+D/A/W) entirely and relying on fb2k's keyboard shortcuts only.
 - [ ] Decide on shuffle/repeat: integrate properly with fb2k playback orders (Shuffle albums/folders, Random, Repeat track; repeat is cosmetic while shuffling).
+- [ ] Support Winamp Modern skins (.wal: XML + MAKI scripts, freeform layouts) — essentially a separate engine.

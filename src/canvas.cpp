@@ -57,4 +57,20 @@ void Canvas::present(HDC dc, int scale) const {
     StretchDIBits(dc, 0, 0, m_w * scale, m_h * scale, 0, 0, m_w, m_h, m_px.data(), &bmi, DIB_RGB_COLORS, SRCCOPY);
 }
 
+void Canvas::present(HDC dc, const RECT& dst) const {
+    if (m_px.empty()) return;
+    BITMAPINFO bmi = {};
+    bmi.bmiHeader.biSize = sizeof(bmi.bmiHeader);
+    bmi.bmiHeader.biWidth = m_w;
+    bmi.bmiHeader.biHeight = -m_h;
+    bmi.bmiHeader.biPlanes = 1;
+    bmi.bmiHeader.biBitCount = 32;
+    bmi.bmiHeader.biCompression = BI_RGB;
+    const int w = dst.right - dst.left, h = dst.bottom - dst.top;
+    const bool shrink = w < m_w || h < m_h;
+    SetStretchBltMode(dc, shrink ? HALFTONE : COLORONCOLOR);
+    if (shrink) SetBrushOrgEx(dc, 0, 0, nullptr);
+    StretchDIBits(dc, dst.left, dst.top, w, h, 0, 0, m_w, m_h, m_px.data(), &bmi, DIB_RGB_COLORS, SRCCOPY);
+}
+
 } // namespace wsz

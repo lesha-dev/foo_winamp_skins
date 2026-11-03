@@ -19,7 +19,6 @@ constexpr UINT_PTR marquee_timer_id = 1;
 constexpr UINT marquee_interval_ms = 220;
 constexpr UINT_PTR vis_timer_id = 2;
 constexpr UINT vis_interval_ms = 25;
-constexpr double balance_snap = 0.25;
 
 // Top-level fb2k main menu groups, shown as submenus of the context menu.
 struct MenuRoot { const GUID* guid; const wchar_t* label; };
@@ -106,8 +105,11 @@ MainWindow::~MainWindow() = default;
 // ---------------------------------------------------------------------------------------------
 // lifetime
 
+MainWindow* MainWindow::s_instance = nullptr;
+
 HWND MainWindow::create(HookProc hook) {
     register_class(&s_wndproc);
+    s_instance = this;
     m_hook = hook;
     m_scale = config::double_size.get() ? 2 : 1;
     m_shade = config::shade.get();
@@ -142,6 +144,7 @@ HWND MainWindow::create(HookProc hook) {
 
 void MainWindow::destroy() {
     if (!m_wnd) return;
+    s_instance = nullptr;
     m_callbacks.reset();
     save_position();
     HWND wnd = m_wnd;
@@ -362,6 +365,7 @@ void MainWindow::on_lbutton_down(POINT p) {
     const ControlRect* r = hit(p);
     if (!r) return;
     if (r->id == Control::posbar && !playback_control::get()->playback_can_seek()) return;
+    if (r->id == Control::balance && !balance::enabled()) return;
     m_pressed = r->id;
     m_pressed_inside = true;
     SetCapture(m_wnd);
@@ -420,7 +424,7 @@ void MainWindow::update_slider(POINT p) {
     }
     case Control::balance: {
         double b = ratio(L::pos_balance.x, L::balance_bg.w, L::balance_thumb.w) * 2.0 - 1.0;
-        if (std::abs(b) < balance_snap) b = 0;
+        if (std::abs(b) * 100 < static_cast<double>(config::balance_snap.get())) b = 0;
         m_drag_value = b;
         balance::set(b);
         const int pct = static_cast<int>(std::abs(b) * 100 + 0.5);
@@ -486,6 +490,7 @@ void MainWindow::activate_control(Control id) {
 }
 
 bool MainWindow::on_key(WPARAM vk) {
+    if (!config::winamp_hotkeys.get()) return false;
     const bool ctrl = GetKeyState(VK_CONTROL) < 0;
     auto pc = playback_control::get();
     if (ctrl) {

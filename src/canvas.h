@@ -25,6 +25,8 @@ public:
 
     // Draws to a window DC with integer scaling (nearest neighbour).
     void present(HDC dc, int scale) const;
+    // Draws into an arbitrary rect (HALFTONE when shrinking).
+    void present(HDC dc, const RECT& dst) const;
 
     int width() const { return m_w; }
     int height() const { return m_h; }

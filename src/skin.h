@@ -42,6 +42,8 @@ public:
     const SkinRegions& regions() const { return m_regions; }
     const std::string& path() const { return m_path; }
     const std::vector<std::string>& warnings() const { return m_warnings; }
+    // Skin author's notes: the readme-like .txt shipped in the skin (UTF-8, may be empty).
+    const std::string& readme() const { return m_readme; }
 
 private:
     Skin();
@@ -56,6 +58,7 @@ private:
     PlaylistColors m_pl_colors;
     SkinRegions m_regions;
     std::vector<std::string> m_warnings;
+    std::string m_readme;
 };
 
 } // namespace wsz

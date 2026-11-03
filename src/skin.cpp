@@ -166,6 +166,34 @@ void read_directory(const std::wstring& dir, std::map<std::string, std::vector<u
     FindClose(h);
 }
 
+// Skin config files that are not the author's notes.
+bool is_config_txt(const std::string& name) {
+    static const char* const known[] = { "viscolor.txt", "pledit.txt", "region.txt", "winampmb.txt" };
+    for (auto* k : known) if (name == k) return true;
+    return false;
+}
+
+bool is_text_ext(const std::string& name) {
+    for (auto* ext : { ".txt", ".nfo", ".diz" })
+        if (name.size() > 4 && name.compare(name.size() - 4, 4, ext) == 0) return true;
+    return false;
+}
+
+// Readmes are mostly ANSI from the Winamp 2 era; accept UTF-8 and UTF-16 (BOM) too.
+std::string decode_text(const std::vector<uint8_t>& data) {
+    constexpr size_t max_len = 64 * 1024;
+    const size_t n = std::min(data.size(), max_len);
+    if (n >= 2 && data[0] == 0xFF && data[1] == 0xFE) {
+        std::wstring w(reinterpret_cast<const wchar_t*>(data.data() + 2), (n - 2) / 2);
+        return pfc::stringcvt::string_utf8_from_wide(w.c_str()).get_ptr();
+    }
+    std::string s(reinterpret_cast<const char*>(data.data()), n);
+    if (s.rfind("\xEF\xBB\xBF", 0) == 0) s.erase(0, 3);
+    s.erase(std::remove(s.begin(), s.end(), '\0'), s.end());
+    if (pfc::is_valid_utf8(s.c_str())) return s;
+    return pfc::stringcvt::string_utf8_from_ansi(s.c_str()).get_ptr();
+}
+
 } // namespace
 
 Skin::Skin() : m_vis_colors(default_vis_colors) {}
@@ -226,6 +254,16 @@ void Skin::load_from(FileMap& files) {
         color("selectedbg", m_pl_colors.selected_bg);
         if (auto k = t.find("font"); k != t.end() && !k->second.empty()) m_pl_colors.font = k->second;
     }
+
+    // Readme: prefer a file called readme*, otherwise the first other text file.
+    const std::vector<uint8_t>* readme = nullptr;
+    for (auto& [name, data] : files) {
+        if (!is_text_ext(name) || is_config_txt(name)) continue;
+        const bool named = name.find("readme") != std::string::npos || name.find("read me") != std::string::npos;
+        if (named || !readme) readme = &data;
+        if (named) break;
+    }
+    if (readme) m_readme = decode_text(*readme);
 
     if (auto it = files.find("region.txt"); it != files.end()) {
         for (auto& [section, keys] : parse_ini(it->second)) {

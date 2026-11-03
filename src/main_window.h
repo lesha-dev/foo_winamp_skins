@@ -23,6 +23,13 @@ public:
     void destroy();
     HWND hwnd() const { return m_wnd; }
 
+    // The live window, or null when this UI isn't active (e.g. preferences opened under another UI).
+    static MainWindow* instance() { return s_instance; }
+
+    bool load_skin(const char* path, bool interactive);
+    void unload_skin();
+    void invalidate();
+
 private:
     class Callbacks;
     friend class Callbacks;
@@ -35,7 +42,6 @@ private:
     void paint_placeholder(HDC dc);
     MainState build_state();
     pfc::string8 current_title();
-    void invalidate();
 
     // input
     POINT to_skin(POINT client) const;
@@ -72,9 +78,9 @@ private:
     void save_position();
 
     // skins
-    bool load_skin(const char* path, bool interactive);
     void browse_skin();
-    void unload_skin();
+
+    static MainWindow* s_instance;
 
     HWND m_wnd = nullptr;
     HookProc m_hook = nullptr;
