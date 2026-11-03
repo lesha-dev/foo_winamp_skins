@@ -9,7 +9,7 @@
 namespace wsz::eq {
 
 constexpr int band_count = 10;
-constexpr std::array<double, band_count> band_hz = { 60, 170, 310, 600, 1000, 3000, 6000, 12000, 14000, 16000 };
+constexpr std::array<double, band_count> band_hz = { 70, 180, 320, 600, 1000, 3000, 6000, 12000, 14000, 16000 };
 constexpr double max_db = 12.0;
 
 // Slider values 0..100, 50 = 0 dB, 100 = +12 dB.
