@@ -263,7 +263,7 @@ void EqWindow::render_normal(Canvas& c) {
     const Image& ex = m_skin->bitmap(SkinBitmap::eq_ex);
     c.clear(0);
     c.blit(img, bg, { 0, 0 });
-    c.blit(img, m_active ? title_active : title_inactive, { 0, 0 });
+    c.blit(img, title_lit() ? title_active : title_inactive, { 0, 0 });
     const bool down = m_inside;
     if (m_pressed == Part::close && down) c.blit(img, close_down, pos_close);
     if (m_pressed == Part::shade && down) c.blit(ex, shade_btn_down, pos_shade_btn);
@@ -316,7 +316,7 @@ void EqWindow::render_normal(Canvas& c) {
 void EqWindow::render_shade(Canvas& c) {
     const Image& ex = m_skin->bitmap(SkinBitmap::eq_ex);
     c.clear(0);
-    c.blit(ex, m_active ? shade_active : shade_inactive, { 0, 0 });
+    c.blit(ex, title_lit() ? shade_active : shade_inactive, { 0, 0 });
     const bool down = m_inside;
     if (m_pressed == Part::shade && down) c.blit(ex, shade_unshade_down, pos_shade_btn);
     c.blit(ex, m_pressed == Part::close && down ? shade_close_down : shade_close, pos_close);

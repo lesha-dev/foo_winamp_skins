@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "balance_dsp.h"
 #include "config.h"
 #include "guids.h"
 #include "main_renderer.h"
@@ -13,8 +12,6 @@
 
 namespace wsz {
 namespace {
-
-constexpr int default_snap = 25;
 
 std::wstring wide(const char* s) { return pfc::stringcvt::string_wide_from_utf8(s).get_ptr(); }
 pfc::string8 utf8(const std::wstring& s) { return pfc::stringcvt::string_utf8_from_wide(s.c_str()).get_ptr(); }
@@ -38,7 +35,7 @@ std::wstring file_title(const std::wstring& path) {
     return name;
 }
 
-// Skin selection and options are edited here and only take effect on Apply.
+// Skin selection is edited here and only take effect on Apply.
 class PrefsInstance : public preferences_page_instance {
 public:
     explicit PrefsInstance(preferences_page_callback::ptr callback) : m_callback(callback) {}
@@ -50,7 +47,7 @@ public:
     }
 
     t_uint32 get_state() override {
-        t_uint32 s = preferences_state::resettable | preferences_state::dark_mode_supported;
+        t_uint32 s = preferences_state::dark_mode_supported;
         if (has_changed()) s |= preferences_state::changed;
         return s;
     }
@@ -58,30 +55,14 @@ public:
 
     void apply() override {
         const std::wstring current = wide(config::skin_path.get());
-        if (_wcsicmp(m_pending.c_str(), current.c_str()) != 0) {
-            MainWindow* w = MainWindow::instance();
-            if (m_pending.empty()) {
-                if (w) w->unload_skin();
-                else config::skin_path = "";
-            } else if (w) {
-                w->load_skin(utf8(m_pending), true);
-            } else {
-                config::skin_path = utf8(m_pending);
-            }
+        if (!m_pending.empty() && _wcsicmp(m_pending.c_str(), current.c_str()) != 0) {
+            if (MainWindow* w = MainWindow::instance()) w->load_skin(utf8(m_pending), true);
+            else config::skin_path = utf8(m_pending);
         }
-        config::winamp_hotkeys = checked(IDC_WINAMP_HOTKEYS);
-        balance::set_enabled(checked(IDC_BALANCE_DSP));
-        config::balance_snap = snap_value();
-        if (MainWindow* w = MainWindow::instance()) w->invalidate();
         changed();
     }
 
-    void reset() override {
-        CheckDlgButton(m_wnd, IDC_WINAMP_HOTKEYS, BST_CHECKED);
-        CheckDlgButton(m_wnd, IDC_BALANCE_DSP, BST_CHECKED);
-        SetDlgItemInt(m_wnd, IDC_BALANCE_SNAP, default_snap, FALSE);
-        changed();
-    }
+    void reset() override {}
 
 private:
     static INT_PTR CALLBACK s_dlgproc(HWND wnd, UINT msg, WPARAM wp, LPARAM lp) {
@@ -124,11 +105,6 @@ private:
         m_dark.AddDialogWithControls(m_wnd);
         m_pending = wide(config::skin_path.get());
         uSetDlgItemText(m_wnd, IDC_FOLDER, utf8(skins_folder::path()));
-        CheckDlgButton(m_wnd, IDC_WINAMP_HOTKEYS, config::winamp_hotkeys.get() ? BST_CHECKED : BST_UNCHECKED);
-        CheckDlgButton(m_wnd, IDC_BALANCE_DSP, balance::enabled() ? BST_CHECKED : BST_UNCHECKED);
-        SetDlgItemInt(m_wnd, IDC_BALANCE_SNAP, static_cast<UINT>(config::balance_snap.get()), FALSE);
-        SendDlgItemMessageW(m_wnd, IDC_BALANCE_SNAP, EM_SETLIMITTEXT, 2, 0);
-        m_initialized = true;
         refresh_list();
         load_preview();
     }
@@ -148,22 +124,6 @@ private:
         case IDC_REFRESH:
             if (code == BN_CLICKED) refresh_list();
             break;
-        case IDC_LOAD_FILE:
-            if (code == BN_CLICKED) browse();
-            break;
-        case IDC_UNLOAD:
-            if (code == BN_CLICKED) {
-                SendDlgItemMessageW(m_wnd, IDC_SKIN_LIST, LB_SETCURSEL, static_cast<WPARAM>(-1), 0);
-                select_pending(L"");
-            }
-            break;
-        case IDC_WINAMP_HOTKEYS:
-        case IDC_BALANCE_DSP:
-            if (code == BN_CLICKED) changed();
-            break;
-        case IDC_BALANCE_SNAP:
-            if (code == EN_CHANGE && m_initialized) changed();
-            break;
         }
     }
 
@@ -180,17 +140,6 @@ private:
         SendMessageW(list, LB_SETCURSEL, static_cast<WPARAM>(sel), 0);
         SendMessageW(list, WM_SETREDRAW, TRUE, 0);
         InvalidateRect(list, nullptr, TRUE);
-    }
-
-    void browse() {
-        pfc::string8 path = utf8(m_pending);
-        const pfc::string8 dir = utf8(skins_folder::path());
-        if (!uGetOpenFileName(m_wnd, "Winamp skins (*.wsz;*.zip)|*.wsz;*.zip|All files|*.*", 0, "wsz",
-                "Load Winamp skin", path.is_empty() ? dir.get_ptr() : nullptr, path, FALSE))
-            return;
-        if (!m_wnd) return; // page went away while the dialog was open
-        select_pending(wide(path));
-        refresh_list(); // selects it if the file is in the skins folder
     }
 
     void select_pending(const std::wstring& path) {
@@ -240,20 +189,9 @@ private:
         m_canvas.present(dc, dst);
     }
 
-    bool checked(int id) const { return IsDlgButtonChecked(m_wnd, id) == BST_CHECKED; }
-
-    int snap_value() const {
-        BOOL ok = FALSE;
-        const UINT v = GetDlgItemInt(m_wnd, IDC_BALANCE_SNAP, &ok, FALSE);
-        return ok ? static_cast<int>(std::min(v, 99u)) : default_snap;
-    }
-
     bool has_changed() const {
         if (!m_wnd) return false;
-        if (_wcsicmp(m_pending.c_str(), wide(config::skin_path.get()).c_str()) != 0) return true;
-        if (checked(IDC_WINAMP_HOTKEYS) != config::winamp_hotkeys.get()) return true;
-        if (checked(IDC_BALANCE_DSP) != balance::enabled()) return true;
-        return snap_value() != static_cast<int>(config::balance_snap.get());
+        return _wcsicmp(m_pending.c_str(), wide(config::skin_path.get()).c_str()) != 0;
     }
 
     void changed() { m_callback->on_state_changed(); }
@@ -261,7 +199,6 @@ private:
     HWND m_wnd = nullptr;
     preferences_page_callback::ptr m_callback;
     fb2k::CCoreDarkModeHooks m_dark;
-    bool m_initialized = false;
 
     std::vector<skins_folder::Entry> m_skins;
     std::wstring m_pending; // skin path applied on Apply; empty = no skin

@@ -131,6 +131,7 @@ exit /b 0</Command>
     <ClCompile Include="src\player.cpp" />
     <ClCompile Include="src\skin.cpp" />
     <ClCompile Include="src\prefs_page.cpp" />
+    <ClCompile Include="src\prefs_options.cpp" />
     <ClCompile Include="src\prefs_vis.cpp" />
     <ClCompile Include="src\skins_folder.cpp" />
     <ClCompile Include="src\text_font.cpp" />

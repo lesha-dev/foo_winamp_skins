@@ -35,7 +35,7 @@ const MenuRoot menu_roots[] = {
     { &mainmenu_groups::help,     L"&Help" },
 };
 constexpr UINT menu_id_stride = 0x1000;
-enum : UINT { id_load_skin = 1, id_unload_skin, id_always_on_top, id_double_size, id_shade, id_vis_spectrum, id_vis_osc, id_vis_off,
+enum : UINT { id_always_on_top = 1, id_double_size, id_shade, id_vis_spectrum, id_vis_osc, id_vis_off,
     id_open_skins_folder, id_toggle_eq, id_toggle_pl,
     id_skin_first = 0x100, id_skin_last = 0xFFF }; // must stay below menu_id_stride
 
@@ -306,6 +306,12 @@ void MainWindow::invalidate() {
     if (m_eq && m_eq->visible() && m_eq->shade()) m_eq->invalidate(); // shows volume/balance
 }
 
+void MainWindow::invalidate_all() {
+    invalidate();
+    if (m_eq) m_eq->invalidate();
+    if (m_pl) m_pl->invalidate();
+}
+
 void MainWindow::set_status(const char* text) {
     m_status = text ? text : "";
     invalidate();
@@ -379,7 +385,7 @@ pfc::string8 MainWindow::current_title() {
 
 MainState MainWindow::build_state() {
     MainState st;
-    st.active = m_active;
+    st.active = m_active || !config::dim_titlebars.get();
     st.shade = m_shade;
     st.always_on_top = m_always_on_top;
     st.double_size = m_scale == 2;
@@ -602,7 +608,7 @@ void MainWindow::show_context_menu(POINT pt, HWND owner) {
     if (!owner) owner = m_wnd;
     HMENU menu = CreatePopupMenu();
 
-    // Skins submenu: contents of the skins folder, then file-based actions.
+    // Skins submenu: contents of the skins folder.
     const auto skins = skins_folder::list();
     const std::wstring current = pfc::stringcvt::string_wide_from_utf8(config::skin_path.get()).get_ptr();
     HMENU skins_menu = CreatePopupMenu();
@@ -614,8 +620,6 @@ void MainWindow::show_context_menu(POINT pt, HWND owner) {
     if (skins.empty()) AppendMenuW(skins_menu, MF_STRING | MF_GRAYED, 0, L"(skins folder is empty)");
     AppendMenuW(skins_menu, MF_SEPARATOR, 0, nullptr);
     AppendMenuW(skins_menu, MF_STRING, id_open_skins_folder, L"&Open skins folder");
-    AppendMenuW(skins_menu, MF_STRING, id_load_skin, L"&Load skin from file...");
-    AppendMenuW(skins_menu, MF_STRING | (m_skin ? 0 : MF_GRAYED), id_unload_skin, L"&Unload skin");
     AppendMenuW(menu, MF_POPUP | MF_STRING, reinterpret_cast<UINT_PTR>(skins_menu), L"&Skins");
     AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
     AppendMenuW(menu, MF_STRING | (m_always_on_top ? MF_CHECKED : 0), id_always_on_top, L"Always on &top\tCtrl+A");
@@ -645,8 +649,6 @@ void MainWindow::show_context_menu(POINT pt, HWND owner) {
 
     switch (cmd) {
     case 0: break;
-    case id_load_skin: browse_skin(); break;
-    case id_unload_skin: unload_skin(); break;
     case id_always_on_top: set_always_on_top(!m_always_on_top); break;
     case id_double_size: set_double_size(m_scale == 1); break;
     case id_shade: set_shade(!m_shade); break;
@@ -864,24 +866,6 @@ bool MainWindow::load_skin(const char* path, bool interactive) {
         if (interactive) popup_message::g_show(msg, COMPONENT_NAME, popup_message::icon_error);
         return false;
     }
-}
-
-void MainWindow::browse_skin() {
-    pfc::string8 path = config::skin_path.get();
-    const pfc::string8 dir = pfc::stringcvt::string_utf8_from_wide(skins_folder::path().c_str()).get_ptr();
-    if (uGetOpenFileName(m_wnd, "Winamp skins (*.wsz;*.zip)|*.wsz;*.zip|All files|*.*", 0, "wsz",
-            "Load Winamp skin", path.is_empty() ? dir.get_ptr() : nullptr, path, FALSE))
-        load_skin(path, true);
-}
-
-void MainWindow::unload_skin() {
-    if (m_eq) m_eq->set_skin(nullptr);
-    if (m_pl) m_pl->set_skin(nullptr);
-    m_skin.reset();
-    config::skin_path = "";
-    cancel_drag();
-    apply_region();
-    invalidate();
 }
 
 } // namespace wsz

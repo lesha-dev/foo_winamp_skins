@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "skin_window.h"
+#include "config.h"
 #include "docking.h"
 #include "main_window.h"
 
@@ -141,6 +142,8 @@ LRESULT CALLBACK SkinWindow::s_wndproc(HWND wnd, UINT msg, WPARAM wp, LPARAM lp)
     if (!self) return DefWindowProcW(wnd, msg, wp, lp);
     return self->wndproc(msg, wp, lp);
 }
+
+bool SkinWindow::title_lit() const { return m_active || !config::dim_titlebars.get(); }
 
 void SkinWindow::save_window_position() {
     RECT rc;

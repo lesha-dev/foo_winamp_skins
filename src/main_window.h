@@ -34,8 +34,8 @@ public:
     static MainWindow* instance() { return s_instance; }
 
     bool load_skin(const char* path, bool interactive);
-    void unload_skin();
     void invalidate();
+    void invalidate_all(); // main + eq + playlist
     void on_eq_changed();
     void set_status(const char* text);  // slider feedback in the title area; empty/null restores the title
     void show_context_menu(POINT pt_screen, HWND owner = nullptr); // owner: the clicked window (default: main)
@@ -91,7 +91,6 @@ private:
     void save_positions(); // main + eq + playlist
 
     // skins
-    void browse_skin();
 
     static MainWindow* s_instance;
 

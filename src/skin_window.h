@@ -43,6 +43,8 @@ protected:
 
     // Recomputes window size, canvas and region from skin_size()/scale(); keeps docked windows attached.
     void apply_geometry();
+    // Highlighted titlebar: focused, or always when dimming is off.
+    bool title_lit() const;
     POINT to_skin(POINT client) const { return { client.x / scale(), client.y / scale() }; }
 
     HWND m_wnd = nullptr;

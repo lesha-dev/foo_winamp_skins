@@ -30,7 +30,7 @@
 - [x] Winamp logo (lower right of the main window, Winamp opens About): opens Preferences -> Display -> Winamp Skins.
 - [ ] Versioning: decide on a scheme and bump `src/version.h` per release.
 - [ ] Options from Winamp's "Classic Skin Options" prefs tab, for the Winamp Skins page:
-  - [ ] Dim window titlebars when not in focus
+  - [x] Dim window titlebars when not in focus (Options page)
   - [ ] Dock skinned windows at N pixels (snap distance; currently fixed)
   - [ ] Enable smooth window resizing for resizeable skinned windows
   - [ ] Display tooltips in Winamp's windows (see tooltips item)

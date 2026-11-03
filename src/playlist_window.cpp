@@ -580,7 +580,7 @@ void PlaylistWindow::render(Canvas& c) {
 void PlaylistWindow::render_normal(Canvas& c) {
     const Image& img = m_skin->bitmap(SkinBitmap::pledit);
     const int w = width(), h = height();
-    const bool a = m_active;
+    const bool a = title_lit();
     c.clear(0);
 
     // Top: corners, title centred, tiles between.
@@ -707,7 +707,7 @@ void PlaylistWindow::render_shade(Canvas& c) {
     c.clear(0);
     c.tile(img, shade_tile, 25, 0, w - 75, shade_height);
     c.blit(img, shade_left, { 0, 0 });
-    c.blit(img, m_active ? shade_right_sel : shade_right, { w - 50, 0 });
+    c.blit(img, title_lit() ? shade_right_sel : shade_right, { w - 50, 0 });
     if (m_pressed == Part::close && m_inside) c.blit(img, close_down, { w - 11, 3 });
     if (m_pressed == Part::shade && m_inside) c.blit(img, expand_down, { w - 21, 3 });
 

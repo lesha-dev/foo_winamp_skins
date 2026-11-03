@@ -14,6 +14,7 @@ extern cfg_bool repeat_with_shuffle; // repeat button state while a shuffle orde
 extern cfg_float balance;            // use wsz::balance, which caches it for the audio thread
 extern cfg_bool winamp_hotkeys;       // Z X C V B L, arrows, Ctrl+D/A/W in the main window
 extern cfg_bool balance_dsp;          // use wsz::balance::set_enabled()
+extern cfg_bool dim_titlebars;        // inactive windows show the dimmed titlebar
 extern cfg_int balance_snap;          // percent around centre that snaps to 0
 extern cfg_int vis_mode;
 // Winamp classic vis options (Winamp defaults): analyzer style 0 normal / 1 fire / 2 line; scope style

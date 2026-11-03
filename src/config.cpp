@@ -15,6 +15,7 @@ cfg_float balance(guids::cfg_balance, 0.0);
 cfg_bool winamp_hotkeys(guids::cfg_winamp_hotkeys, true);
 cfg_bool balance_dsp(guids::cfg_balance_dsp, true);
 cfg_int balance_snap(guids::cfg_balance_snap, 25);
+cfg_bool dim_titlebars(guids::cfg_dim_titlebars, true);
 cfg_int vis_mode(guids::cfg_vis_mode, 0);
 cfg_int vis_analyzer(guids::cfg_vis_analyzer, 0);
 cfg_bool vis_thin_bands(guids::cfg_vis_thin_bands, false);
