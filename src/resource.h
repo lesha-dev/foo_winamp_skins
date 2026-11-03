@@ -1,6 +1,7 @@
 #pragma once
 
 #define IDD_PREFS           101
+#define IDD_PREFS_VIS       102
 
 #define IDC_SKIN_LIST       1001
 #define IDC_PREVIEW         1002
@@ -13,3 +14,22 @@
 #define IDC_WINAMP_HOTKEYS  1009
 #define IDC_BALANCE_DSP     1010
 #define IDC_BALANCE_SNAP    1011
+
+#define IDC_VIS_SPECTRUM    1101
+#define IDC_VIS_SCOPE       1102
+#define IDC_VIS_OFF         1103
+#define IDC_VIS_NORMAL      1104
+#define IDC_VIS_FIRE        1105
+#define IDC_VIS_LINE        1106
+#define IDC_VIS_THICK       1107
+#define IDC_VIS_THIN        1108
+#define IDC_VIS_PEAKS       1109
+#define IDC_VIS_DOTS        1110
+#define IDC_VIS_LINES       1111
+#define IDC_VIS_SOLID       1112
+#define IDC_VIS_REFRESH     1113
+#define IDC_VIS_REFRESH_TXT 1114
+#define IDC_VIS_FALLOFF     1115
+#define IDC_VIS_FALLOFF_TXT 1116
+#define IDC_VIS_PFALLOFF    1117
+#define IDC_VIS_PFALLOFF_TXT 1118

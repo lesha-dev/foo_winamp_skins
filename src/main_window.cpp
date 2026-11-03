@@ -119,6 +119,7 @@ HWND MainWindow::create(HookProc hook) {
     m_shade = config::shade.get();
     m_always_on_top = config::always_on_top.get();
     m_vis.set_mode(static_cast<VisMode>(std::clamp<int>(static_cast<int>(config::vis_mode.get()), 0, 2)));
+    m_vis.set_options(config::vis_options());
     titleformat_compiler::get()->compile_safe(m_title_script, "[%artist% - ]%title%[ '('%length%')']");
 
     int x = static_cast<int>(config::window_x.get());
@@ -245,6 +246,15 @@ LRESULT MainWindow::wndproc(UINT msg, WPARAM wp, LPARAM lp) {
         if (msg == WM_CONTEXTMENU && pt.x == -1 && pt.y == -1) {
             RECT rc; GetWindowRect(m_wnd, &rc);
             pt = { rc.left, rc.top };
+        } else {
+            // Right-click on the visualizer opens its own menu, like Winamp.
+            POINT client = pt;
+            ScreenToClient(m_wnd, &client);
+            const ControlRect* r = hit(to_skin(client));
+            if (r && r->id == Control::vis) {
+                show_vis_menu(pt);
+                return 0;
+            }
         }
         show_context_menu(pt);
         return 0;
@@ -664,6 +674,12 @@ void MainWindow::append_vis_items(HMENU menu) {
     AppendMenuW(menu, MF_STRING | (m == VisMode::off ? MF_CHECKED : 0), id_vis_off, L"O&ff");
 }
 
+void MainWindow::set_vis_options(const VisOptions& o) {
+    config::set_vis_options(o);
+    m_vis.set_options(o);
+    invalidate();
+}
+
 void MainWindow::show_vis_menu(POINT pt) {
     HMENU menu = CreatePopupMenu();
     append_vis_items(menu);
@@ -716,7 +732,7 @@ void MainWindow::on_vis_timer() {
         m_vis_running = false;
         m_vis.reset();
     }
-    invalidate();
+    if (m_vis.take_redraw()) invalidate();
 }
 
 // ---------------------------------------------------------------------------------------------

@@ -39,6 +39,8 @@ public:
     void on_eq_changed();
     void set_status(const char* text);  // slider feedback in the title area; empty/null restores the title
     void show_context_menu(POINT pt_screen);
+    void set_vis_mode(VisMode mode);
+    void set_vis_options(const VisOptions& o); // also stored in config
     // Winamp hotkeys, also used by the EQ and playlist windows. Returns true if handled.
     bool handle_key(WPARAM vk, bool alt = false);
     void toggle_eq();
@@ -72,7 +74,6 @@ private:
     void append_vis_items(HMENU menu);
 
     // visualizer
-    void set_vis_mode(VisMode mode);
     void update_vis_timer();
     void on_vis_timer();
 

@@ -16,6 +16,28 @@ cfg_bool winamp_hotkeys(guids::cfg_winamp_hotkeys, true);
 cfg_bool balance_dsp(guids::cfg_balance_dsp, true);
 cfg_int balance_snap(guids::cfg_balance_snap, 25);
 cfg_int vis_mode(guids::cfg_vis_mode, 0);
+cfg_int vis_analyzer(guids::cfg_vis_analyzer, 0);
+cfg_bool vis_thin_bands(guids::cfg_vis_thin_bands, false);
+cfg_bool vis_peaks(guids::cfg_vis_peaks, true);
+cfg_int vis_scope(guids::cfg_vis_scope, 1);
+cfg_int vis_refresh(guids::cfg_vis_refresh, 2);
+cfg_int vis_falloff(guids::cfg_vis_falloff, 2);
+cfg_int vis_peak_falloff(guids::cfg_vis_peak_falloff, 1);
+
+VisOptions vis_options() {
+    return { static_cast<int>(vis_analyzer.get()), vis_thin_bands.get(), vis_peaks.get(), static_cast<int>(vis_scope.get()),
+        static_cast<int>(vis_refresh.get()), static_cast<int>(vis_falloff.get()), static_cast<int>(vis_peak_falloff.get()) };
+}
+
+void set_vis_options(const VisOptions& o) {
+    vis_analyzer = o.analyzer;
+    vis_thin_bands = o.thin_bands;
+    vis_peaks = o.peaks;
+    vis_scope = o.scope;
+    vis_refresh = o.refresh;
+    vis_falloff = o.falloff;
+    vis_peak_falloff = o.peak_falloff;
+}
 
 cfg_bool eq_visible(guids::cfg_eq_visible, false);
 cfg_int eq_x(guids::cfg_eq_x, CW_USEDEFAULT);

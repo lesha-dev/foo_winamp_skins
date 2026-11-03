@@ -18,7 +18,7 @@
 - [x] Equalizer window (drives fb2k's built-in Equalizer: 10 Winamp bands + preamp mapped onto its 18 bands, synced both ways; built-in presets, .eqf import) and playlist editor (active fb2k playlist).
 - [ ] EQ: AUTO button is a toggle only (no per-track presets); no preset saving.
 - [ ] Playlist: no playlist switching in the window (shows fb2k's active playlist); no double size.
-- [ ] Visualizer tuning: dB range / falloff speeds are guesses; no Winamp vis options (fire/line bars, dot oscilloscope, falloff, refresh rate).
+- [x] Visualizer matches Winamp's classic analyser/scope (verified against recordings); Winamp vis options on the Preferences > Display > Winamp Skins > Visualization page (mode, analyzer style, thin/thick bands, peaks, scope style, refresh rate, falloffs).
 - [ ] Main menu (File/Edit/...) is only reachable via right-click; consider Alt shortcuts / options button behaviour like Winamp.
 - [ ] Skin cursors (*.cur) are ignored.
 - [ ] Main window title bar shows wrong active/inactive colours when focus changes.

@@ -8,10 +8,13 @@
 // Behaviour follows Winamp's classic visualizer (studied from its published source; no code taken):
 // - analyser: 512-sample Hann-windowed FFT of L+R, magnitudes * 0.5, folded into 75 values on a
 //   2^(x/12) bin warp with Hermite-interpolated partial bins, clamped to 255;
-// - bars: each 4-column group shows the integer mean of its 4 values, capped at 15; the bars stand
-//   2 rows below the visible area, so 13 rows of a full bar show; colour = skin colour[17 - y];
-// - falloff per cycle: bars drop 12/16 px, peaks drop by a speed that starts at 3/256 px and grows x1.1;
-// - scope: 75 points, each the high byte of a sample / 8 (-16..16), drawn as connected lines.
+// - bars: each 4-column group shows the integer mean of its 4 values (thin bands: one value per
+//   column), capped at 15; the bars stand 2 rows below the visible area, so 13 rows of a full bar
+//   show; colour by style: normal 17 - y, fire v + 2 - y, line 17 - v;
+// - falloff per cycle: bars drop {3,6,12,16,32}/16 px, peaks drop by a speed that starts at 3/256 px
+//   and grows x{1.05,1.1,1.2,1.4,1.6}; the peak is drawn before that cycle's drop;
+// - refresh rate: falloff runs every cycle, drawing every Nth cycle;
+// - scope: 75 points, each the high byte of a sample / 8 (-16..16), as dots, lines or solid.
 namespace wsz {
 namespace {
 
@@ -21,8 +24,8 @@ constexpr int scope_block = 576;      // samples spread over the 75 scope points
 // resolution, so on a default 15.6 ms Windows tick each wait lasts ~31 ms: 32 cycles/s. This also
 // matches the recorded peak hold (first 1 px drop after ~0.73 s).
 constexpr double cycle_hz = 32.0;
-constexpr int bar_drop = 12;          // 1/16 px per cycle
-constexpr float peak_accel = 1.1f;
+constexpr int bar_drop[5] = { 3, 6, 12, 16, 32 };              // 1/16 px per cycle
+constexpr float peak_accel[5] = { 1.05f, 1.1f, 1.2f, 1.4f, 1.6f };
 constexpr int base_offset = 2;        // bar/scope base sits 2 rows below the visible bottom
 
 void fft(std::array<std::complex<double>, fft_n>& a) {
@@ -93,6 +96,16 @@ void Visualizer::set_mode(VisMode m) {
     if (m != VisMode::off) ensure_stream();
 }
 
+void Visualizer::set_options(const VisOptions& o) {
+    m_opt = o;
+    m_opt.analyzer = std::clamp(m_opt.analyzer, 0, 2);
+    m_opt.scope = std::clamp(m_opt.scope, 0, 2);
+    m_opt.refresh = std::clamp(m_opt.refresh, 1, 4);
+    m_opt.falloff = std::clamp(m_opt.falloff, 0, 4);
+    m_opt.peak_falloff = std::clamp(m_opt.peak_falloff, 0, 4);
+    m_redraw = true;
+}
+
 void Visualizer::release() {
     m_stream.release();
 }
@@ -105,6 +118,8 @@ void Visualizer::reset() {
     m_scope_valid = false;
     m_last_tick = {};
     m_pending = 0;
+    m_cycle = 0;
+    m_redraw = true;
 }
 
 void Visualizer::ensure_stream() {
@@ -172,23 +187,23 @@ bool Visualizer::fetch_scope(std::array<int, points>& out) {
     return true;
 }
 
-void Visualizer::step(Falloff& f, int column, int v) {
+void Visualizer::step(Falloff& f, int column, int v, bool draw) {
     v = std::min(v, 15);
     int& bar = f.bar[column];
-    if (v * 16 < bar) v = (bar -= bar_drop) >> 4;
+    if (v * 16 < bar) v = (bar -= bar_drop[m_opt.falloff]) >> 4;
     else bar = v * 16;
     if (bar < 0) bar = 0;
     v = std::max(v, 0);
-    f.shown[column] = v;
+    if (draw) f.shown[column] = v;
     int& peak = f.peak[column];
     float& speed = f.peak_speed[column];
     if (peak <= v * 256) {
         peak = v * 256;
         speed = 3.0f;
     }
-    f.peak_shown[column] = peak; // Winamp draws the peak before decaying it
+    if (draw) f.peak_shown[column] = peak; // Winamp draws the peak before decaying it
     peak -= static_cast<int>(speed);
-    speed *= peak_accel;
+    speed *= peak_accel[m_opt.peak_falloff];
     if (peak < 0) peak = 0;
 }
 
@@ -199,28 +214,48 @@ bool Visualizer::tick(bool playing) {
         : std::clamp(std::chrono::duration<double>(now - m_last_tick).count(), 0.0, 0.25);
     m_last_tick = now;
 
-    if (m_mode == VisMode::oscilloscope) {
-        m_scope_valid = playing && fetch_scope(m_scope);
-        return playing;
-    }
-
-    if (!(playing && fetch_spectrum(m_spec))) m_spec.fill(0);
+    const bool spectrum = m_mode == VisMode::spectrum;
+    bool fetched = false;
     m_pending += dt;
     while (m_pending >= 1.0 / cycle_hz) {
         m_pending -= 1.0 / cycle_hz;
+        const bool draw = ++m_cycle >= m_opt.refresh;
+        if (draw) {
+            m_cycle = 0;
+            m_redraw = true;
+        }
+        if (!spectrum) {
+            if (draw) m_scope_valid = playing && fetch_scope(m_scope);
+            continue;
+        }
+        if (!fetched) {
+            if (!(playing && fetch_spectrum(m_spec))) m_spec.fill(0);
+            fetched = true;
+        }
+        const auto& s = m_spec;
         for (int x = 0; x < points; ++x) {
             const int t = x & ~3;
-            step(m_normal, x, (m_spec[t] + m_spec[t + 1] + m_spec[t + 2] + m_spec[t + 3]) / 4);
+            step(m_normal, x, m_opt.thin_bands ? s[x] : (s[t] + s[t + 1] + s[t + 2] + s[t + 3]) / 4, draw);
         }
         for (int x = 0; x < 37; ++x) {
             const int t = (x & ~3) * 2;
-            step(m_shade, x, (m_spec[t] + m_spec[t + 1] + m_spec[t + 2] + m_spec[t + 3]) / 4);
+            step(m_shade, x, m_opt.thin_bands ? (s[x * 2] + s[x * 2 + 1]) / 2 : (s[t] + s[t + 1] + s[t + 2] + s[t + 3]) / 4, draw);
         }
     }
+    if (!spectrum) return playing;
     if (playing) return true;
     for (int x = 0; x < points; ++x)
         if (m_normal.bar[x] > 0 || m_normal.peak[x] > 0 || m_shade.bar[x] > 0 || m_shade.peak[x] > 0) return true;
     return false;
+}
+
+// Colour index of base row 0 of a bar of height v; rows above count down from it (line style: whole bar).
+int Visualizer::bar_color(int v) const {
+    switch (m_opt.analyzer) {
+    case 1: return v + 2;  // fire
+    case 2: return 17 - v; // line
+    default: return 17;
+    }
 }
 
 void Visualizer::render(Canvas& c, const Skin& skin, layout::Pos pos, bool shade) const {
@@ -233,17 +268,22 @@ void Visualizer::render(Canvas& c, const Skin& skin, layout::Pos pos, bool shade
         c.fill_rect(pos.x, pos.y, shade_width, h, color(0));
         if (m_mode == VisMode::spectrum) {
             for (int x = 0; x < 37; ++x) {
-                if ((x & 3) == 3) continue;
-                const int v = std::min(m_shade.shown[x] * 5 / 15, 5);
-                for (int y = 0; y < v; ++y) c.set_pixel(pos.x + x, pos.y + h - 1 - y, color(17 - y * 15 / 5));
+                if (!m_opt.thin_bands && (x & 3) == 3) continue;
+                const int full = m_shade.shown[x];
+                const int top = bar_color(full);
+                const int v = std::min(full * 5 / 15, 5);
+                for (int y = 0; y < v; ++y)
+                    c.set_pixel(pos.x + x, pos.y + h - 1 - y, color(m_opt.analyzer == 2 ? top : top - y * 15 / 5));
                 const int p = m_shade.peak_shown[x] * 5 / 15 / 256;
-                if (p >= 0 && p <= 4) c.set_pixel(pos.x + x, pos.y + h - 1 - p, color(23));
+                if (m_opt.peaks && p >= 0 && p <= 4) c.set_pixel(pos.x + x, pos.y + h - 1 - p, color(23));
             }
         } else if (m_scope_valid) {
             int last = -5;
             for (int x = 0; x < shade_width; ++x) {
                 const int v = std::clamp((m_scope[x] + 8) * 5 / 16, 0, 4);
-                const int lo = last == -5 ? v : std::min(v, last), hi = last == -5 ? v : std::max(v, last);
+                int lo = v, hi = v;
+                if (m_opt.scope == 2) lo = std::min(v, 2), hi = std::max(v, 2);
+                else if (m_opt.scope == 1 && last != -5) lo = std::min(v, last), hi = std::max(v, last);
                 for (int y = lo; y <= hi; ++y) c.set_pixel(pos.x + x, pos.y + h - 1 - y, color(18));
                 last = v;
             }
@@ -261,10 +301,13 @@ void Visualizer::render(Canvas& c, const Skin& skin, layout::Pos pos, bool shade
 
     if (m_mode == VisMode::spectrum) {
         for (int x = 0; x < points; ++x) {
-            if ((x & 3) == 3) continue;
-            for (int y = base_offset; y < m_normal.shown[x]; ++y) c.set_pixel(pos.x + x, pos.y + row_of(y), color(17 - y));
+            if (!m_opt.thin_bands && (x & 3) == 3) continue;
+            const int v = m_normal.shown[x];
+            const int top = bar_color(v);
+            for (int y = base_offset; y < v; ++y)
+                c.set_pixel(pos.x + x, pos.y + row_of(y), color(m_opt.analyzer == 2 ? top : top - y));
             const int p = m_normal.peak_shown[x] / 256;
-            if (p >= base_offset && p <= 15) c.set_pixel(pos.x + x, pos.y + row_of(p), color(23));
+            if (m_opt.peaks && p >= base_offset && p <= 15) c.set_pixel(pos.x + x, pos.y + row_of(p), color(23));
         }
         return;
     }
@@ -277,8 +320,15 @@ void Visualizer::render(Canvas& c, const Skin& skin, layout::Pos pos, bool shade
         if (last == -1) last = v;
         const int prev = last;
         last = v;
-        // Rising: v down to prev inclusive; falling: v up to prev exclusive.
-        const int lo = v >= prev ? prev : v, hi = v >= prev ? v : prev - 1;
+        int lo = v, hi = v;
+        if (m_opt.scope == 1) {
+            // Rising: v down to prev inclusive; falling: v up to prev exclusive.
+            lo = v >= prev ? prev : v;
+            hi = v >= prev ? v : prev - 1;
+        } else if (m_opt.scope == 2) {
+            lo = v > 7 ? 8 : v;
+            hi = v > 7 ? v : 7;
+        }
         for (int y = lo; y <= hi; ++y)
             if (y >= base_offset) c.set_pixel(pos.x + x, pos.y + row_of(y), color(col));
     }

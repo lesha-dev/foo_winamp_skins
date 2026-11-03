@@ -1,5 +1,7 @@
 #pragma once
 
+#include "vis_options.h"
+
 namespace wsz::config {
 extern cfg_int window_x;
 extern cfg_int window_y;
@@ -14,6 +16,17 @@ extern cfg_bool winamp_hotkeys;       // Z X C V B L, arrows, Ctrl+D/A/W in the 
 extern cfg_bool balance_dsp;          // use wsz::balance::set_enabled()
 extern cfg_int balance_snap;          // percent around centre that snaps to 0
 extern cfg_int vis_mode;
+// Winamp classic vis options (Winamp defaults): analyzer style 0 normal / 1 fire / 2 line; scope style
+// 0 dots / 1 lines / 2 solid; refresh = draw every Nth cycle (1..4); falloffs 0 slowest .. 4 fastest.
+extern cfg_int vis_analyzer;
+extern cfg_bool vis_thin_bands;
+extern cfg_bool vis_peaks;
+extern cfg_int vis_scope;
+extern cfg_int vis_refresh;
+extern cfg_int vis_falloff;
+extern cfg_int vis_peak_falloff;
+VisOptions vis_options();
+void set_vis_options(const VisOptions& o);
 
 extern cfg_bool eq_visible;
 extern cfg_int eq_x, eq_y;

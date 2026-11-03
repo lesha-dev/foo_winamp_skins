@@ -22,6 +22,7 @@
     <ClCompile Include="src\player.cpp"><Filter>Source Files</Filter></ClCompile>
     <ClCompile Include="src\skin.cpp"><Filter>Source Files</Filter></ClCompile>
     <ClCompile Include="src\prefs_page.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClCompile Include="src\prefs_vis.cpp"><Filter>Source Files</Filter></ClCompile>
     <ClCompile Include="src\skins_folder.cpp"><Filter>Source Files</Filter></ClCompile>
     <ClCompile Include="src\text_font.cpp"><Filter>Source Files</Filter></ClCompile>
     <ClCompile Include="src\ui_module.cpp"><Filter>Source Files</Filter></ClCompile>
@@ -50,6 +51,7 @@
     <ClInclude Include="src\skins_folder.h"><Filter>Header Files</Filter></ClInclude>
     <ClInclude Include="src\text_font.h"><Filter>Header Files</Filter></ClInclude>
     <ClInclude Include="src\version.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="src\vis_options.h"><Filter>Header Files</Filter></ClInclude>
     <ClInclude Include="src\visualizer.h"><Filter>Header Files</Filter></ClInclude>
     <ClInclude Include="3rdParty\miniz\miniz.h"><Filter>3rdParty</Filter></ClInclude>
   </ItemGroup>

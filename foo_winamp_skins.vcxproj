@@ -111,6 +111,7 @@ exit /b 0</Command>
     <ClInclude Include="src\skins_folder.h" />
     <ClInclude Include="src\text_font.h" />
     <ClInclude Include="src\version.h" />
+    <ClInclude Include="src\vis_options.h" />
     <ClInclude Include="src\visualizer.h" />
     <ClInclude Include="3rdParty\miniz\miniz.h" />
   </ItemGroup>
@@ -130,6 +131,7 @@ exit /b 0</Command>
     <ClCompile Include="src\player.cpp" />
     <ClCompile Include="src\skin.cpp" />
     <ClCompile Include="src\prefs_page.cpp" />
+    <ClCompile Include="src\prefs_vis.cpp" />
     <ClCompile Include="src\skins_folder.cpp" />
     <ClCompile Include="src\text_font.cpp" />
     <ClCompile Include="src\ui_module.cpp" />
