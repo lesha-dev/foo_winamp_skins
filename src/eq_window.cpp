@@ -280,7 +280,10 @@ void EqWindow::render_normal(Canvas& c) {
     auto slider = [&](int x, int v, bool pressed) {
         const int frame = static_cast<int>(std::lround(v / 100.0 * 27));
         c.blit(img, slider_frame_x + (frame % 14) * 15, slider_frame_y + (frame / 14) * 65, slider_w, slider_h, x, band_y);
-        const int ty = band_y + static_cast<int>(std::lround((100 - v) / 100.0 * slider_travel));
+        // Inverse of drag_to: 100..50 -> 0..25, 49..0 -> 26..51 (0 dB sits at 25, as in Winamp).
+        constexpr int half = slider_travel / 2;
+        const int ty = band_y + (v >= 50 ? static_cast<int>(std::lround((100 - v) * half / 50.0))
+                                         : half + 1 + static_cast<int>(std::lround((49 - v) * half / 49.0)));
         c.blit(img, pressed ? thumb_down : thumb, { x + 1, ty });
     };
     slider(pos_preamp.x, vals.preamp, m_pressed == Part::preamp);
