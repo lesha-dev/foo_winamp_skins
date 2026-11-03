@@ -131,9 +131,11 @@ void render_main(Canvas& c, const Skin& skin, const MainState& st) {
         c.blit(playpaus, L::ind_not_working, L::pos_work_ind);
         break;
     case PlayState::paused:
+        c.blit(playpaus, L::ind_filler, L::pos_work_ind);
         c.blit(playpaus, L::ind_paused, L::pos_play_state);
         break;
     case PlayState::stopped:
+        c.blit(playpaus, L::ind_filler, L::pos_work_ind);
         c.blit(playpaus, L::ind_stopped, L::pos_play_state);
         break;
     }

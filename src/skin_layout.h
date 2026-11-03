@@ -32,6 +32,7 @@ constexpr Sprite ind_paused      {  9, 0, 9, 9 };
 constexpr Sprite ind_stopped     { 18, 0, 9, 9 };
 constexpr Sprite ind_not_working { 36, 0, 3, 9 };
 constexpr Sprite ind_working     { 39, 0, 3, 9 };
+constexpr Sprite ind_filler      { 27, 0, 2, 9 };  // drawn at pos_work_ind when not playing (matches Winamp)
 constexpr Pos pos_play_state  { 26, 28 };
 constexpr Pos pos_work_ind    { 24, 28 };
 
