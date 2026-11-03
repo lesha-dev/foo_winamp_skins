@@ -727,6 +727,13 @@ void MainWindow::update_vis_timer() {
 
 void MainWindow::on_vis_timer() {
     auto pc = playback_control::get();
+    if (pc->is_playing() && pc->is_paused()) {
+        // Winamp freezes the visualizer while paused; resume continues from the frozen state.
+        KillTimer(m_wnd, vis_timer_id);
+        m_vis_running = false;
+        m_vis.freeze();
+        return;
+    }
     if (!m_vis.tick(pc->is_playing() && !pc->is_paused())) {
         KillTimer(m_wnd, vis_timer_id);
         m_vis_running = false;

@@ -31,6 +31,7 @@ public:
     bool tick(bool playing);
     bool take_redraw() { return std::exchange(m_redraw, false); } // a draw cycle happened since the last call
     void reset();
+    void freeze() { m_last_tick = {}; m_pending = 0; } // keeps the picture; the next tick starts a fresh interval
     void release(); // drops the vis stream (window teardown)
 
     void render(Canvas& c, const Skin& skin, layout::Pos pos, bool shade) const;
