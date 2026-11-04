@@ -10,6 +10,7 @@ cp build-x86/foo_winamp_skins.dll "$stage/"
 cp build-x64/foo_winamp_skins.dll "$stage/x64/"
 cp $repo/LICENSE "$stage/LICENSE.txt"
 cp $repo/3rdParty/miniz/LICENSE "$stage/LICENSE-miniz.txt"
+cp $repo/licenses/webamp-LICENSE.txt "$stage/LICENSE-webamp.txt"
 pkg="$repo/out/foo_winamp_skins-$ver.fb2k-component"
 rm -f "$pkg"
 pkg=$(realpath -m "$pkg")

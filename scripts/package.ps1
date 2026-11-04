@@ -9,6 +9,7 @@ try {
     Copy-Item "$root\out\x64\Release\foo_winamp_skins.dll" "$stage\x64"
     Copy-Item "$root\LICENSE" "$stage\LICENSE.txt"
     Copy-Item "$root\3rdParty\miniz\LICENSE" "$stage\LICENSE-miniz.txt"
+    Copy-Item "$root\licenses\webamp-LICENSE.txt" "$stage\LICENSE-webamp.txt"
     $zip = "$root\out\foo_winamp_skins-$ver.zip"
     $pkg = [IO.Path]::ChangeExtension($zip, '.fb2k-component')
     Remove-Item $zip, $pkg -ErrorAction SilentlyContinue
