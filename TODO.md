@@ -19,7 +19,7 @@
 - [ ] EQ: AUTO button is a toggle only (no per-track presets, keyed by file path, applied on track start). Preset load/save is via .feq files.
 - [x] Playlist switching: Playlists submenu in the context menu (sets fb2k's active playlist). No double size for the playlist (Winamp never had it).
 - [x] Visualizer matches Winamp's classic analyser/scope (verified against recordings); Winamp vis options on the Preferences > Display > Winamp Skins > Visualization page (mode, analyzer style, thin/thick bands, peaks, scope style, refresh rate, falloffs).
-- [ ] Skin cursors (*.cur) are ignored.
+- [x] Skin cursors (*.cur) are ignored.
 - [x] Main window title bar shows wrong active/inactive colours when focus changes.
 - [x] Dragging the song title (marquee) scrolls the text by hand, like Winamp.
 - [x] Tooltips on controls (main, EQ, playlist windows), like Winamp; unimplemented features say "(doesn't work)".
@@ -30,7 +30,7 @@
   - [x] Dock skinned windows at N pixels (Options page; Shift inverts while dragging)
   - [x] Enable smooth window resizing for resizeable skinned windows (playlist, Options page)
   - [x] Display tooltips in Winamp's windows (Options page)
-  - [ ] Use skinned mouse cursors (see *.cur item)
+  - [x] Use skinned mouse cursors (see *.cur item)
   - [ ] Display playlist position in the song scroller
   - [x] Always show Winamp "Clutterbar" in main window (Options page)
   - [x] Use doublesize setting on equalizer as well as main window (Options page)

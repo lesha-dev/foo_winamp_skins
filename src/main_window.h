@@ -64,6 +64,7 @@ private:
 
     // input
     POINT to_skin(POINT client) const;
+    SkinCursor cursor_at(POINT skin_pt) const;
     const ControlRect* hit(POINT skin_pt) const;
     void on_lbutton_down(POINT skin_pt);
     void on_mouse_move(POINT skin_pt);

@@ -16,6 +16,7 @@ extern cfg_bool dim_titlebars;        // inactive windows show the dimmed titleb
 extern cfg_bool clutterbar;           // always show the clutterbar (else only while pressed)
 extern cfg_bool oldschool_pl_buttons; // playlist menus: hold, pick on release (else click to open, click to pick)
 extern cfg_bool tooltips;             // tooltips on the skinned windows
+extern cfg_bool skin_cursors;         // mouse cursors from the skin's *.cur files
 extern cfg_bool snap;                 // dock windows to each other / screen edges (Shift inverts while dragging)
 extern cfg_int snap_distance;         // px
 extern cfg_bool smooth_resize;        // playlist resizes per pixel instead of 25x29 steps

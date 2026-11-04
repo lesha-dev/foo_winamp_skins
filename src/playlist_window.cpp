@@ -229,6 +229,24 @@ void PlaylistWindow::recompute_lengths() {
 // ---------------------------------------------------------------------------------------------
 // hit testing
 
+// Hit areas follow Winamp's playlist cursor map.
+SkinCursor PlaylistWindow::cursor_at(POINT p) const {
+    const SIZE sz = skin_size();
+    const int w = sz.cx, h = sz.cy;
+    if (m_shade) {
+        if (in_rect(p, w - 21, 3, w - 13, 12)) return SkinCursor::plws_winbut;
+        if (in_rect(p, w - 11, 3, w - 3, 12)) return SkinCursor::plws_close;
+        if (in_rect(p, w - 29, 3, w - 20, 12)) return SkinCursor::plws_size;
+        return SkinCursor::plws_normal;
+    }
+    if (in_rect(p, w - 21, 3, w - 13, 12)) return SkinCursor::pl_winbut;
+    if (in_rect(p, w - 11, 3, w - 3, 12)) return SkinCursor::pl_close;
+    if (in_rect(p, 0, 0, w - 1, 13)) return SkinCursor::pl_titlebar;
+    if (in_rect(p, w - 15, 20, w - 7, h - 38)) return SkinCursor::pl_vscroll;
+    if (in_rect(p, w - 20, h - 20, w - 1, h - 1)) return SkinCursor::pl_size;
+    return SkinCursor::pl_normal;
+}
+
 const wchar_t* PlaylistWindow::tooltip_at(POINT p) const {
     if (m_menu_open) return nullptr;
     switch (hit(p)) {

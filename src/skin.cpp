@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "skin.h"
 
+#include "config.h"
+
 #include <miniz.h>
 
 #include <cctype>
@@ -16,6 +18,31 @@ const char* const bitmap_files[] = {
     "pledit.bmp", "gen.bmp", "genex.bmp", "video.bmp",
 };
 static_assert(std::size(bitmap_files) == static_cast<size_t>(SkinBitmap::count_));
+
+const char* const cursor_files[] = {
+    "volbal.cur", "posbar.cur", "winbut.cur", "min.cur", "close.cur", "mainmenu.cur", "titlebar.cur", "songname.cur", "normal.cur",
+    "winbut.cur", "min.cur", "wsposbar.cur", "close.cur", "mmenu.cur", "wsnormal.cur",
+    "pwinbut.cur", "pclose.cur", "ptbar.cur", "pvscroll.cur", "psize.cur", "pnormal.cur",
+    "pwinbut.cur", "pclose.cur", "pwssize.cur", "pwsnorm.cur",
+    "eqslid.cur", "eqclose.cur", "eqtitle.cur", "eqnormal.cur",
+};
+static_assert(std::size(cursor_files) == static_cast<size_t>(SkinCursor::count_));
+
+// LoadImage handles both static (.cur) and animated (RIFF .ani) cursors, but only from a file.
+HCURSOR load_cursor(const std::vector<uint8_t>& data) {
+    wchar_t dir[MAX_PATH], path[MAX_PATH];
+    if (!GetTempPathW(MAX_PATH, dir) || !GetTempFileNameW(dir, L"wsz", 0, path)) return nullptr;
+    HCURSOR c = nullptr;
+    HANDLE f = CreateFileW(path, GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_TEMPORARY, nullptr);
+    if (f != INVALID_HANDLE_VALUE) {
+        DWORD written = 0;
+        const bool ok = WriteFile(f, data.data(), static_cast<DWORD>(data.size()), &written, nullptr) && written == data.size();
+        CloseHandle(f);
+        if (ok) c = static_cast<HCURSOR>(LoadImageW(nullptr, path, IMAGE_CURSOR, 0, 0, LR_LOADFROMFILE));
+    }
+    DeleteFileW(path);
+    return c;
+}
 
 // Winamp's built-in visualization palette, used when viscolor.txt is missing or short.
 constexpr std::array<COLORREF, 24> default_vis_colors = {
@@ -198,6 +225,30 @@ std::string decode_text(const std::vector<uint8_t>& data) {
 
 Skin::Skin() : m_vis_colors(default_vis_colors) {}
 
+void set_skin_cursor(const Skin* skin, SkinCursor c) {
+    using C = SkinCursor;
+    // Cursors of the same kind (Winamp's built-in cursor groups), tried in order when one is missing.
+    static const std::initializer_list<C> lr_scroll = { C::volbal, C::posbar, C::songname, C::ws_posbar, C::plws_size };
+    static const std::initializer_list<C> ud_scroll = { C::pl_vscroll, C::eq_slider };
+    static const std::initializer_list<C> danger = { C::close, C::ws_close, C::pl_close, C::plws_close, C::eq_close };
+    static const std::initializer_list<C> move = { C::titlebar, C::pl_titlebar, C::eq_titlebar };
+    HCURSOR h = nullptr;
+    if (skin && config::skin_cursors.get()) {
+        h = skin->cursor(c);
+        for (const auto* group : { &lr_scroll, &ud_scroll, &danger, &move }) {
+            if (h || std::find(group->begin(), group->end(), c) == group->end()) continue;
+            for (C other : *group) if ((h = skin->cursor(other)) != nullptr) break;
+        }
+        // Winamp fills the rest with its built-in cursors; we use the skin's Normal.cur instead.
+        if (!h) h = skin->cursor(C::normal);
+    }
+    SetCursor(h ? h : LoadCursorW(nullptr, IDC_ARROW));
+}
+
+Skin::~Skin() {
+    for (HCURSOR c : m_cursors) if (c) DestroyCursor(c);
+}
+
 std::unique_ptr<Skin> Skin::load(const char* path_utf8) {
     std::wstring wpath = pfc::stringcvt::string_wide_from_utf8(path_utf8).get_ptr();
     const DWORD attr = GetFileAttributesW(wpath.c_str());
@@ -227,6 +278,10 @@ void Skin::load_from(FileMap& files) {
         } catch (const std::exception& e) {
             m_warnings.push_back(pfc::format(bitmap_files[i], ": ", e.what()).c_str());
         }
+    }
+
+    for (size_t i = 0; i < std::size(cursor_files); ++i) {
+        if (auto it = files.find(cursor_files[i]); it != files.end() && !it->second.empty()) m_cursors[i] = load_cursor(it->second);
     }
 
     if (auto it = files.find("viscolor.txt"); it != files.end()) {

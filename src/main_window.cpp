@@ -294,6 +294,13 @@ LRESULT MainWindow::wndproc(UINT msg, WPARAM wp, LPARAM lp) {
         if (docking::end_move(m_wnd)) { save_positions(); return 0; }
         if (reinterpret_cast<HWND>(lp) != m_wnd) cancel_drag();
         return 0;
+    case WM_SETCURSOR:
+        if (reinterpret_cast<HWND>(wp) == m_wnd && LOWORD(lp) == HTCLIENT) {
+            POINT p; GetCursorPos(&p); ScreenToClient(m_wnd, &p);
+            set_skin_cursor(m_skin.get(), cursor_at(to_skin(p)));
+            return TRUE;
+        }
+        break;
     case WM_MOUSEWHEEL:
         if (GET_WHEEL_DELTA_WPARAM(wp) > 0) playback_control::get()->volume_up();
         else playback_control::get()->volume_down();
@@ -508,6 +515,27 @@ MainState MainWindow::build_state() {
 
 // ---------------------------------------------------------------------------------------------
 // input
+
+// Hit areas follow Winamp's main window cursor map.
+SkinCursor MainWindow::cursor_at(POINT p) const {
+    if (m_shade) {
+        if (in_rect(p, 254, 3, 262, 12)) return SkinCursor::ws_winbut;
+        if (in_rect(p, 244, 3, 253, 12)) return SkinCursor::ws_min;
+        if (in_rect(p, 228, 3, 242, 12)) return SkinCursor::ws_posbar;
+        if (in_rect(p, 264, 3, 272, 12)) return SkinCursor::ws_close;
+        if (in_rect(p, 5, 3, 17, 13)) return SkinCursor::ws_mainmenu;
+        return SkinCursor::ws_normal;
+    }
+    if (in_rect(p, 107, 58, 215, 66)) return SkinCursor::volbal;
+    if (in_rect(p, 18, 73, 263, 81)) return SkinCursor::posbar;
+    if (in_rect(p, 254, 3, 262, 12)) return SkinCursor::winbut;
+    if (in_rect(p, 244, 3, 253, 12)) return SkinCursor::min;
+    if (in_rect(p, 264, 3, 272, 12)) return SkinCursor::close;
+    if (in_rect(p, 5, 3, 17, 13)) return SkinCursor::mainmenu;
+    if (in_rect(p, 0, 0, 275, 13)) return SkinCursor::titlebar;
+    if (in_rect(p, 105, 24, 266, 35)) return SkinCursor::songname;
+    return SkinCursor::normal;
+}
 
 POINT MainWindow::to_skin(POINT client) const {
     return { client.x / m_scale, client.y / m_scale };

@@ -191,6 +191,13 @@ LRESULT SkinWindow::wndproc(UINT msg, WPARAM wp, LPARAM lp) {
         if (docking::end_move(m_wnd)) { save_window_position(); return 0; }
         if (reinterpret_cast<HWND>(lp) != m_wnd) on_mouse_leave_capture();
         return 0;
+    case WM_SETCURSOR:
+        if (reinterpret_cast<HWND>(wp) == m_wnd && LOWORD(lp) == HTCLIENT) {
+            POINT p; GetCursorPos(&p); ScreenToClient(m_wnd, &p);
+            set_skin_cursor(m_skin, cursor_at(to_skin(p)));
+            return TRUE;
+        }
+        break;
     case WM_MOUSEWHEEL:
         on_wheel(GET_WHEEL_DELTA_WPARAM(wp));
         return 0;

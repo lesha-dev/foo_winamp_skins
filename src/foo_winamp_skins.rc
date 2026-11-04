@@ -17,7 +17,7 @@ BEGIN
     PUSHBUTTON      "Refresh", IDC_REFRESH, 283, 249, 43, 14
 END
 
-IDD_PREFS_OPTIONS DIALOGEX 0, 0, 332, 177
+IDD_PREFS_OPTIONS DIALOGEX 0, 0, 332, 190
 STYLE DS_SETFONT | DS_FIXEDSYS | DS_CONTROL | WS_CHILD
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
@@ -27,7 +27,7 @@ BEGIN
     LTEXT           "Balance center snap:", IDC_STATIC, 14, 45, 72, 8
     EDITTEXT        IDC_BALANCE_SNAP, 88, 43, 26, 12, ES_NUMBER
     LTEXT           "%", IDC_STATIC, 117, 45, 10, 8
-    GROUPBOX        "Display", IDC_STATIC, 7, 66, 319, 107
+    GROUPBOX        "Display", IDC_STATIC, 7, 66, 319, 120
     AUTOCHECKBOX    "Dim window titlebars when not in focus", IDC_DIM_TITLEBARS, 14, 78, 300, 10
     AUTOCHECKBOX    "Dock skinned windows at", IDC_SNAP, 14, 91, 94, 10
     EDITTEXT        IDC_SNAP_PX, 109, 90, 22, 12, ES_NUMBER
@@ -37,6 +37,7 @@ BEGIN
     AUTOCHECKBOX    "Always show Clutterbar in main window", IDC_CLUTTERBAR, 14, 131, 300, 10
     AUTOCHECKBOX    "Oldschool playlist button behavior (hold, pick on release)", IDC_OLDSCHOOL_PL, 14, 144, 300, 10
     AUTOCHECKBOX    "Display tooltips in Winamp's windows", IDC_TOOLTIPS, 14, 157, 300, 10
+    AUTOCHECKBOX    "Use skinned mouse cursors", IDC_SKIN_CURSORS, 14, 170, 300, 10
 END
 
 IDD_PREFS_VIS DIALOGEX 0, 0, 332, 200

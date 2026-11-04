@@ -36,6 +36,8 @@ protected:
     virtual bool holds_mouse() const { return false; }
     // Tooltip text for the point (skin coordinates), or null.
     virtual const wchar_t* tooltip_at(POINT) const { return nullptr; }
+    // Skinned cursor for the point (skin coordinates).
+    virtual SkinCursor cursor_at(POINT) const = 0;
     virtual void on_right_click(POINT screen_pt);
     virtual void on_wheel(int /*delta*/) {}
     virtual bool on_key(WPARAM /*vk*/) { return false; }

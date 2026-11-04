@@ -17,6 +17,7 @@ cfg_bool dim_titlebars(guids::cfg_dim_titlebars, true);
 cfg_bool clutterbar(guids::cfg_clutterbar, true);
 cfg_bool oldschool_pl_buttons(guids::cfg_oldschool_pl_buttons, false);
 cfg_bool tooltips(guids::cfg_tooltips, true);
+cfg_bool skin_cursors(guids::cfg_skin_cursors, true);
 cfg_bool snap(guids::cfg_snap, true);
 cfg_int snap_distance(guids::cfg_snap_distance, 10);
 cfg_bool smooth_resize(guids::cfg_smooth_resize, false);

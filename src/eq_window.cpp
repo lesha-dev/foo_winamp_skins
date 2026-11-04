@@ -114,6 +114,19 @@ void EqWindow::on_visibility_changed(bool visible) {
     if (MainWindow* w = MainWindow::instance()) w->invalidate();
 }
 
+// Hit areas follow Winamp's equalizer cursor map.
+SkinCursor EqWindow::cursor_at(POINT p) const {
+    if (!m_shade) {
+        for (int i = 0; i < 11; ++i) {
+            const int x = i == 0 ? 21 : 78 + (i - 1) * 18;
+            if (in_rect(p, x, 39, x + 12, 98)) return SkinCursor::eq_slider;
+        }
+    }
+    if (in_rect(p, 264, 3, 272, 12)) return SkinCursor::eq_close;
+    if (in_rect(p, 0, 0, 275, 13)) return SkinCursor::eq_titlebar;
+    return SkinCursor::eq_normal;
+}
+
 const wchar_t* EqWindow::tooltip_at(POINT p) const {
     static const wchar_t* const bands[eq::band_count] = { L"70Hz", L"180Hz", L"320Hz", L"600Hz", L"1KHz", L"3KHz", L"6KHz", L"12KHz", L"14KHz", L"16KHz" };
     const Part part = hit(p);

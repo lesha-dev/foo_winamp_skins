@@ -41,6 +41,7 @@ public:
         config::clutterbar = checked(IDC_CLUTTERBAR);
         config::oldschool_pl_buttons = checked(IDC_OLDSCHOOL_PL);
         config::tooltips = checked(IDC_TOOLTIPS);
+        config::skin_cursors = checked(IDC_SKIN_CURSORS);
         if (MainWindow* w = MainWindow::instance()) w->apply_display_options();
         changed();
     }
@@ -57,6 +58,7 @@ public:
         CheckDlgButton(m_wnd, IDC_CLUTTERBAR, BST_CHECKED);
         CheckDlgButton(m_wnd, IDC_OLDSCHOOL_PL, BST_UNCHECKED);
         CheckDlgButton(m_wnd, IDC_TOOLTIPS, BST_CHECKED);
+        CheckDlgButton(m_wnd, IDC_SKIN_CURSORS, BST_CHECKED);
         changed();
     }
 
@@ -100,6 +102,7 @@ private:
         CheckDlgButton(m_wnd, IDC_CLUTTERBAR, config::clutterbar.get() ? BST_CHECKED : BST_UNCHECKED);
         CheckDlgButton(m_wnd, IDC_OLDSCHOOL_PL, config::oldschool_pl_buttons.get() ? BST_CHECKED : BST_UNCHECKED);
         CheckDlgButton(m_wnd, IDC_TOOLTIPS, config::tooltips.get() ? BST_CHECKED : BST_UNCHECKED);
+        CheckDlgButton(m_wnd, IDC_SKIN_CURSORS, config::skin_cursors.get() ? BST_CHECKED : BST_UNCHECKED);
         m_initialized = true;
     }
 
@@ -129,7 +132,8 @@ private:
             || checked(IDC_EQ_DSIZE) != config::eq_double_size.get()
             || checked(IDC_CLUTTERBAR) != config::clutterbar.get()
             || checked(IDC_OLDSCHOOL_PL) != config::oldschool_pl_buttons.get()
-            || checked(IDC_TOOLTIPS) != config::tooltips.get();
+            || checked(IDC_TOOLTIPS) != config::tooltips.get()
+            || checked(IDC_SKIN_CURSORS) != config::skin_cursors.get();
     }
 
     void changed() { m_callback->on_state_changed(); }
