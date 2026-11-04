@@ -1,9 +1,12 @@
 #pragma once
 
+#include "hosted_element.h"
 #include "skin_window.h"
 
 namespace wsz {
 
+// Winamp's playlist editor. Its list area is our own list, or (switch in its menu) Default UI's Playlist
+// View; all frame controls stay either way.
 class PlaylistWindow : public SkinWindow {
 public:
     PlaylistWindow();
@@ -23,7 +26,16 @@ public:
     // Mini time display, fed by the main window so both always show the same value.
     void set_time(bool show, bool negative, int seconds);
     void apply_resize_mode(); // smooth resize turned off: snap the size to 25x29 steps
+
+    bool can_switch_view() const override { return true; }
+    bool is_view_switched() const override { return m_host != nullptr; }
+    void toggle_view() override { set_use_view(!m_host); }
+    void set_use_view(bool on);
+
+    // Saves the Playlist View's settings and destroys it (before the window goes away).
+    void release_element();
     void update_title_formats(); // Options > Title formatting changed
+    void apply_list_font();      // hosted mode: skin's font for the element, per Options
 
 protected:
     SIZE skin_size() const override;
@@ -64,6 +76,7 @@ private:
     void clamp_scroll();
     void ensure_visible(size_t item);
     void scroll_to_thumb(int y);
+    int thumb_top() const;
     void move_focus(int delta, bool extend);
     void run_menu_action(Part menu, int item);
     void playlist_changed();
@@ -75,6 +88,19 @@ private:
     void render_shade(Canvas& c);
     void render_list(Canvas& c);
     void render_menu(Canvas& c);
+
+    // Playlist View mode: the element sits in a child container sized to the list area; it is made wider than the
+    // container by a scrollbar's width, so its own scrollbar is hidden and ours drives its list instead.
+    std::unique_ptr<HostedElement> m_host;
+    HWND m_container = nullptr;
+    int m_last_scroll_pos = -1;
+    RECT host_rect() const;
+    void layout_host();
+    void ensure_host();
+    HWND list_hwnd() const;                 // the element's scrollable list window
+    bool list_scroll(SCROLLINFO& si) const;
+    void update_host_clip();                // cuts an open sprite menu out of the element's area
+    Part m_clip_menu = Part::none;
 
     std::unique_ptr<Callbacks> m_callbacks;
     titleformat_object::ptr m_title_script; // rows

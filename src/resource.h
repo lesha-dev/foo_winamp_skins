@@ -29,6 +29,7 @@
 #define IDC_FORMAT_PL       1024
 #define IDC_FORMAT_PL_SHADE 1025
 #define IDC_RENAME_EDIT     1026
+#define IDC_PLVIEW_FONT     1027
 
 #define IDC_VIS_SPECTRUM    1101
 #define IDC_VIS_SCOPE       1102

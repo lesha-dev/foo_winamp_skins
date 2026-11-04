@@ -135,8 +135,8 @@ private:
     Tooltip m_tooltip;
     std::unique_ptr<EqWindow> m_eq;
     std::unique_ptr<PlaylistWindow> m_pl;
-    std::vector<std::unique_ptr<ElementWindow>> m_elements;
-    ElementWindow* create_element_window(ElementWindow::State s);
+    std::vector<std::unique_ptr<ElementPanel>> m_elements; // Elements menu windows
+    ElementPanel* create_element_window(ElementState s);
     ui_selection_holder::ptr m_selection; // selection viewers (Album Art, Properties) follow the playlist selection
     bool m_vis_running = false;
 };

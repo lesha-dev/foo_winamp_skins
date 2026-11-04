@@ -23,6 +23,7 @@ cfg_string format_main(guids::cfg_format_main, default_format_main);
 cfg_string format_playlist(guids::cfg_format_playlist, default_format_playlist);
 cfg_string format_playlist_shade(guids::cfg_format_playlist_shade, default_format_playlist_shade);
 cfg_bool lock_ui(guids::cfg_lock_ui, false);
+cfg_bool playlist_view_skin_font(guids::cfg_playlist_view_skin_font, true);
 cfg_bool skin_cursors(guids::cfg_skin_cursors, true);
 cfg_bool snap(guids::cfg_snap, true);
 cfg_int snap_distance(guids::cfg_snap_distance, 10);
@@ -68,6 +69,8 @@ cfg_int pl_h(guids::cfg_pl_h, 4);
 cfg_int pl_width(guids::cfg_pl_width, -1);
 cfg_int pl_height(guids::cfg_pl_height, -1);
 cfg_bool pl_shade(guids::cfg_pl_shade, false);
+cfg_bool pl_use_view(guids::cfg_pl_use_view, false);
+cfg_blob pl_view_config(guids::cfg_pl_view_config);
 
 cfg_blob element_windows(guids::cfg_element_windows);
 }

@@ -26,6 +26,7 @@ extern cfg_string format_main;           // main window song title
 extern cfg_string format_playlist;       // playlist editor rows (track length stays right-aligned)
 extern cfg_string format_playlist_shade; // playlist editor in windowshade mode
 extern cfg_bool lock_ui;              // dragging any skinned window moves everything docked to it
+extern cfg_bool playlist_view_skin_font; // hosted Playlist View uses the skin's playlist font
 extern cfg_bool skin_cursors;         // mouse cursors from the skin's *.cur files
 extern cfg_bool snap;                 // dock windows to each other / screen edges (Shift inverts while dragging)
 extern cfg_int snap_distance;         // px
@@ -57,6 +58,8 @@ extern cfg_int pl_x, pl_y;
 extern cfg_int pl_w, pl_h;            // legacy: size steps beyond the 275x116 minimum (25 / 29 px each)
 extern cfg_int pl_width, pl_height;   // px beyond the 275x116 minimum; -1 = take the legacy steps
 extern cfg_bool pl_shade;             // VisMode
+extern cfg_bool pl_use_view;          // list area shows Default UI's Playlist View
+extern cfg_blob pl_view_config;       // its configuration
 
 extern cfg_blob element_windows;      // UI element windows: placement + element configuration (see MainWindow)
 }

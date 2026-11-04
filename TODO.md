@@ -37,7 +37,9 @@
   - [x] Use skinned font for main window title display (+ alternative font style when 'Double size' is enabled)
   - [x] Oldschool playlist button behavior (Options page; default is Winamp's click-to-open)
 - [ ] Integrate as panels into Default UI
-- [ ] Use foobar's playlist view inside Winamp's playlist
+- [x] Use foobar's playlist view inside Winamp's playlist (playlist menu switch "Use foobar's Playlist View", also Elements > Playlist View)
+  - [ ] Find a way to hide Default UI Playlist View's column header
+  - [ ] Find a way to make Default UI Playlist View's rows as short as Winamp's (13 px)
 - [x] Add support for cover art (Album Art Viewer via the Elements menu)
 - [x] Elements menu: any Default UI element in a Winamp generic window (gen.bmp frame, pledit.bmp fallback)
 

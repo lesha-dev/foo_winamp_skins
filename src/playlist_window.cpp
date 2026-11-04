@@ -96,6 +96,7 @@ PlaylistWindow::PlaylistWindow() {
     m_shade = config::pl_shade.get();
     m_w_extra = std::clamp(config::pl_width.get() >= 0 ? static_cast<int>(config::pl_width.get()) : static_cast<int>(config::pl_w.get()) * step_w, 0, max_extra_w);
     m_h_extra = std::clamp(config::pl_height.get() >= 0 ? static_cast<int>(config::pl_height.get()) : static_cast<int>(config::pl_h.get()) * step_h, 0, max_extra_h);
+    if (config::pl_use_view.get()) set_use_view(true);
     if (!config::smooth_resize.get()) { m_w_extra -= m_w_extra % step_w; m_h_extra -= m_h_extra % step_h; }
     update_title_formats();
 }
@@ -107,6 +108,7 @@ void PlaylistWindow::update_title_formats() {
 }
 
 PlaylistWindow::~PlaylistWindow() {
+    release_element();
     m_callbacks.reset();
     destroy();
     if (m_font) DeleteObject(m_font);
@@ -135,6 +137,7 @@ void PlaylistWindow::set_shade(bool on) {
     config::pl_shade = on;
     m_pressed = Part::none;
     apply_geometry();
+    layout_host();
 }
 
 void PlaylistWindow::save_position() {
@@ -149,6 +152,11 @@ void PlaylistWindow::on_position_saved(int x, int y) {
 
 void PlaylistWindow::on_visibility_changed(bool visible) {
     config::pl_visible = visible;
+    if (m_host) {
+        if (visible) ensure_host();
+        if (visible) SetTimer(m_wnd, 1, 100, nullptr); // follows the element's scrolling for our thumb
+        else KillTimer(m_wnd, 1);
+    }
     if (visible && !m_callbacks) m_callbacks = std::make_unique<Callbacks>(*this);
     if (!visible) m_callbacks.reset();
     m_lengths_dirty = true;
@@ -165,11 +173,135 @@ void PlaylistWindow::set_time(bool show, bool negative, int seconds) {
 
 void PlaylistWindow::on_skin_changed() {
     update_font();
+    if (m_host) m_host->set_skin(m_skin);
     invalidate();
 }
 
+// ---------------------------------------------------------------------------------------------
+// hosted element
+
+namespace {
+constexpr wchar_t host_class[] = L"foo_winamp_skins_host";
+
+void register_host_class() {
+    static bool registered = false;
+    if (registered) return;
+    WNDCLASSEXW wc = {};
+    wc.cbSize = sizeof(wc);
+    wc.lpfnWndProc = DefWindowProcW;
+    wc.hInstance = core_api::get_my_instance();
+    wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
+    wc.lpszClassName = host_class;
+    if (RegisterClassExW(&wc)) registered = true;
+}
+} // namespace
+
+void PlaylistWindow::release_element() {
+    if (!m_host) return;
+    const auto& cfg = m_host->config();
+    config::pl_view_config.set(cfg.data(), cfg.size());
+    m_host->release();
+}
+
+// Main playlist: switches the list area between our list and Default UI's Playlist View.
+void PlaylistWindow::set_use_view(bool on) {
+    if (on == (m_host != nullptr)) return;
+    config::pl_use_view = on;
+    if (on) {
+        const GUID guid = playlist_view_guid();
+        if (guid == pfc::guid_null) {
+            FB2K_console_formatter() << "foo_winamp_skins: Default UI's Playlist View element not found";
+            config::pl_use_view = false;
+            return;
+        }
+        std::vector<uint8_t> cfg;
+        if (auto blob = config::pl_view_config.get(); blob.is_valid() && blob->size()) {
+            const auto* p = static_cast<const uint8_t*>(blob->get_ptr());
+            cfg.assign(p, p + blob->size());
+        }
+        m_host = std::make_unique<HostedElement>(guid, std::move(cfg));
+        m_host->on_activate = [this] { show(true); };
+        if (visible()) {
+            ensure_host();
+            SetTimer(m_wnd, 1, 100, nullptr);
+        }
+    } else {
+        release_element();
+        m_host.reset();
+        if (m_container) { DestroyWindow(m_container); m_container = nullptr; }
+        if (m_wnd) KillTimer(m_wnd, 1);
+        m_clip_menu = Part::none;
+        m_last_scroll_pos = -1;
+    }
+    invalidate();
+}
+
+RECT PlaylistWindow::host_rect() const {
+    return { left_w, top_h, width() - right_w, height() - bottom_h };
+}
+
+void PlaylistWindow::ensure_host() {
+    if (!m_host || !m_wnd) return;
+    if (!m_container) {
+        register_host_class();
+        m_container = CreateWindowExW(WS_EX_CONTROLPARENT, host_class, L"", WS_CHILD | WS_CLIPCHILDREN, 0, 0, 0, 0, m_wnd, nullptr,
+                                      core_api::get_my_instance(), nullptr);
+        if (!m_container) return;
+    }
+    m_host->set_skin(m_skin);
+    if (!m_font) update_font();
+    apply_list_font();
+    m_host->create(m_container);
+    layout_host();
+}
+
+void PlaylistWindow::layout_host() {
+    if (!m_container || !m_host) return;
+    const RECT r = host_rect();
+    const int w = std::max<int>(0, r.right - r.left), h = std::max<int>(0, r.bottom - r.top);
+    SetWindowPos(m_container, nullptr, r.left, r.top, w, h, SWP_NOZORDER | SWP_NOACTIVATE | (m_shade ? SWP_HIDEWINDOW : SWP_SHOWWINDOW));
+    m_host->set_rect({ 0, 0, w + GetSystemMetrics(SM_CXVSCROLL), h });
+}
+
+// The sprite menus are drawn on our canvas, under the element's child window: while one is open, its
+// rectangle is cut out of the container so the menu shows through.
+void PlaylistWindow::update_host_clip() {
+    if (!m_container) return;
+    const Part menu = (m_pressed >= Part::menu_add && m_pressed <= Part::menu_list) ? m_pressed : Part::none;
+    if (menu == m_clip_menu) return;
+    m_clip_menu = menu;
+    if (menu == Part::none) { SetWindowRgn(m_container, nullptr, TRUE); return; }
+    const MenuDef& d = menu_def(static_cast<int>(menu) - static_cast<int>(Part::menu_add));
+    const int x = d.from_right ? width() - d.x_from_left : d.x_from_left;
+    const int top = height() - 12 - 18 * static_cast<int>(d.items.size());
+    const RECT hr = host_rect();
+    HRGN rgn = CreateRectRgn(0, 0, hr.right - hr.left, hr.bottom - hr.top);
+    HRGN cut = CreateRectRgn(x - 3 - hr.left, top - hr.top, x + 22 - hr.left, height() - 12 - hr.top);
+    CombineRgn(rgn, rgn, cut, RGN_DIFF);
+    DeleteObject(cut);
+    SetWindowRgn(m_container, rgn, TRUE); // the window owns the region now
+}
+
+HWND PlaylistWindow::list_hwnd() const {
+    if (!m_container) return nullptr;
+    struct Find { HWND found = nullptr; } f;
+    EnumChildWindows(m_container, [](HWND w, LPARAM lp) -> BOOL {
+        if (GetWindowLongPtrW(w, GWL_STYLE) & WS_VSCROLL) { reinterpret_cast<Find*>(lp)->found = w; return FALSE; }
+        return TRUE;
+    }, reinterpret_cast<LPARAM>(&f));
+    return f.found;
+}
+
+bool PlaylistWindow::list_scroll(SCROLLINFO& si) const {
+    HWND list = list_hwnd();
+    si = {};
+    si.cbSize = sizeof(si);
+    si.fMask = SIF_ALL;
+    return list && GetScrollInfo(list, SB_VERT, &si) && si.nMax >= si.nMin;
+}
+
 void PlaylistWindow::update_font() {
-    if (m_font) DeleteObject(m_font);
+    HFONT old = m_font; // deleted after the hosted element has switched to the new one
     m_font = nullptr;
     const std::wstring face = wide(m_skin ? m_skin->playlist_colors().font.c_str() : "Arial");
     LOGFONTW lf = {};
@@ -179,6 +311,12 @@ void PlaylistWindow::update_font() {
     lf.lfQuality = NONANTIALIASED_QUALITY;
     wcsncpy_s(lf.lfFaceName, face.c_str(), _TRUNCATE);
     m_font = CreateFontIndirectW(&lf);
+    apply_list_font();
+    if (old) DeleteObject(old);
+}
+
+void PlaylistWindow::apply_list_font() {
+    if (m_host) m_host->set_list_font(config::playlist_view_skin_font.get() ? m_font : nullptr);
 }
 
 void PlaylistWindow::apply_size(int w_extra, int h_extra) {
@@ -191,6 +329,7 @@ void PlaylistWindow::apply_size(int w_extra, int h_extra) {
     config::pl_height = h_extra;
     clamp_scroll();
     apply_geometry(false);
+    layout_host();
 }
 
 void PlaylistWindow::apply_resize_mode() {
@@ -320,11 +459,13 @@ void PlaylistWindow::on_mouse_down(POINT p, bool dbl) {
         m_menu_open = false;
         m_pressed = Part::none;
         m_menu_hover = -1;
+        update_host_clip();
         invalidate();
         if (hover >= 0) run_menu_action(part, hover);
         return;
     }
     m_pressed = hit(p);
+    update_host_clip();
     m_inside = true;
     m_menu_hover = -1;
     m_drag_reorder = false;
@@ -362,10 +503,7 @@ void PlaylistWindow::on_mouse_down(POINT p, bool dbl) {
         break;
     }
     case Part::scrollbar: {
-        const int track_h = height() - top_h - bottom_h - scroll_handle.h;
-        const size_t count = pm->activeplaylist_get_item_count();
-        const size_t rows = static_cast<size_t>(visible_rows());
-        const int thumb_y = top_h + (count > rows ? static_cast<int>(track_h * double(m_scroll) / double(count - rows)) : 0);
+        const int thumb_y = thumb_top();
         m_thumb_grab = (p.y >= thumb_y && p.y < thumb_y + scroll_handle.h) ? p.y - thumb_y : scroll_handle.h / 2;
         scroll_to_thumb(p.y);
         break;
@@ -380,8 +518,38 @@ void PlaylistWindow::on_mouse_down(POINT p, bool dbl) {
     invalidate();
 }
 
+// Thumb position: our list's scroll offset, or the hosted element's scrollbar.
+int PlaylistWindow::thumb_top() const {
+    const int track_h = height() - top_h - bottom_h - scroll_handle.h;
+    if (m_host) {
+        SCROLLINFO si;
+        if (!list_scroll(si)) return top_h;
+        const int range = si.nMax + 1 - si.nMin - static_cast<int>(si.nPage);
+        return top_h + (range > 0 ? static_cast<int>(track_h * double(si.nPos - si.nMin) / range) : 0);
+    }
+    const size_t count = playlist_manager::get()->activeplaylist_get_item_count();
+    const size_t rows = static_cast<size_t>(visible_rows());
+    return top_h + (count > rows ? static_cast<int>(track_h * double(m_scroll) / double(count - rows)) : 0);
+}
+
 void PlaylistWindow::scroll_to_thumb(int y) {
     const int track_h = height() - top_h - bottom_h - scroll_handle.h;
+    if (m_host) {
+        SCROLLINFO si;
+        if (!list_scroll(si) || track_h <= 0) return;
+        const int range = si.nMax + 1 - si.nMin - static_cast<int>(si.nPage);
+        if (range <= 0) return;
+        const double t = std::clamp((y - m_thumb_grab - top_h) / double(track_h), 0.0, 1.0);
+        HWND list = list_hwnd();
+        SCROLLINFO pos = {};
+        pos.cbSize = sizeof(pos);
+        pos.fMask = SIF_POS;
+        pos.nPos = si.nMin + static_cast<int>(std::lround(t * range));
+        SetScrollInfo(list, SB_VERT, &pos, FALSE);
+        SendMessageW(list, WM_VSCROLL, MAKEWPARAM(SB_THUMBTRACK, pos.nPos & 0xFFFF), 0);
+        SendMessageW(list, WM_VSCROLL, MAKEWPARAM(SB_ENDSCROLL, 0), 0);
+        return;
+    }
     const size_t count = playlist_manager::get()->activeplaylist_get_item_count();
     const size_t rows = static_cast<size_t>(visible_rows());
     if (count <= rows || track_h <= 0) { m_scroll = 0; return; }
@@ -448,6 +616,7 @@ void PlaylistWindow::on_mouse_up(POINT p) {
     }
     const Part part = m_pressed;
     m_pressed = Part::none;
+    update_host_clip();
     const bool inside = hit(p) == part;
     const int hover = m_menu_hover;
     m_menu_hover = -1;
@@ -462,8 +631,16 @@ void PlaylistWindow::on_mouse_up(POINT p) {
     case Part::next: if (inside) player::next(); break;
     case Part::eject: if (inside) player::open_files(); break;
     case Part::mini_time: if (inside) config::time_remaining = !config::time_remaining.get(); break;
-    case Part::scroll_up: if (inside) { m_scroll = m_scroll > 0 ? m_scroll - 1 : 0; } break;
-    case Part::scroll_down: if (inside) { ++m_scroll; clamp_scroll(); } break;
+    case Part::scroll_up:
+        if (!inside) break;
+        if (HWND list = list_hwnd()) SendMessageW(list, WM_VSCROLL, MAKEWPARAM(SB_LINEUP, 0), 0);
+        else if (!m_host) m_scroll = m_scroll > 0 ? m_scroll - 1 : 0;
+        break;
+    case Part::scroll_down:
+        if (!inside) break;
+        if (HWND list = list_hwnd()) SendMessageW(list, WM_VSCROLL, MAKEWPARAM(SB_LINEDOWN, 0), 0);
+        else if (!m_host) { ++m_scroll; clamp_scroll(); }
+        break;
     case Part::resize: save_position(); break;
     case Part::menu_add: case Part::menu_rem: case Part::menu_sel: case Part::menu_misc: case Part::menu_list:
         if (hover >= 0) run_menu_action(part, hover);
@@ -476,11 +653,16 @@ void PlaylistWindow::on_mouse_up(POINT p) {
 void PlaylistWindow::on_mouse_leave_capture() {
     m_menu_open = false;
     m_pressed = Part::none;
+    update_host_clip();
     m_menu_hover = -1;
     invalidate();
 }
 
 void PlaylistWindow::on_wheel(int delta) {
+    if (m_host) {
+        if (HWND list = list_hwnd()) SendMessageW(list, WM_MOUSEWHEEL, MAKEWPARAM(0, delta), 0);
+        return;
+    }
     const int lines = delta > 0 ? -3 : 3;
     if (lines < 0) m_scroll = m_scroll > size_t(-lines) ? m_scroll + lines : 0;
     else m_scroll += size_t(lines);
@@ -492,7 +674,7 @@ void PlaylistWindow::on_right_click(POINT screen_pt) {
     POINT client = screen_pt;
     ScreenToClient(m_wnd, &client);
     const POINT p = to_skin(client);
-    if (!m_shade && list_rect().in(p)) {
+    if (!m_host && !m_shade && list_rect().in(p)) {
         const int row = row_at(p);
         auto pm = playlist_manager::get();
         if (row >= 0 && !pm->activeplaylist_is_item_selected(static_cast<size_t>(row))) {
@@ -605,6 +787,7 @@ void PlaylistWindow::move_focus(int delta, bool extend) {
 }
 
 bool PlaylistWindow::on_key(WPARAM vk) {
+    if (m_host) return false; // the element handles its own keys
     const bool shift = GetKeyState(VK_SHIFT) < 0, ctrl = GetKeyState(VK_CONTROL) < 0;
     auto pm = playlist_manager::get();
     const int page = std::max(1, visible_rows() - 1);
@@ -630,6 +813,14 @@ bool PlaylistWindow::on_key(WPARAM vk) {
 }
 
 bool PlaylistWindow::on_message(UINT msg, WPARAM wp, LPARAM, LRESULT& ret) {
+    if (msg == WM_TIMER && wp == 1 && m_host) {
+        SCROLLINFO si;
+        const int pos = list_scroll(si) ? si.nPos : -1;
+        if (pos != m_last_scroll_pos) { m_last_scroll_pos = pos; invalidate(); }
+        ret = 0;
+        return true;
+    }
+    if (msg == WM_SIZE) layout_host();
     if (msg == WM_CREATE) {
         DragAcceptFiles(m_wnd, TRUE);
         return false;
@@ -687,15 +878,10 @@ void PlaylistWindow::render_normal(Canvas& c) {
     c.blit(img, bottom_left, { 0, h - bottom_h });
     c.blit(img, bottom_right, { w - 150, h - bottom_h });
 
-    render_list(c);
+    if (!m_host) render_list(c);
 
     // Scrollbar thumb.
-    auto pm = playlist_manager::get();
-    const size_t count = pm->activeplaylist_get_item_count();
-    const size_t rows = static_cast<size_t>(visible_rows());
-    const int track_h = h - top_h - bottom_h - scroll_handle.h;
-    const int thumb_y = top_h + (count > rows ? static_cast<int>(track_h * double(m_scroll) / double(count - rows)) : 0);
-    c.blit(img, m_pressed == Part::scrollbar ? scroll_handle_down : scroll_handle, { w - 15, thumb_y });
+    c.blit(img, m_pressed == Part::scrollbar ? scroll_handle_down : scroll_handle, { w - 15, thumb_top() });
 
     // Running time (selected/total) and mini time, in the skin's text font.
     const Image& font = m_skin->bitmap(SkinBitmap::text);

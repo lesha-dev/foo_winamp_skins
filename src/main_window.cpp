@@ -39,18 +39,19 @@ const MenuRoot menu_roots[] = {
 constexpr UINT menu_id_stride = 0x1000;
 enum : UINT { id_lock_ui = 1, id_vis_spectrum, id_vis_osc, id_vis_off,
     id_open_skins_folder, id_toggle_eq, id_toggle_pl,
-    id_panel_double = 0x80, id_panel_shade, id_panel_rename, id_panel_close,
+    id_panel_double = 0x80, id_panel_shade, id_panel_rename, id_panel_close, id_panel_view,
     id_skin_first = 0x100, id_skin_last = 0x7FF,
     id_playlist_first = 0x800, id_playlist_last = 0xBFF,
     id_element_first = 0xC00, id_element_last = 0xFFF }; // must stay below menu_id_stride
 
 // Element windows are stored as: u32 magic, u32 count, then per window: GUID, u8 visible, i32 x, y, w, h,
-// u32 size + config bytes, u32 size + title (UTF-8). Blobs without the magic are the first format (no
-// magic, no title).
-constexpr uint32_t element_states_magic = 0x32455357; // "WSE2"
+// u32 size + config bytes, u32 size + title (UTF-8), u8 shade. Older blobs: "WSE2" has no shade byte;
+// without a magic there's no title either.
+constexpr uint32_t element_states_magic_v2 = 0x32455357; // "WSE2"
+constexpr uint32_t element_states_magic = 0x33455357;    // "WSE3"
 
-std::vector<ElementWindow::State> load_element_states() {
-    std::vector<ElementWindow::State> out;
+std::vector<ElementState> load_element_states() {
+    std::vector<ElementState> out;
     auto blob = config::element_windows.get();
     if (blob.is_empty()) return out;
     const auto* p = static_cast<const uint8_t*>(blob->get_ptr());
@@ -63,10 +64,11 @@ std::vector<ElementWindow::State> load_element_states() {
     };
     uint32_t count = 0;
     if (!read(&count, 4)) return out;
-    const bool with_title = count == element_states_magic;
+    const bool with_shade = count == element_states_magic;
+    const bool with_title = with_shade || count == element_states_magic_v2;
     if (with_title && !read(&count, 4)) return out;
     for (uint32_t i = 0; i < count; ++i) {
-        ElementWindow::State s;
+        ElementState s;
         uint8_t vis = 0;
         int32_t v[4] = {};
         uint32_t size = 0;
@@ -82,12 +84,17 @@ std::vector<ElementWindow::State> load_element_states() {
             s.title.set_string(reinterpret_cast<const char*>(p), len);
             p += len;
         }
+        if (with_shade) {
+            uint8_t shade = 0;
+            if (!read(&shade, 1)) break;
+            s.shade = shade != 0;
+        }
         out.push_back(std::move(s));
     }
     return out;
 }
 
-void save_element_states(const std::vector<ElementWindow::State>& states) {
+void save_element_states(const std::vector<ElementState>& states) {
     std::vector<uint8_t> buf;
     auto write = [&](const void* src, size_t n) { const auto* b = static_cast<const uint8_t*>(src); buf.insert(buf.end(), b, b + n); };
     const uint32_t count = static_cast<uint32_t>(states.size());
@@ -105,19 +112,13 @@ void save_element_states(const std::vector<ElementWindow::State>& states) {
         const uint32_t len = static_cast<uint32_t>(s.title.length());
         write(&len, 4);
         write(s.title.get_ptr(), len);
+        const uint8_t shade = s.shade ? 1 : 0;
+        write(&shade, 1);
     }
     config::element_windows.set(buf.data(), buf.size());
 }
 
-// Default UI's Album Art Viewer, toggled by Alt+A.
-GUID album_art_guid() {
-    for (auto e : ui_element::enumerate()) {
-        pfc::string8 name;
-        e->get_name(name);
-        if (strcmp(name, "Album Art Viewer") == 0) return e->get_guid();
-    }
-    return pfc::guid_null;
-}
+GUID album_art_guid() { return find_element("Album Art Viewer"); } // toggled by Alt+A
 
 // Winamp's tooltip texts; "(doesn't work)" marks what isn't implemented here.
 const wchar_t* tooltip_text(Control id) {
@@ -337,10 +338,12 @@ HWND MainWindow::create(HookProc hook) {
     if (config::pl_visible.get()) m_pl->show(true);
 
     // UI element windows (Elements menu), restored with their placement and element settings.
+    const GUID playlist_view = playlist_view_guid();
     for (auto& s : load_element_states()) {
+        if (s.guid == playlist_view) continue; // older builds gave it a window of its own
         if (!remember) s.x = s.y = CW_USEDEFAULT;
-        ElementWindow* w = create_element_window(s);
-        if (s.visible) w->show(true);
+        ElementPanel* w = create_element_window(s);
+        if (s.visible) w->window().show(true);
     }
 
     m_callbacks = std::make_unique<Callbacks>(*this);
@@ -356,9 +359,9 @@ void MainWindow::destroy() {
     save_position();
     // Keep the visibility flags: hiding during teardown would clear them.
     if (m_eq) { m_eq->save_position(); m_eq->destroy(); m_eq.reset(); }
-    if (m_pl) { m_pl->save_position(); m_pl->destroy(); m_pl.reset(); }
+    if (m_pl) { m_pl->save_position(); m_pl->release_element(); m_pl->destroy(); m_pl.reset(); }
     save_element_windows();
-    for (auto& w : m_elements) { w->release_element(); w->destroy(); }
+    for (auto& w : m_elements) { w->release_element(); w->window().destroy(); }
     m_elements.clear();
     m_selection.release();
     s_instance = nullptr;
@@ -512,7 +515,7 @@ void MainWindow::invalidate() {
 
 void MainWindow::update_title_formats() {
     titleformat_compiler::get()->compile_safe(m_title_script, config::format_main.get());
-    if (m_pl) m_pl->update_title_formats();
+    if (m_pl) { m_pl->update_title_formats(); m_pl->apply_list_font(); }
 }
 
 void MainWindow::apply_display_options() {
@@ -527,7 +530,7 @@ void MainWindow::invalidate_all() {
     invalidate();
     if (m_eq) m_eq->invalidate();
     if (m_pl) m_pl->invalidate();
-    for (auto& w : m_elements) w->invalidate();
+    for (auto& w : m_elements) w->window().invalidate();
 }
 
 void MainWindow::set_status(const char* text) {
@@ -549,7 +552,7 @@ void MainWindow::toggle_playlist() {
     invalidate();
 }
 
-ElementWindow* MainWindow::create_element_window(ElementWindow::State s) {
+ElementPanel* MainWindow::create_element_window(ElementState s) {
     // New windows open to the right of the main window.
     if (s.x == CW_USEDEFAULT) {
         RECT mrc{};
@@ -557,29 +560,39 @@ ElementWindow* MainWindow::create_element_window(ElementWindow::State s) {
         s.x = mrc.right;
         s.y = mrc.top;
     }
-    auto w = std::make_unique<ElementWindow>(s);
+    std::unique_ptr<ElementPanel> w = std::make_unique<ElementWindow>(s);
     pfc::string8 name;
     ui_element::g_get_name(name, s.guid);
-    w->create(m_wnd, pfc::stringcvt::string_wide_from_utf8(name), s.x, s.y);
-    w->set_skin(m_skin.get());
+    SkinWindow& wnd = w->window();
+    wnd.create(m_wnd, pfc::stringcvt::string_wide_from_utf8(name), s.x, s.y);
+    wnd.set_skin(m_skin.get());
+    w->on_skin_changed();
     m_elements.push_back(std::move(w));
     return m_elements.back().get();
 }
 
 void MainWindow::toggle_element(const GUID& guid) {
     if (guid == pfc::guid_null) return;
-    for (auto& w : m_elements) {
-        if (w->guid() == guid) { w->show(!w->visible()); save_element_windows(); return; }
+    // Playlist View lives in the playlist editor: its switch, showing the editor when turned on.
+    if (guid == playlist_view_guid()) {
+        if (!m_pl) return;
+        m_pl->toggle_view();
+        if (m_pl->is_view_switched()) m_pl->show(true);
+        invalidate();
+        return;
     }
-    ElementWindow::State s;
+    for (auto& w : m_elements) {
+        if (w->element_guid() == guid) { w->window().show(!w->window().visible()); save_element_windows(); return; }
+    }
+    ElementState s;
     s.guid = guid;
-    create_element_window(s)->show(true);
+    create_element_window(s)->window().show(true);
     save_element_windows();
 }
 
 void MainWindow::save_element_windows() {
-    std::vector<ElementWindow::State> states;
-    for (auto& w : m_elements) states.push_back(w->state());
+    std::vector<ElementState> states;
+    for (auto& w : m_elements) states.push_back(w->element_state());
     save_element_states(states);
 }
 
@@ -731,7 +744,7 @@ void MainWindow::save_positions() {
     save_position();
     if (m_eq) m_eq->save_position();
     if (m_pl) m_pl->save_position();
-    for (auto& w : m_elements) w->state();
+    for (auto& w : m_elements) w->element_state();
 }
 
 void MainWindow::on_lbutton_down(POINT p) {
@@ -917,6 +930,8 @@ void MainWindow::show_context_menu(POINT pt, SkinWindow* panel) {
         AppendMenuW(menu, flags(shade_can, shade_on), id_panel_shade, panel ? L"&Windowshade" : shortcut_label(L"&Windowshade", L"Ctrl+W").c_str());
         AppendMenuW(menu, flags(panel && panel->can_rename(), false), id_panel_rename, L"&Rename...");
         AppendMenuW(menu, MF_STRING, id_panel_close, L"&Close");
+        if (panel && panel->can_switch_view())
+            AppendMenuW(menu, flags(true, panel->is_view_switched()), id_panel_view, L"Use foobar's Playlist &View");
         AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
     }
     AppendMenuW(menu, MF_STRING | (m_eq && m_eq->visible() ? MF_CHECKED : 0), id_toggle_eq, shortcut_label(L"E&qualizer", L"Alt+G").c_str());
@@ -925,7 +940,7 @@ void MainWindow::show_context_menu(POINT pt, SkinWindow* panel) {
     const std::vector<ElementInfo> elements = list_elements();
     HMENU elements_menu = CreatePopupMenu();
     {
-        const GUID art = album_art_guid();
+        const GUID art = album_art_guid(), playlist_view = playlist_view_guid();
         HMENU group_menu = nullptr;
         pfc::string8 group;
         for (size_t i = 0; i < elements.size() && i <= id_element_last - id_element_first; ++i) {
@@ -937,7 +952,8 @@ void MainWindow::show_context_menu(POINT pt, SkinWindow* panel) {
                     menu_label(pfc::stringcvt::string_wide_from_utf8(group).get_ptr()).c_str());
             }
             bool open = false;
-            for (auto& w : m_elements) if (w->guid() == e.guid && w->visible()) open = true;
+            for (auto& w : m_elements) if (w->element_guid() == e.guid && w->window().visible()) open = true;
+            if (e.guid == playlist_view && m_pl) open = m_pl->is_view_switched();
             std::wstring label = menu_label(pfc::stringcvt::string_wide_from_utf8(e.name).get_ptr());
             if (e.guid == art && shortcuts) label += L"\tAlt+A";
             AppendMenuW(group_menu, MF_STRING | (open ? MF_CHECKED : 0), id_element_first + i, label.c_str());
@@ -998,6 +1014,7 @@ void MainWindow::show_context_menu(POINT pt, SkinWindow* panel) {
     case id_panel_shade: if (panel) panel->toggle_shade(); else set_shade(!m_shade); break;
     case id_panel_rename: if (panel) panel->rename(); break;
     case id_panel_close: if (panel) panel->show(false); else PostMessageW(m_wnd, WM_CLOSE, 0, 0); break;
+    case id_panel_view: if (panel) panel->toggle_view(); break;
     case id_lock_ui: config::lock_ui = !config::lock_ui.get(); break;
     case id_vis_spectrum: set_vis_mode(VisMode::spectrum); break;
     case id_vis_osc: set_vis_mode(VisMode::oscilloscope); break;
@@ -1244,7 +1261,7 @@ bool MainWindow::load_skin(const char* path, bool interactive) {
         config::skin_path = path;
         if (m_eq) m_eq->set_skin(m_skin.get());
         if (m_pl) { m_pl->set_skin(m_skin.get()); m_pl->on_skin_changed(); }
-        for (auto& w : m_elements) { w->set_skin(m_skin.get()); w->on_skin_changed(); }
+        for (auto& w : m_elements) { w->window().set_skin(m_skin.get()); w->on_skin_changed(); }
         update_title_fonts();
         apply_region();
         invalidate();

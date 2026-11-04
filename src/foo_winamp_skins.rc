@@ -28,7 +28,7 @@ BEGIN
     PUSHBUTTON      "Refresh", IDC_REFRESH, 283, 249, 43, 14
 END
 
-IDD_PREFS_OPTIONS DIALOGEX 0, 0, 332, 280
+IDD_PREFS_OPTIONS DIALOGEX 0, 0, 332, 293
 STYLE DS_SETFONT | DS_FIXEDSYS | DS_CONTROL | WS_CHILD
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
@@ -38,7 +38,7 @@ BEGIN
     LTEXT           "Balance center snap:", IDC_STATIC, 14, 45, 72, 8
     EDITTEXT        IDC_BALANCE_SNAP, 88, 43, 26, 12, ES_NUMBER
     LTEXT           "%", IDC_STATIC, 117, 45, 10, 8
-    GROUPBOX        "Display", IDC_STATIC, 7, 66, 319, 146
+    GROUPBOX        "Display", IDC_STATIC, 7, 66, 319, 159
     AUTOCHECKBOX    "Dim window titlebars when not in focus", IDC_DIM_TITLEBARS, 14, 78, 300, 10
     AUTOCHECKBOX    "Dock skinned windows at", IDC_SNAP, 14, 91, 94, 10
     EDITTEXT        IDC_SNAP_PX, 109, 90, 22, 12, ES_NUMBER
@@ -51,13 +51,14 @@ BEGIN
     AUTOCHECKBOX    "Use skinned mouse cursors", IDC_SKIN_CURSORS, 14, 170, 300, 10
     AUTOCHECKBOX    "Use bitmap font for main window title display (no international support)", IDC_TITLE_BITMAP, 14, 183, 300, 10
     AUTOCHECKBOX    "Use alternative font style when 'Double size' is enabled", IDC_TITLE_ALT, 24, 196, 290, 10
-    GROUPBOX        "Title formatting", IDC_STATIC, 7, 217, 319, 59
-    LTEXT           "Main window title:", IDC_STATIC, 14, 231, 84, 8
-    EDITTEXT        IDC_FORMAT_MAIN, 100, 229, 219, 12, ES_AUTOHSCROLL
-    LTEXT           "Playlist entry:", IDC_STATIC, 14, 246, 84, 8
-    EDITTEXT        IDC_FORMAT_PL, 100, 244, 219, 12, ES_AUTOHSCROLL
-    LTEXT           "Playlist shade title:", IDC_STATIC, 14, 261, 84, 8
-    EDITTEXT        IDC_FORMAT_PL_SHADE, 100, 259, 219, 12, ES_AUTOHSCROLL
+    AUTOCHECKBOX    "Use skin's font in Default UI's Playlist View", IDC_PLVIEW_FONT, 14, 209, 300, 10
+    GROUPBOX        "Title formatting", IDC_STATIC, 7, 230, 319, 59
+    LTEXT           "Main window title:", IDC_STATIC, 14, 244, 84, 8
+    EDITTEXT        IDC_FORMAT_MAIN, 100, 242, 219, 12, ES_AUTOHSCROLL
+    LTEXT           "Playlist entry:", IDC_STATIC, 14, 259, 84, 8
+    EDITTEXT        IDC_FORMAT_PL, 100, 257, 219, 12, ES_AUTOHSCROLL
+    LTEXT           "Playlist shade title:", IDC_STATIC, 14, 274, 84, 8
+    EDITTEXT        IDC_FORMAT_PL_SHADE, 100, 272, 219, 12, ES_AUTOHSCROLL
 END
 
 IDD_PREFS_VIS DIALOGEX 0, 0, 332, 200
