@@ -41,7 +41,9 @@ std::array<Letter, 26> scan_letters(const Image& img, int y) {
 
 constexpr int unknown_char_w = 5;
 
-void render_gen(Canvas& c, const Image& g, int w, int h, const char* title, bool active, bool close_pressed) {
+constexpr int min_title_w = 44; // narrowest title bar laid out for its width (side strips 20 + 24 px)
+
+void render_gen_title(Canvas& c, const Image& g, int w, const char* title, bool active, bool close_pressed) {
     const int sy = active ? 0 : 21;
     const int text_y = active ? 88 : 96;
     const auto letters = scan_letters(g, text_y);
@@ -52,20 +54,7 @@ void render_gen(Canvas& c, const Image& g, int w, int h, const char* title, bool
     int text_exact = 0;
     for (const char* p = title; *p; ++p) text_exact += width_of(*p);
 
-    // Title bar: corner, filler, title section in 25 px steps, filler, corner (with close button).
-    int text_w = text_exact + 24;
-    text_w -= text_w % 25;
-    text_w = std::min(text_w, w - 100);
-    const int fill_n = (w - 100 - text_w) / 25;
-    int x = 0;
-    c.blit(g, 0, sy, 25, 20, x, 0); x += 25;
-    if (fill_n & 1) { c.blit(g, 104, sy, 12, 20, x, 0); x += 12; }
-    for (int i = 0; i < fill_n / 2; ++i) { c.blit(g, 104, sy, 25, 20, x, 0); x += 25; }
-    c.blit(g, 26, sy, 25, 20, x, 0); x += 25;
-    if (text_w >= 25) {
-        int tx = x + (text_w - text_exact) / 2 + (text_w != text_exact ? 1 : 0);
-        for (int i = 0; i < text_w / 25; ++i) { c.blit(g, 52, sy, 25, 20, x, 0); x += 25; }
-        int room = text_w;
+    auto draw_text = [&](int tx, int room) {
         for (const char* p = title; *p; ++p) {
             char ch = *p;
             if (ch >= 'a' && ch <= 'z') ch = static_cast<char>(ch - 'a' + 'A');
@@ -75,6 +64,63 @@ void render_gen(Canvas& c, const Image& g, int w, int h, const char* title, bool
             tx += cw;
             room -= cw;
         }
+    };
+
+    // Title bar: corner, filler, title section in 25 px steps, filler, corner (with close button).
+    int text_w = text_exact + 24;
+    text_w -= text_w % 25;
+
+    if (w < GenFrame::full_width) {
+        // Narrower than Winamp allows. In order: the filler shrinks (evenly on both sides), the title
+        // section tightens to its text, the bars inside the corner/end pieces shrink (their middles are
+        // cut out, keeping the frame edge, the bars' ends and the close button), then the text is cut.
+        constexpr int min_left = 20, min_right = min_title_w - min_left;
+        const int tight = text_exact + 2;
+        int sides = 100;
+        if (w - 100 >= text_w) {
+            sides = w - text_w;
+        } else if (w - 100 >= tight) {
+            text_w = w - 100;
+        } else {
+            text_w = std::max(0, std::min(tight, w - min_left - min_right));
+            sides = w - text_w;
+        }
+        const int left = sides / 2, right = sides - left;
+        const S filler{ 104, sy, 25, 20 };
+        // A side strip: outer piece, filler, inner piece; below 50 px the middle of the strip is cut out.
+        auto strip = [&](int x0, int width, int outer_x, int inner_x, bool outer_first) {
+            const int a = outer_first ? outer_x : inner_x, b = outer_first ? inner_x : outer_x;
+            if (width >= 50) {
+                c.blit(g, a, sy, 25, 20, x0, 0);
+                c.tile(g, filler, x0 + 25, 0, width - 50, 20);
+                c.blit(g, b, sy, 25, 20, x0 + width - 25, 0);
+            } else {
+                const int keep_a = width / 2, keep_b = width - keep_a;
+                c.blit(g, a, sy, keep_a, 20, x0, 0);
+                c.blit(g, b + 25 - keep_b, sy, keep_b, 20, x0 + keep_a, 0);
+            }
+        };
+        strip(0, left, 0, 26, true);           // left corner + left end of the title section
+        int x = left;
+        c.tile(g, { 52, sy, 25, 20 }, x, 0, text_w, 20);
+        draw_text(text_exact <= text_w ? x + (text_w - text_exact) / 2 + (text_w != text_exact ? 1 : 0) : x, text_w);
+        x += text_w;
+        strip(x, right, 130, 78, false);       // right end of the title section + right corner
+        if (close_pressed) c.blit(g, 148, 42, 9, 9, w - 11, 3);
+        return;
+    }
+
+    text_w = std::min(text_w, w - 100);
+    const int fill_n = (w - 100 - text_w) / 25;
+    int x = 0;
+    c.blit(g, 0, sy, 25, 20, x, 0); x += 25;
+    if (fill_n & 1) { c.blit(g, 104, sy, 12, 20, x, 0); x += 12; }
+    for (int i = 0; i < fill_n / 2; ++i) { c.blit(g, 104, sy, 25, 20, x, 0); x += 25; }
+    c.blit(g, 26, sy, 25, 20, x, 0); x += 25;
+    if (text_w >= 25) {
+        const int tx = x + (text_w - text_exact) / 2 + (text_w != text_exact ? 1 : 0);
+        for (int i = 0; i < text_w / 25; ++i) { c.blit(g, 52, sy, 25, 20, x, 0); x += 25; }
+        draw_text(tx, text_w);
     }
     c.blit(g, 78, sy, 25, 20, x, 0); x += 25;
     if (fill_n & 1) { c.blit(g, 104, sy, 13, 20, x, 0); x += 13; }
@@ -83,9 +129,13 @@ void render_gen(Canvas& c, const Image& g, int w, int h, const char* title, bool
     if (rest > 0) { stretch(c, g, { 104, sy, 25, 20 }, x, 0, rest, 20); x += rest; }
     c.blit(g, 130, sy, 25, 20, x, 0);
     if (close_pressed) c.blit(g, 148, 42, 9, 9, w - 11, 3);
+}
+
+void render_gen(Canvas& c, const Image& g, int w, int h, const char* title, bool active, bool close_pressed) {
+    render_gen_title(c, g, w, title, active, close_pressed);
 
     // Sides: 29 px tiles, the last one stretched, then the 24 px lower pieces.
-    int y = 20;
+    int y = 20, x = 0;
     for (int i = 0; i < (h - 58) / 29; ++i) {
         c.blit(g, 127, 42, 11, 29, 0, y);
         c.blit(g, 139, 42, 8, 29, w - 8, y);
@@ -117,11 +167,15 @@ constexpr S pl_bottom_tile{ 179, 0, 25, 38 };
 constexpr S pl_close_down{ 52, 42, 9, 9 };
 constexpr int pl_top_h = 20, pl_bottom_h = 38, pl_left_w = 12, pl_right_w = 20;
 
-void render_pledit(Canvas& c, const Image& img, int w, int h, bool active, bool close_pressed) {
+void render_pledit_title(Canvas& c, const Image& img, int w, bool active, bool close_pressed) {
     c.tile(img, active ? pl_top_tile_sel : pl_top_tile, 25, 0, w - 50, pl_top_h);
     c.blit(img, active ? pl_top_left_sel : pl_top_left, { 0, 0 });
     c.blit(img, active ? pl_top_right_sel : pl_top_right, { w - 25, 0 });
     if (close_pressed) c.blit(img, pl_close_down, { w - 11, 3 });
+}
+
+void render_pledit(Canvas& c, const Image& img, int w, int h, bool active, bool close_pressed) {
+    render_pledit_title(c, img, w, active, close_pressed);
     c.tile(img, pl_left_tile, 0, pl_top_h, pl_left_w, h - pl_top_h - pl_bottom_h);
     c.tile(img, pl_right_tile, w - pl_right_w, pl_top_h, pl_right_w, h - pl_top_h - pl_bottom_h);
     c.tile(img, pl_bottom_tile, 0, h - pl_bottom_h, w, pl_bottom_h);
@@ -134,10 +188,41 @@ GenFrame::Insets GenFrame::insets(const Skin& skin) {
     return { pl_left_w, pl_top_h, pl_right_w, pl_bottom_h };
 }
 
-void GenFrame::render(Canvas& c, const Skin& skin, int w, int h, const char* title, bool active, bool close_pressed) {
+namespace {
+
+void render_full(Canvas& c, const Skin& skin, int w, int h, const char* title, bool active, bool close_pressed) {
     c.clear(0);
     if (has_gen(skin)) render_gen(c, skin.bitmap(SkinBitmap::gen), w, h, title, active, close_pressed);
     else render_pledit(c, skin.bitmap(SkinBitmap::pledit), w, h, active, close_pressed);
+}
+
+} // namespace
+
+void GenFrame::render(Canvas& c, const Skin& skin, int w, int h, const char* title, bool active, bool close_pressed) {
+    if (w >= full_width && h >= full_height) {
+        render_full(c, skin, w, h, title, active, close_pressed);
+        return;
+    }
+    // Below the frame's minimum: draw it at the smallest full size and keep each corner's quarter.
+    const int fw = std::max(w, full_width), fh = std::max(h, full_height);
+    static Canvas full;
+    full.resize(fw, fh);
+    full.reset_clip();
+    render_full(full, skin, fw, fh, title, active, close_pressed);
+    const int half_w = w / 2, half_h = h / 2;
+    for (int y = 0; y < h; ++y) {
+        const int sy = y < half_h ? y : fh - (h - y);
+        for (int x = 0; x < w; ++x) {
+            const int sx = x < half_w ? x : fw - (w - x);
+            c.set_pixel(x, y, full.pixel(sx, sy));
+        }
+    }
+    // The title bar is laid out for the real width while it fits: the filler shrinks, the title stays.
+    if (has_gen(skin)) {
+        if (w >= min_title_w) render_gen_title(c, skin.bitmap(SkinBitmap::gen), w, title, active, close_pressed);
+    } else if (w >= 50) {
+        render_pledit_title(c, skin.bitmap(SkinBitmap::pledit), w, active, close_pressed);
+    }
 }
 
 } // namespace wsz

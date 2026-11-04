@@ -3,22 +3,35 @@
 #include "gen_frame.h"
 #include "skin_window.h"
 
+#include <vector>
+
 namespace wsz {
 
-// Album Art window: a Winamp generic frame hosting foobar2000's own Album Art UI element.
-class ArtWindow : public SkinWindow, private ui_element_instance_callback_receiver {
+// A Winamp generic frame (gen.bmp) hosting one of foobar2000's UI elements (Album Art Viewer, Console, ...).
+class ElementWindow : public SkinWindow, private ui_element_instance_callback_receiver {
 public:
-    ArtWindow();
-    ~ArtWindow() override;
+    // Remembered per element: placement and the element's own configuration.
+    struct State {
+        GUID guid = {};
+        bool visible = false;
+        int x = CW_USEDEFAULT, y = CW_USEDEFAULT;
+        int w = GenFrame::full_width, h = GenFrame::full_height + 4 * GenFrame::step_h;
+        std::vector<uint8_t> config;
+    };
 
-    void save_position();
+    explicit ElementWindow(const State& state);
+    ~ElementWindow() override;
+
+    const GUID& guid() const { return m_state.guid; }
+    // Current placement and element configuration (refreshed from the live element).
+    State state();
     void on_skin_changed();
     void apply_resize_mode(); // smooth resize turned off: snap the size to 25x29 steps
     // Saves the element's settings and destroys it (before the window goes away).
     void release_element();
 
 protected:
-    SIZE skin_size() const override { return { m_w, m_h }; }
+    SIZE skin_size() const override { return { m_state.w, m_state.h }; }
     void render(Canvas& c) override;
     bool is_control(POINT p) const override { return hit(p) != Part::none; }
     void on_mouse_down(POINT p, bool dbl) override;
@@ -37,18 +50,28 @@ private:
     void apply_size(int w, int h);
     void ensure_element();
     void layout_element();
+    void capture_config();
 
-    // ui_element_instance_callback_receiver: colours and fonts come from foobar2000's UI settings.
+    // ui_element_instance_callback_receiver: colours from the skin's playlist, fonts from foobar2000.
     bool query_color(const GUID& what, t_ui_color& out) override;
     t_ui_font query_font_ex(const GUID& what) override;
     bool request_activation(service_ptr_t<ui_element_instance>) override;
 
-    int m_w = GenFrame::min_width, m_h = GenFrame::min_height + 4 * GenFrame::step_h;
+    State m_state;
+    pfc::string8 m_title;
     Part m_pressed = Part::none;
     bool m_inside = false;
     POINT m_drag_origin = {};
     SIZE m_drag_size = {};
     ui_element_instance::ptr m_elem;
 };
+
+// Elements offered in the Elements menu: user-addable, not containers (they need Default UI's edit mode).
+struct ElementInfo {
+    GUID guid;
+    pfc::string8 name;
+    pfc::string8 group;
+};
+std::vector<ElementInfo> list_elements();
 
 } // namespace wsz

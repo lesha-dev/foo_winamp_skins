@@ -68,10 +68,5 @@ cfg_int pl_width(guids::cfg_pl_width, -1);
 cfg_int pl_height(guids::cfg_pl_height, -1);
 cfg_bool pl_shade(guids::cfg_pl_shade, false);
 
-cfg_bool art_visible(guids::cfg_art_visible, false);
-cfg_int art_x(guids::cfg_art_x, CW_USEDEFAULT);
-cfg_int art_y(guids::cfg_art_y, CW_USEDEFAULT);
-cfg_int art_width(guids::cfg_art_width, 275);
-cfg_int art_height(guids::cfg_art_height, 232);
-cfg_blob art_element(guids::cfg_art_element);
+cfg_blob element_windows(guids::cfg_element_windows);
 }

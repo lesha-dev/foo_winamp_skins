@@ -38,7 +38,8 @@
   - [x] Oldschool playlist button behavior (Options page; default is Winamp's click-to-open)
 - [ ] Integrate as panels into Default UI
 - [ ] Use foobar's playlist view inside Winamp's playlist
-- [x] Add support for cover art (Album Art window: gen.bmp frame, pledit.bmp fallback, hosts DUI's Album Art element)
+- [x] Add support for cover art (Album Art Viewer via the Elements menu)
+- [x] Elements menu: any Default UI element in a Winamp generic window (gen.bmp frame, pledit.bmp fallback)
 
 ## Release
 - [ ] Credits: Webamp (sprite layout, EQ presets data), miniz, foobar2000 SDK; show in README / About.

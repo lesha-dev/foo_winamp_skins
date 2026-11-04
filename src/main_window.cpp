@@ -7,7 +7,7 @@
 #include "guids.h"
 #include "eq_window.h"
 #include "playlist_window.h"
-#include "art_window.h"
+#include "element_window.h"
 #include "player.h"
 #include "skins_folder.h"
 #include "text_font.h"
@@ -38,9 +38,69 @@ const MenuRoot menu_roots[] = {
 };
 constexpr UINT menu_id_stride = 0x1000;
 enum : UINT { id_always_on_top = 1, id_double_size, id_shade, id_vis_spectrum, id_vis_osc, id_vis_off,
-    id_open_skins_folder, id_toggle_eq, id_toggle_pl, id_toggle_art,
+    id_open_skins_folder, id_toggle_eq, id_toggle_pl,
     id_skin_first = 0x100, id_skin_last = 0x7FF,
-    id_playlist_first = 0x800, id_playlist_last = 0xFFF }; // must stay below menu_id_stride
+    id_playlist_first = 0x800, id_playlist_last = 0xBFF,
+    id_element_first = 0xC00, id_element_last = 0xFFF }; // must stay below menu_id_stride
+
+// Element windows are stored as: u32 count, then per window: GUID, u8 visible, i32 x, y, w, h, u32 size, config bytes.
+std::vector<ElementWindow::State> load_element_states() {
+    std::vector<ElementWindow::State> out;
+    auto blob = config::element_windows.get();
+    if (blob.is_empty()) return out;
+    const auto* p = static_cast<const uint8_t*>(blob->get_ptr());
+    const uint8_t* end = p + blob->size();
+    auto read = [&](void* dst, size_t n) {
+        if (static_cast<size_t>(end - p) < n) return false;
+        memcpy(dst, p, n);
+        p += n;
+        return true;
+    };
+    uint32_t count = 0;
+    if (!read(&count, 4)) return out;
+    for (uint32_t i = 0; i < count; ++i) {
+        ElementWindow::State s;
+        uint8_t vis = 0;
+        int32_t v[4] = {};
+        uint32_t size = 0;
+        if (!read(&s.guid, sizeof(GUID)) || !read(&vis, 1) || !read(v, sizeof(v)) || !read(&size, 4)) break;
+        if (static_cast<size_t>(end - p) < size) break;
+        s.visible = vis != 0;
+        s.x = v[0]; s.y = v[1]; s.w = v[2]; s.h = v[3];
+        s.config.assign(p, p + size);
+        p += size;
+        out.push_back(std::move(s));
+    }
+    return out;
+}
+
+void save_element_states(const std::vector<ElementWindow::State>& states) {
+    std::vector<uint8_t> buf;
+    auto write = [&](const void* src, size_t n) { const auto* b = static_cast<const uint8_t*>(src); buf.insert(buf.end(), b, b + n); };
+    const uint32_t count = static_cast<uint32_t>(states.size());
+    write(&count, 4);
+    for (const auto& s : states) {
+        const uint8_t vis = s.visible ? 1 : 0;
+        const int32_t v[4] = { s.x, s.y, s.w, s.h };
+        const uint32_t size = static_cast<uint32_t>(s.config.size());
+        write(&s.guid, sizeof(GUID));
+        write(&vis, 1);
+        write(v, sizeof(v));
+        write(&size, 4);
+        write(s.config.data(), s.config.size());
+    }
+    config::element_windows.set(buf.data(), buf.size());
+}
+
+// Default UI's Album Art Viewer, toggled by Alt+A.
+GUID album_art_guid() {
+    for (auto e : ui_element::enumerate()) {
+        pfc::string8 name;
+        e->get_name(name);
+        if (strcmp(name, "Album Art Viewer") == 0) return e->get_guid();
+    }
+    return pfc::guid_null;
+}
 
 // Winamp's tooltip texts; "(doesn't work)" marks what isn't implemented here.
 const wchar_t* tooltip_text(Control id) {
@@ -241,16 +301,15 @@ HWND MainWindow::create(HookProc hook) {
     m_selection = ui_selection_manager::get()->acquire();
     m_selection->set_playlist_selection_tracking();
 
-    // Album Art: default to the right of the main window.
-    m_art = std::make_unique<ArtWindow>();
-    int ax = remember ? static_cast<int>(config::art_x.get()) : CW_USEDEFAULT;
-    int ay = remember ? static_cast<int>(config::art_y.get()) : CW_USEDEFAULT;
-    if (ax == CW_USEDEFAULT) { ax = mrc.right; ay = mrc.top; }
-    m_art->create(m_wnd, L"Album Art", ax, ay);
-    m_art->set_skin(m_skin.get());
     if (config::eq_visible.get()) m_eq->show(true);
     if (config::pl_visible.get()) m_pl->show(true);
-    if (config::art_visible.get()) m_art->show(true);
+
+    // UI element windows (Elements menu), restored with their placement and element settings.
+    for (auto& s : load_element_states()) {
+        if (!remember) s.x = s.y = CW_USEDEFAULT;
+        ElementWindow* w = create_element_window(s);
+        if (s.visible) w->show(true);
+    }
 
     m_callbacks = std::make_unique<Callbacks>(*this);
     on_track_changed();
@@ -266,7 +325,9 @@ void MainWindow::destroy() {
     // Keep the visibility flags: hiding during teardown would clear them.
     if (m_eq) { m_eq->save_position(); m_eq->destroy(); m_eq.reset(); }
     if (m_pl) { m_pl->save_position(); m_pl->destroy(); m_pl.reset(); }
-    if (m_art) { m_art->save_position(); m_art->release_element(); m_art->destroy(); m_art.reset(); }
+    save_element_windows();
+    for (auto& w : m_elements) { w->release_element(); w->destroy(); }
+    m_elements.clear();
     m_selection.release();
     s_instance = nullptr;
     m_tooltip.destroy();
@@ -426,7 +487,7 @@ void MainWindow::apply_display_options() {
     update_title_formats();
     if (m_eq) m_eq->set_double_size(m_scale == 2 && config::eq_double_size.get());
     if (m_pl) m_pl->apply_resize_mode();
-    if (m_art) m_art->apply_resize_mode();
+    for (auto& w : m_elements) w->apply_resize_mode();
     invalidate_all();
 }
 
@@ -434,7 +495,7 @@ void MainWindow::invalidate_all() {
     invalidate();
     if (m_eq) m_eq->invalidate();
     if (m_pl) m_pl->invalidate();
-    if (m_art) m_art->invalidate();
+    for (auto& w : m_elements) w->invalidate();
 }
 
 void MainWindow::set_status(const char* text) {
@@ -456,8 +517,38 @@ void MainWindow::toggle_playlist() {
     invalidate();
 }
 
-void MainWindow::toggle_album_art() {
-    if (m_art) m_art->show(!m_art->visible());
+ElementWindow* MainWindow::create_element_window(ElementWindow::State s) {
+    // New windows open to the right of the main window.
+    if (s.x == CW_USEDEFAULT) {
+        RECT mrc{};
+        GetWindowRect(m_wnd, &mrc);
+        s.x = mrc.right;
+        s.y = mrc.top;
+    }
+    auto w = std::make_unique<ElementWindow>(s);
+    pfc::string8 name;
+    ui_element::g_get_name(name, s.guid);
+    w->create(m_wnd, pfc::stringcvt::string_wide_from_utf8(name), s.x, s.y);
+    w->set_skin(m_skin.get());
+    m_elements.push_back(std::move(w));
+    return m_elements.back().get();
+}
+
+void MainWindow::toggle_element(const GUID& guid) {
+    if (guid == pfc::guid_null) return;
+    for (auto& w : m_elements) {
+        if (w->guid() == guid) { w->show(!w->visible()); save_element_windows(); return; }
+    }
+    ElementWindow::State s;
+    s.guid = guid;
+    create_element_window(s)->show(true);
+    save_element_windows();
+}
+
+void MainWindow::save_element_windows() {
+    std::vector<ElementWindow::State> states;
+    for (auto& w : m_elements) states.push_back(w->state());
+    save_element_states(states);
 }
 
 bool MainWindow::handle_key(WPARAM vk, bool alt) {
@@ -465,7 +556,7 @@ bool MainWindow::handle_key(WPARAM vk, bool alt) {
         if (!config::winamp_hotkeys.get()) return false;
         if (vk == 'G') { toggle_eq(); return true; }
         if (vk == 'E') { toggle_playlist(); return true; }
-        if (vk == 'A') { toggle_album_art(); return true; }
+        if (vk == 'A') { toggle_element(album_art_guid()); return true; }
         return false;
     }
     return on_key(vk);
@@ -608,7 +699,7 @@ void MainWindow::save_positions() {
     save_position();
     if (m_eq) m_eq->save_position();
     if (m_pl) m_pl->save_position();
-    if (m_art) m_art->save_position();
+    for (auto& w : m_elements) w->state();
 }
 
 void MainWindow::on_lbutton_down(POINT p) {
@@ -804,7 +895,30 @@ void MainWindow::show_context_menu(POINT pt, HWND owner) {
     AppendMenuW(menu, MF_STRING | (m_shade ? MF_CHECKED : 0), id_shade, shortcut_label(L"&Windowshade", L"Ctrl+W").c_str());
     AppendMenuW(menu, MF_STRING | (m_eq && m_eq->visible() ? MF_CHECKED : 0), id_toggle_eq, shortcut_label(L"&Equalizer", L"Alt+G").c_str());
     AppendMenuW(menu, MF_STRING | (m_pl && m_pl->visible() ? MF_CHECKED : 0), id_toggle_pl, shortcut_label(L"&Playlist editor", L"Alt+E").c_str());
-    AppendMenuW(menu, MF_STRING | (m_art && m_art->visible() ? MF_CHECKED : 0), id_toggle_art, shortcut_label(L"&Album art", L"Alt+A").c_str());
+    // Elements submenu: foobar2000's UI elements by group, like Default UI's "Replace UI Element" list.
+    const std::vector<ElementInfo> elements = list_elements();
+    HMENU elements_menu = CreatePopupMenu();
+    {
+        const GUID art = album_art_guid();
+        HMENU group_menu = nullptr;
+        pfc::string8 group;
+        for (size_t i = 0; i < elements.size() && i <= id_element_last - id_element_first; ++i) {
+            const ElementInfo& e = elements[i];
+            if (!group_menu || e.group != group) {
+                group = e.group;
+                group_menu = CreatePopupMenu();
+                AppendMenuW(elements_menu, MF_POPUP | MF_STRING, reinterpret_cast<UINT_PTR>(group_menu),
+                    menu_label(pfc::stringcvt::string_wide_from_utf8(group).get_ptr()).c_str());
+            }
+            bool open = false;
+            for (auto& w : m_elements) if (w->guid() == e.guid && w->visible()) open = true;
+            std::wstring label = menu_label(pfc::stringcvt::string_wide_from_utf8(e.name).get_ptr());
+            if (e.guid == art && shortcuts) label += L"\tAlt+A";
+            AppendMenuW(group_menu, MF_STRING | (open ? MF_CHECKED : 0), id_element_first + i, label.c_str());
+        }
+        if (elements.empty()) AppendMenuW(elements_menu, MF_STRING | MF_GRAYED, 0, L"(no UI elements)");
+    }
+    AppendMenuW(menu, MF_POPUP | MF_STRING, reinterpret_cast<UINT_PTR>(elements_menu), L"E&lements");
     // Playlists submenu: fb2k's playlists; picking one makes it active (shown in the playlist editor).
     auto pm = playlist_manager::get();
     HMENU playlists = CreatePopupMenu();
@@ -849,9 +963,11 @@ void MainWindow::show_context_menu(POINT pt, HWND owner) {
     case id_open_skins_folder: skins_folder::open_in_explorer(); break;
     case id_toggle_eq: toggle_eq(); break;
     case id_toggle_pl: toggle_playlist(); break;
-    case id_toggle_art: toggle_album_art(); break;
     default:
-        if (cmd >= id_playlist_first && cmd <= id_playlist_last) {
+        if (cmd >= id_element_first && cmd <= id_element_last) {
+            const size_t i = cmd - id_element_first;
+            if (i < elements.size()) toggle_element(elements[i].guid);
+        } else if (cmd >= id_playlist_first && cmd <= id_playlist_last) {
             const size_t i = cmd - id_playlist_first;
             if (i < playlist_manager::get()->get_playlist_count()) playlist_manager::get()->set_active_playlist(i);
         } else if (cmd >= id_skin_first && cmd <= id_skin_last) {
@@ -1086,7 +1202,7 @@ bool MainWindow::load_skin(const char* path, bool interactive) {
         config::skin_path = path;
         if (m_eq) m_eq->set_skin(m_skin.get());
         if (m_pl) { m_pl->set_skin(m_skin.get()); m_pl->on_skin_changed(); }
-        if (m_art) { m_art->set_skin(m_skin.get()); m_art->on_skin_changed(); }
+        for (auto& w : m_elements) { w->set_skin(m_skin.get()); w->on_skin_changed(); }
         update_title_fonts();
         apply_region();
         invalidate();
