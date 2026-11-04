@@ -194,7 +194,8 @@ HWND MainWindow::create(HookProc hook) {
     m_always_on_top = config_object::g_get_data_bool_simple(standard_config_objects::bool_ui_always_on_top, false);
     m_vis.set_mode(static_cast<VisMode>(std::clamp<int>(static_cast<int>(config::vis_mode.get()), 0, 2)));
     m_vis.set_options(config::vis_options());
-    titleformat_compiler::get()->compile_safe(m_title_script, "[%artist% - ]%title%[ '('%length%')']");
+    update_title_formats();
+    titleformat_compiler::get()->compile_safe(m_caption_script, "[%artist% - ]%title%");
 
     // foobar2000's "Remember window positions" decides whether saved positions are used.
     const bool remember = standard_config_objects::query_remember_window_positions();
@@ -416,7 +417,13 @@ void MainWindow::invalidate() {
     if (m_eq && m_eq->visible() && m_eq->shade()) m_eq->invalidate(); // shows volume/balance
 }
 
+void MainWindow::update_title_formats() {
+    titleformat_compiler::get()->compile_safe(m_title_script, config::format_main.get());
+    if (m_pl) m_pl->update_title_formats();
+}
+
 void MainWindow::apply_display_options() {
+    update_title_formats();
     if (m_eq) m_eq->set_double_size(m_scale == 2 && config::eq_double_size.get());
     if (m_pl) m_pl->apply_resize_mode();
     if (m_art) m_art->apply_resize_mode();
@@ -503,8 +510,9 @@ pfc::string8 MainWindow::current_title() {
     if (pc->is_playing()) {
         pc->playback_format_title(nullptr, out, m_title_script, nullptr, playback_control::display_level_all);
     } else {
-        metadb_handle_ptr item;
-        if (playlist_manager::get()->activeplaylist_get_focus_item_handle(item)) item->format_title(nullptr, out, m_title_script, nullptr);
+        auto pm = playlist_manager::get();
+        const size_t focus = pm->activeplaylist_get_focus_item();
+        if (focus < pm->activeplaylist_get_item_count()) pm->activeplaylist_item_format_title(focus, nullptr, out, m_title_script, nullptr, playback_control::display_level_all);
     }
     return out;
 }
@@ -968,7 +976,7 @@ void MainWindow::on_track_changed() {
         const int sr = track_info_int(track, "samplerate");
         m_khz = sr > 0 ? (sr + 500) / 1000 : -1;
         pfc::string8 title;
-        pc->playback_format_title(nullptr, title, m_title_script, nullptr, playback_control::display_level_titles);
+        pc->playback_format_title(nullptr, title, m_caption_script, nullptr, playback_control::display_level_titles);
         uSetWindowText(m_wnd, pfc::format(title, " - foobar2000"));
     }
     m_marquee_px = 0;

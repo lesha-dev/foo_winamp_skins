@@ -20,6 +20,7 @@ public:
     // Mini time display, fed by the main window so both always show the same value.
     void set_time(bool show, bool negative, int seconds);
     void apply_resize_mode(); // smooth resize turned off: snap the size to 25x29 steps
+    void update_title_formats(); // Options > Title formatting changed
 
 protected:
     SIZE skin_size() const override;
@@ -73,7 +74,8 @@ private:
     void render_menu(Canvas& c);
 
     std::unique_ptr<Callbacks> m_callbacks;
-    titleformat_object::ptr m_title_script;
+    titleformat_object::ptr m_title_script; // rows
+    titleformat_object::ptr m_shade_script; // windowshade title
     HFONT m_font = nullptr;
 
     bool m_shade = false;

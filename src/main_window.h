@@ -106,7 +106,9 @@ private:
     std::unique_ptr<Callbacks> m_callbacks;
     std::unique_ptr<Skin> m_skin;
     Canvas m_canvas;
-    titleformat_object::ptr m_title_script;
+    titleformat_object::ptr m_title_script;   // Options > Main window title
+    titleformat_object::ptr m_caption_script; // taskbar caption
+    void update_title_formats();
     HFONT m_title_font = nullptr, m_title_font2x = nullptr; // playlist font for the non-bitmap title
     void update_title_fonts();
 

@@ -44,6 +44,9 @@ public:
         config::skin_cursors = checked(IDC_SKIN_CURSORS);
         config::title_bitmap_font = checked(IDC_TITLE_BITMAP);
         config::title_font_alt = checked(IDC_TITLE_ALT);
+        config::format_main = text(IDC_FORMAT_MAIN);
+        config::format_playlist = text(IDC_FORMAT_PL);
+        config::format_playlist_shade = text(IDC_FORMAT_PL_SHADE);
         if (MainWindow* w = MainWindow::instance()) w->apply_display_options();
         changed();
     }
@@ -63,6 +66,9 @@ public:
         CheckDlgButton(m_wnd, IDC_SKIN_CURSORS, BST_CHECKED);
         CheckDlgButton(m_wnd, IDC_TITLE_BITMAP, BST_CHECKED);
         CheckDlgButton(m_wnd, IDC_TITLE_ALT, BST_UNCHECKED);
+        uSetDlgItemText(m_wnd, IDC_FORMAT_MAIN, config::default_format_main);
+        uSetDlgItemText(m_wnd, IDC_FORMAT_PL, config::default_format_playlist);
+        uSetDlgItemText(m_wnd, IDC_FORMAT_PL_SHADE, config::default_format_playlist_shade);
         update_enabled();
         changed();
     }
@@ -111,6 +117,9 @@ private:
         CheckDlgButton(m_wnd, IDC_SKIN_CURSORS, config::skin_cursors.get() ? BST_CHECKED : BST_UNCHECKED);
         CheckDlgButton(m_wnd, IDC_TITLE_BITMAP, config::title_bitmap_font.get() ? BST_CHECKED : BST_UNCHECKED);
         CheckDlgButton(m_wnd, IDC_TITLE_ALT, config::title_font_alt.get() ? BST_CHECKED : BST_UNCHECKED);
+        uSetDlgItemText(m_wnd, IDC_FORMAT_MAIN, config::format_main.get());
+        uSetDlgItemText(m_wnd, IDC_FORMAT_PL, config::format_playlist.get());
+        uSetDlgItemText(m_wnd, IDC_FORMAT_PL_SHADE, config::format_playlist_shade.get());
         update_enabled();
         m_initialized = true;
     }
@@ -119,6 +128,7 @@ private:
     void update_enabled() { EnableWindow(GetDlgItem(m_wnd, IDC_TITLE_ALT), !checked(IDC_TITLE_BITMAP)); }
 
     bool checked(int id) const { return IsDlgButtonChecked(m_wnd, id) == BST_CHECKED; }
+    pfc::string8 text(int id) const { return uGetDlgItemText(m_wnd, id); }
 
     int snap_value() const {
         BOOL ok = FALSE;
@@ -147,7 +157,10 @@ private:
             || checked(IDC_TOOLTIPS) != config::tooltips.get()
             || checked(IDC_SKIN_CURSORS) != config::skin_cursors.get()
             || checked(IDC_TITLE_BITMAP) != config::title_bitmap_font.get()
-            || checked(IDC_TITLE_ALT) != config::title_font_alt.get();
+            || checked(IDC_TITLE_ALT) != config::title_font_alt.get()
+            || text(IDC_FORMAT_MAIN) != config::format_main.get()
+            || text(IDC_FORMAT_PL) != config::format_playlist.get()
+            || text(IDC_FORMAT_PL_SHADE) != config::format_playlist_shade.get();
     }
 
     void changed() { m_callback->on_state_changed(); }

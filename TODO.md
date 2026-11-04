@@ -25,13 +25,13 @@
 - [x] Tooltips on controls (main, EQ, playlist windows), like Winamp; unimplemented features say "(doesn't work)".
 - [x] Shuffle/repeat: buttons open menus of fb2k playback orders (None/Random/Shuffle tracks/albums/folders; None/Repeat playlist/track); lit when such an order is active.
 - [x] Winamp logo (lower right of the main window, Winamp opens About): opens Preferences -> Display -> Winamp Skins.
-- [ ] Options from Winamp's "Classic Skin Options" prefs tab, for the Winamp Skins page:
+- [x] Options from Winamp's "Classic Skin Options" prefs tab, for the Winamp Skins page:
   - [x] Dim window titlebars when not in focus (Options page)
   - [x] Dock skinned windows at N pixels (Options page; Shift inverts while dragging)
   - [x] Enable smooth window resizing for resizeable skinned windows (playlist, Options page)
   - [x] Display tooltips in Winamp's windows (Options page)
   - [x] Use skinned mouse cursors (see *.cur item)
-  - [ ] Display playlist position in the song scroller
+  - [x] Display playlist position in the song scroller (via Options > Title formatting: main title, playlist entry, playlist shade title)
   - [x] Always show Winamp "Clutterbar" in main window (Options page)
   - [x] Use doublesize setting on equalizer as well as main window (Options page)
   - [x] Use skinned font for main window title display (+ alternative font style when 'Double size' is enabled)

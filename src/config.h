@@ -18,6 +18,13 @@ extern cfg_bool oldschool_pl_buttons; // playlist menus: hold, pick on release (
 extern cfg_bool tooltips;             // tooltips on the skinned windows
 extern cfg_bool title_bitmap_font;    // main window title in the skin's text.bmp font (else playlist font)
 extern cfg_bool title_font_alt;       // double size: draw the font title at full resolution
+// Title formatting scripts (foobar2000 syntax). $num(%list_index%,0) is Winamp's unpadded position.
+constexpr const char default_format_main[] = "[$num(%list_index%,0). ][%artist% - ]%title%[ '('%length%')']'  ***  '";
+constexpr const char default_format_playlist[] = "$num(%list_index%,0). [%artist% - ]%title%";
+constexpr const char default_format_playlist_shade[] = "[%artist% - ]%title%";
+extern cfg_string format_main;           // main window song title
+extern cfg_string format_playlist;       // playlist editor rows (track length stays right-aligned)
+extern cfg_string format_playlist_shade; // playlist editor in windowshade mode
 extern cfg_bool skin_cursors;         // mouse cursors from the skin's *.cur files
 extern cfg_bool snap;                 // dock windows to each other / screen edges (Shift inverts while dragging)
 extern cfg_int snap_distance;         // px

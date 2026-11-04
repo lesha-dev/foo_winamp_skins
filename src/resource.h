@@ -24,6 +24,9 @@
 #define IDC_SKIN_CURSORS    1020
 #define IDC_TITLE_BITMAP    1021
 #define IDC_TITLE_ALT       1022
+#define IDC_FORMAT_MAIN     1023
+#define IDC_FORMAT_PL       1024
+#define IDC_FORMAT_PL_SHADE 1025
 
 #define IDC_VIS_SPECTRUM    1101
 #define IDC_VIS_SCOPE       1102

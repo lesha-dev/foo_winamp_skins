@@ -97,7 +97,13 @@ PlaylistWindow::PlaylistWindow() {
     m_w_extra = std::clamp(config::pl_width.get() >= 0 ? static_cast<int>(config::pl_width.get()) : static_cast<int>(config::pl_w.get()) * step_w, 0, max_extra_w);
     m_h_extra = std::clamp(config::pl_height.get() >= 0 ? static_cast<int>(config::pl_height.get()) : static_cast<int>(config::pl_h.get()) * step_h, 0, max_extra_h);
     if (!config::smooth_resize.get()) { m_w_extra -= m_w_extra % step_w; m_h_extra -= m_h_extra % step_h; }
-    titleformat_compiler::get()->compile_safe(m_title_script, "[%artist% - ]%title%");
+    update_title_formats();
+}
+
+void PlaylistWindow::update_title_formats() {
+    titleformat_compiler::get()->compile_safe(m_title_script, config::format_playlist.get());
+    titleformat_compiler::get()->compile_safe(m_shade_script, config::format_playlist_shade.get());
+    invalidate();
 }
 
 PlaylistWindow::~PlaylistWindow() {
@@ -745,7 +751,7 @@ void PlaylistWindow::render_list(Canvas& c) {
         pfc::string8 title;
         pm->activeplaylist_item_format_title(item, nullptr, title, m_title_script, nullptr, playback_control::display_level_titles);
         const double len = pm->activeplaylist_get_item_handle(item)->get_length();
-        const std::wstring left = wide(pfc::format(item + 1, ". ", title));
+        const std::wstring left = wide(title);
         const std::wstring right = len > 0 ? wide(time_str(len, true)) : std::wstring();
 
         SetTextColor(dc, playing_here && item == playing_idx ? col.current : col.normal);
@@ -797,12 +803,12 @@ void PlaylistWindow::render_shade(Canvas& c) {
     double len = 0;
     metadb_handle_ptr track;
     if (pc->get_now_playing(track)) {
-        pc->playback_format_title(nullptr, title, m_title_script, nullptr, playback_control::display_level_titles);
+        pc->playback_format_title(nullptr, title, m_shade_script, nullptr, playback_control::display_level_titles);
         len = track->get_length();
     } else {
         const size_t focus = pm->activeplaylist_get_focus_item();
         if (focus < pm->activeplaylist_get_item_count()) {
-            pm->activeplaylist_item_format_title(focus, nullptr, title, m_title_script, nullptr, playback_control::display_level_none);
+            pm->activeplaylist_item_format_title(focus, nullptr, title, m_shade_script, nullptr, playback_control::display_level_none);
             len = pm->activeplaylist_get_item_handle(focus)->get_length();
         }
     }

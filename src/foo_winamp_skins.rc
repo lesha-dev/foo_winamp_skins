@@ -17,7 +17,7 @@ BEGIN
     PUSHBUTTON      "Refresh", IDC_REFRESH, 283, 249, 43, 14
 END
 
-IDD_PREFS_OPTIONS DIALOGEX 0, 0, 332, 216
+IDD_PREFS_OPTIONS DIALOGEX 0, 0, 332, 280
 STYLE DS_SETFONT | DS_FIXEDSYS | DS_CONTROL | WS_CHILD
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
@@ -40,6 +40,13 @@ BEGIN
     AUTOCHECKBOX    "Use skinned mouse cursors", IDC_SKIN_CURSORS, 14, 170, 300, 10
     AUTOCHECKBOX    "Use bitmap font for main window title display (no international support)", IDC_TITLE_BITMAP, 14, 183, 300, 10
     AUTOCHECKBOX    "Use alternative font style when 'Double size' is enabled", IDC_TITLE_ALT, 24, 196, 290, 10
+    GROUPBOX        "Title formatting", IDC_STATIC, 7, 217, 319, 59
+    LTEXT           "Main window title:", IDC_STATIC, 14, 231, 84, 8
+    EDITTEXT        IDC_FORMAT_MAIN, 100, 229, 219, 12, ES_AUTOHSCROLL
+    LTEXT           "Playlist entry:", IDC_STATIC, 14, 246, 84, 8
+    EDITTEXT        IDC_FORMAT_PL, 100, 244, 219, 12, ES_AUTOHSCROLL
+    LTEXT           "Playlist shade title:", IDC_STATIC, 14, 261, 84, 8
+    EDITTEXT        IDC_FORMAT_PL_SHADE, 100, 259, 219, 12, ES_AUTOHSCROLL
 END
 
 IDD_PREFS_VIS DIALOGEX 0, 0, 332, 200

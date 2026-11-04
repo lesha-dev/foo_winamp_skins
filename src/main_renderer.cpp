@@ -52,14 +52,14 @@ void draw_time(Canvas& c, const Skin& skin, const MainState& st) {
 
 void draw_marquee(Canvas& c, const Image& font, const MainState& st) {
     if (st.marquee.empty()) return;
-    static const char separator[] = "  ***  ";
     const size_t len = text_length(st.marquee.c_str());
 
     c.set_clip(L::pos_title_text.x, L::pos_title_text.y, L::title_text_w, font_char_h);
     if (len >= static_cast<size_t>(L::marquee_max_chars)) {
-        const int loop = static_cast<int>(len + (std::size(separator) - 1)) * font_char_w;
+        // The separator between repeats is part of the title format (Options).
+        const int loop = static_cast<int>(len) * font_char_w;
         const int offset = (st.marquee_px % loop + loop) % loop;
-        const std::string looped = st.marquee + separator + st.marquee;
+        const std::string looped = st.marquee + st.marquee;
         draw_text(c, font, L::pos_title_text.x - offset, L::pos_title_text.y, looped.c_str());
     } else {
         draw_text(c, font, L::pos_title_text.x, L::pos_title_text.y, st.marquee.c_str());
@@ -91,10 +91,9 @@ void draw_title_font(HDC dc, int scale, HFONT font, const MainState& st) {
     int offset = 0;
     const int text_w = width_of(text);
     if (text_w > 146 * scale) {
-        static const wchar_t separator[] = L"  ***  ";
-        const int loop = text_w + width_of(separator);
+        const int loop = text_w;
         offset = ((st.marquee_px * scale) % loop + loop) % loop;
-        shown = text + separator + text;
+        shown = text + text;
     }
     RECT r = { 111 * scale - offset, 23 * scale, 265 * scale, area.bottom };
     DrawTextW(dc, shown.c_str(), static_cast<int>(shown.size()), &r, DT_LEFT | DT_SINGLELINE | DT_NOPREFIX);
