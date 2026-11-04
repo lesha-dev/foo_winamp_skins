@@ -89,7 +89,7 @@ private:
             self->on_init();
             return TRUE;
         case WM_COMMAND:
-            if (LOWORD(wp) == IDC_TITLE_BITMAP) self->update_enabled();
+            if (LOWORD(wp) == IDC_TITLE_BITMAP || LOWORD(wp) == IDC_BALANCE_DSP) self->update_enabled();
             if (HIWORD(wp) == BN_CLICKED || (HIWORD(wp) == EN_CHANGE && self->m_initialized))
                 self->changed();
             return TRUE;
@@ -128,7 +128,12 @@ private:
     }
 
     // The alternative style only applies to the Windows-font title, like Winamp.
-    void update_enabled() { EnableWindow(GetDlgItem(m_wnd, IDC_TITLE_ALT), !checked(IDC_TITLE_BITMAP)); }
+    void update_enabled() {
+        EnableWindow(GetDlgItem(m_wnd, IDC_TITLE_ALT), !checked(IDC_TITLE_BITMAP));
+        // The snap only matters while the balance slider works, i.e. with the balance DSP.
+        const bool dsp = checked(IDC_BALANCE_DSP);
+        for (int id : { IDC_BALANCE_SNAP_LABEL, IDC_BALANCE_SNAP, IDC_BALANCE_SNAP_PCT }) EnableWindow(GetDlgItem(m_wnd, id), dsp);
+    }
 
     bool checked(int id) const { return IsDlgButtonChecked(m_wnd, id) == BST_CHECKED; }
     pfc::string8 text(int id) const { return uGetDlgItemText(m_wnd, id); }

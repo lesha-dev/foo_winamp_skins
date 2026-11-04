@@ -18,47 +18,47 @@ STYLE DS_SETFONT | DS_FIXEDSYS | DS_CONTROL | WS_CHILD
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
     LTEXT           "Skins:", IDC_STATIC, 7, 7, 130, 8
-    LISTBOX         IDC_SKIN_LIST, 7, 18, 130, 226, LBS_NOTIFY | LBS_NOINTEGRALHEIGHT | WS_VSCROLL | WS_TABSTOP
+    LISTBOX         IDC_SKIN_LIST, 7, 18, 130, 245, LBS_NOTIFY | LBS_NOINTEGRALHEIGHT | WS_VSCROLL | WS_TABSTOP
     LTEXT           "Preview:", IDC_STATIC, 143, 7, 183, 8
     CONTROL         "", IDC_PREVIEW, "Static", SS_OWNERDRAW, 143, 18, 183, 72
-    EDITTEXT        IDC_SKIN_INFO, 143, 94, 183, 150, ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL | WS_VSCROLL
-    LTEXT           "Folder:", IDC_STATIC, 7, 252, 26, 8
-    EDITTEXT        IDC_FOLDER, 35, 250, 193, 12, ES_AUTOHSCROLL | ES_READONLY
-    PUSHBUTTON      "Open folder", IDC_OPEN_FOLDER, 232, 249, 48, 14
-    PUSHBUTTON      "Refresh", IDC_REFRESH, 283, 249, 43, 14
+    EDITTEXT        IDC_SKIN_INFO, 143, 94, 183, 169, ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL | WS_VSCROLL
+    LTEXT           "Folder:", IDC_STATIC, 7, 270, 26, 8
+    EDITTEXT        IDC_FOLDER, 35, 268, 193, 12, ES_AUTOHSCROLL | ES_READONLY
+    PUSHBUTTON      "Open folder", IDC_OPEN_FOLDER, 232, 267, 48, 14
+    PUSHBUTTON      "Refresh", IDC_REFRESH, 283, 267, 43, 14
 END
 
-IDD_PREFS_OPTIONS DIALOGEX 0, 0, 332, 293
+IDD_PREFS_OPTIONS DIALOGEX 0, 0, 332, 279
 STYLE DS_SETFONT | DS_FIXEDSYS | DS_CONTROL | WS_CHILD
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
-    GROUPBOX        "General", IDC_STATIC, 7, 7, 319, 54
+    GROUPBOX        "General", IDC_STATIC, 7, 7, 319, 40
     AUTOCHECKBOX    "Winamp hotkeys (Z X C V B L, arrows, Ctrl+D/A/W)", IDC_WINAMP_HOTKEYS, 14, 19, 300, 10
-    AUTOCHECKBOX    "Enable balance DSP", IDC_BALANCE_DSP, 14, 31, 300, 10
-    LTEXT           "Balance center snap:", IDC_STATIC, 14, 45, 72, 8
-    EDITTEXT        IDC_BALANCE_SNAP, 88, 43, 26, 12, ES_NUMBER
-    LTEXT           "%", IDC_STATIC, 117, 45, 10, 8
-    GROUPBOX        "Display", IDC_STATIC, 7, 66, 319, 159
-    AUTOCHECKBOX    "Dim window titlebars when not in focus", IDC_DIM_TITLEBARS, 14, 78, 300, 10
-    AUTOCHECKBOX    "Dock skinned windows at", IDC_SNAP, 14, 91, 94, 10
-    EDITTEXT        IDC_SNAP_PX, 109, 90, 22, 12, ES_NUMBER
-    LTEXT           "pixels (hold Shift while dragging to invert)", IDC_STATIC, 135, 92, 180, 8
-    AUTOCHECKBOX    "Enable smooth resizing of the playlist window", IDC_SMOOTH_RESIZE, 14, 105, 300, 10
-    AUTOCHECKBOX    "Use double size setting on equalizer as well as main window", IDC_EQ_DSIZE, 14, 118, 300, 10
-    AUTOCHECKBOX    "Always show Clutterbar in main window", IDC_CLUTTERBAR, 14, 131, 300, 10
-    AUTOCHECKBOX    "Oldschool playlist button behavior (hold, pick on release)", IDC_OLDSCHOOL_PL, 14, 144, 300, 10
-    AUTOCHECKBOX    "Display tooltips in Winamp's windows", IDC_TOOLTIPS, 14, 157, 300, 10
-    AUTOCHECKBOX    "Use skinned mouse cursors", IDC_SKIN_CURSORS, 14, 170, 300, 10
-    AUTOCHECKBOX    "Use bitmap font for main window title display (no international support)", IDC_TITLE_BITMAP, 14, 183, 300, 10
-    AUTOCHECKBOX    "Use alternative font style when 'Double size' is enabled", IDC_TITLE_ALT, 24, 196, 290, 10
-    AUTOCHECKBOX    "Use skin's font in Default UI's Playlist View", IDC_PLVIEW_FONT, 14, 209, 300, 10
-    GROUPBOX        "Title formatting", IDC_STATIC, 7, 230, 319, 59
-    LTEXT           "Main window title:", IDC_STATIC, 14, 244, 84, 8
-    EDITTEXT        IDC_FORMAT_MAIN, 100, 242, 219, 12, ES_AUTOHSCROLL
-    LTEXT           "Playlist entry:", IDC_STATIC, 14, 259, 84, 8
-    EDITTEXT        IDC_FORMAT_PL, 100, 257, 219, 12, ES_AUTOHSCROLL
-    LTEXT           "Playlist shade title:", IDC_STATIC, 14, 274, 84, 8
-    EDITTEXT        IDC_FORMAT_PL_SHADE, 100, 272, 219, 12, ES_AUTOHSCROLL
+    AUTOCHECKBOX    "Enable balance DSP", IDC_BALANCE_DSP, 14, 32, 84, 10
+    LTEXT           "center snap:", IDC_BALANCE_SNAP_LABEL, 100, 33, 44, 8
+    EDITTEXT        IDC_BALANCE_SNAP, 146, 31, 22, 12, ES_NUMBER
+    LTEXT           "%", IDC_BALANCE_SNAP_PCT, 171, 33, 10, 8
+    GROUPBOX        "Display", IDC_STATIC, 7, 52, 319, 159
+    AUTOCHECKBOX    "Dim window titlebars when not in focus", IDC_DIM_TITLEBARS, 14, 64, 300, 10
+    AUTOCHECKBOX    "Dock skinned windows at", IDC_SNAP, 14, 77, 94, 10
+    EDITTEXT        IDC_SNAP_PX, 109, 76, 22, 12, ES_NUMBER
+    LTEXT           "pixels (hold Shift while dragging to invert)", IDC_STATIC, 135, 78, 180, 8
+    AUTOCHECKBOX    "Enable smooth resizing of the playlist window", IDC_SMOOTH_RESIZE, 14, 91, 300, 10
+    AUTOCHECKBOX    "Use double size setting on equalizer as well as main window", IDC_EQ_DSIZE, 14, 104, 300, 10
+    AUTOCHECKBOX    "Always show Clutterbar in main window", IDC_CLUTTERBAR, 14, 117, 300, 10
+    AUTOCHECKBOX    "Oldschool playlist button behavior (hold, pick on release)", IDC_OLDSCHOOL_PL, 14, 130, 300, 10
+    AUTOCHECKBOX    "Display tooltips in Winamp's windows", IDC_TOOLTIPS, 14, 143, 300, 10
+    AUTOCHECKBOX    "Use skinned mouse cursors", IDC_SKIN_CURSORS, 14, 156, 300, 10
+    AUTOCHECKBOX    "Use bitmap font for main window title display (no international support)", IDC_TITLE_BITMAP, 14, 169, 300, 10
+    AUTOCHECKBOX    "Use alternative font style when 'Double size' is enabled", IDC_TITLE_ALT, 24, 182, 290, 10
+    AUTOCHECKBOX    "Use skin's font in Default UI's Playlist View", IDC_PLVIEW_FONT, 14, 195, 300, 10
+    GROUPBOX        "Title formatting", IDC_STATIC, 7, 216, 319, 59
+    LTEXT           "Main window title:", IDC_STATIC, 14, 230, 84, 8
+    EDITTEXT        IDC_FORMAT_MAIN, 100, 228, 219, 12, ES_AUTOHSCROLL
+    LTEXT           "Playlist entry:", IDC_STATIC, 14, 245, 84, 8
+    EDITTEXT        IDC_FORMAT_PL, 100, 243, 219, 12, ES_AUTOHSCROLL
+    LTEXT           "Playlist shade title:", IDC_STATIC, 14, 260, 84, 8
+    EDITTEXT        IDC_FORMAT_PL_SHADE, 100, 258, 219, 12, ES_AUTOHSCROLL
 END
 
 IDD_PREFS_VIS DIALOGEX 0, 0, 332, 200
