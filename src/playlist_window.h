@@ -55,6 +55,7 @@ private:
     int visible_rows() const;
     int row_at(POINT p) const; // item index, or -1
     Part hit(POINT p) const;
+    const wchar_t* tooltip_at(POINT p) const override;
     void clamp_scroll();
     void ensure_visible(size_t item);
     void scroll_to_thumb(int y);

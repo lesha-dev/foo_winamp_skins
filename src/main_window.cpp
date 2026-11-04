@@ -41,6 +41,38 @@ enum : UINT { id_always_on_top = 1, id_double_size, id_shade, id_vis_spectrum, i
     id_skin_first = 0x100, id_skin_last = 0x7FF,
     id_playlist_first = 0x800, id_playlist_last = 0xFFF }; // must stay below menu_id_stride
 
+// Winamp's tooltip texts; "(doesn't work)" marks what isn't implemented here.
+const wchar_t* tooltip_text(Control id) {
+    switch (id) {
+    case Control::options: return L"Main Menu";
+    case Control::minimize: return L"Minimize";
+    case Control::shade: return L"Toggle Windowshade Mode";
+    case Control::close: return L"Close";
+    case Control::clutter_o: return L"Options Menu";
+    case Control::clutter_a: return L"Toggle Always-On-Top";
+    case Control::clutter_i: return L"File Info";
+    case Control::clutter_d: return L"Toggle Doublesize Mode";
+    case Control::clutter_v: return L"Visualization";
+    case Control::prev: return L"Previous Track";
+    case Control::play: return L"Play";
+    case Control::pause: return L"Pause";
+    case Control::stop: return L"Stop";
+    case Control::next: return L"Next Track";
+    case Control::eject: return L"Open file(s)";
+    case Control::shuffle: return L"Shuffle Modes";
+    case Control::repeat: return L"Repeat Modes";
+    case Control::eq: return L"Toggle Equalizer Window";
+    case Control::pl: return L"Toggle Playlist Window";
+    case Control::posbar: return L"Seekbar";
+    case Control::volume: return L"Volume";
+    case Control::balance: return L"Balance";
+    case Control::time: return L"Time Display (click to toggle elapsed/remaining)";
+    case Control::marquee: return L"Song Title";
+    case Control::about: return L"Winamp Skins Preferences";
+    default: return nullptr;
+    }
+}
+
 std::wstring menu_label(const std::wstring& s) {
     std::wstring out;
     for (wchar_t ch : s) { if (ch == L'&') out += L'&'; out += ch; }
@@ -113,13 +145,25 @@ MainWindow::~MainWindow() = default;
 
 MainWindow* MainWindow::s_instance = nullptr;
 
+namespace {
+class always_on_top_notify : public config_object_notify {
+public:
+    t_size get_watched_object_count() override { return 1; }
+    GUID get_watched_object(t_size) override { return standard_config_objects::bool_ui_always_on_top; }
+    void on_watched_object_changed(const service_ptr_t<config_object>&) override {
+        if (MainWindow* w = MainWindow::instance()) w->sync_always_on_top();
+    }
+};
+FB2K_SERVICE_FACTORY(always_on_top_notify);
+}
+
 HWND MainWindow::create(HookProc hook) {
     register_class(&s_wndproc);
     s_instance = this;
     m_hook = hook;
     m_scale = config::double_size.get() ? 2 : 1;
     m_shade = config::shade.get();
-    m_always_on_top = config::always_on_top.get();
+    m_always_on_top = config_object::g_get_data_bool_simple(standard_config_objects::bool_ui_always_on_top, false);
     m_vis.set_mode(static_cast<VisMode>(std::clamp<int>(static_cast<int>(config::vis_mode.get()), 0, 2)));
     m_vis.set_options(config::vis_options());
     titleformat_compiler::get()->compile_safe(m_title_script, "[%artist% - ]%title%[ '('%length%')']");
@@ -136,6 +180,7 @@ HWND MainWindow::create(HookProc hook) {
         WS_POPUP | WS_SYSMENU | WS_MINIMIZEBOX | WS_CLIPCHILDREN,
         x, y, w, h, nullptr, nullptr, core_api::get_my_instance(), this);
     if (!m_wnd) throw exception_win32(GetLastError());
+    m_tooltip.attach(m_wnd);
 
     const pfc::string8 path = config::skin_path.get();
     if (!path.is_empty()) load_skin(path, false);
@@ -177,6 +222,7 @@ void MainWindow::destroy() {
     if (m_eq) { m_eq->save_position(); m_eq->destroy(); m_eq.reset(); }
     if (m_pl) { m_pl->save_position(); m_pl->destroy(); m_pl.reset(); }
     s_instance = nullptr;
+    m_tooltip.destroy();
     docking::remove(m_wnd);
     HWND wnd = m_wnd;
     KillTimer(wnd, marquee_timer_id);
@@ -221,10 +267,14 @@ LRESULT MainWindow::wndproc(UINT msg, WPARAM wp, LPARAM lp) {
         on_lbutton_down(p);
         return 0;
     }
-    case WM_MOUSEMOVE:
-        if (docking::moving(m_wnd)) { docking::move_to_cursor(m_wnd); return 0; }
-        on_mouse_move(to_skin({ GET_X_LPARAM(lp), GET_Y_LPARAM(lp) }));
+    case WM_MOUSEMOVE: {
+        if (docking::moving(m_wnd)) { m_tooltip.set(nullptr); docking::move_to_cursor(m_wnd); return 0; }
+        const POINT p = to_skin({ GET_X_LPARAM(lp), GET_Y_LPARAM(lp) });
+        const ControlRect* r = m_skin && GetCapture() != m_wnd ? hit(p) : nullptr;
+        m_tooltip.set(r ? tooltip_text(r->id) : nullptr);
+        on_mouse_move(p);
         return 0;
+    }
     case WM_LBUTTONUP:
         if (docking::end_move(m_wnd)) { save_positions(); return 0; }
         on_lbutton_up(to_skin({ GET_X_LPARAM(lp), GET_Y_LPARAM(lp) }));
@@ -259,6 +309,7 @@ LRESULT MainWindow::wndproc(UINT msg, WPARAM wp, LPARAM lp) {
                 show_vis_menu(pt);
                 return 0;
             }
+            if (r && r->id == Control::marquee) return 0;
         }
         show_context_menu(pt);
         return 0;
@@ -863,8 +914,14 @@ void MainWindow::set_double_size(bool on) {
 }
 
 void MainWindow::set_always_on_top(bool on) {
+    // foobar2000's own View > Always on top; the change comes back through sync_always_on_top.
+    config_object::g_set_data_bool(standard_config_objects::bool_ui_always_on_top, on);
+}
+
+void MainWindow::sync_always_on_top() {
+    const bool on = config_object::g_get_data_bool_simple(standard_config_objects::bool_ui_always_on_top, false);
+    if (!m_wnd || on == m_always_on_top) return;
     m_always_on_top = on;
-    config::always_on_top = on;
     SetWindowPos(m_wnd, on ? HWND_TOPMOST : HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
     invalidate();
 }

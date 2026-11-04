@@ -4,6 +4,7 @@
 #include "controls.h"
 #include "main_renderer.h"
 #include "skin.h"
+#include "tooltip.h"
 #include "visualizer.h"
 
 #include <memory>
@@ -32,6 +33,7 @@ public:
 
     // The live window, or null when this UI isn't active (e.g. preferences opened under another UI).
     static MainWindow* instance() { return s_instance; }
+    void sync_always_on_top();
 
     bool load_skin(const char* path, bool interactive);
     void invalidate();
@@ -119,6 +121,7 @@ private:
     int m_khz = -1;
 
     Visualizer m_vis;
+    Tooltip m_tooltip;
     std::unique_ptr<EqWindow> m_eq;
     std::unique_ptr<PlaylistWindow> m_pl;
     bool m_vis_running = false;

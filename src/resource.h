@@ -20,6 +20,7 @@
 #define IDC_EQ_DSIZE        1016
 #define IDC_CLUTTERBAR      1017
 #define IDC_OLDSCHOOL_PL    1018
+#define IDC_TOOLTIPS        1019
 
 #define IDC_VIS_SPECTRUM    1101
 #define IDC_VIS_SCOPE       1102

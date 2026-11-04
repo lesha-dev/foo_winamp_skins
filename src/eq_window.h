@@ -35,6 +35,7 @@ protected:
 private:
     enum class Part { none, close, shade, on, autob, presets, preamp, band0, volume = band0 + eq::band_count, balance };
     Part hit(POINT p) const;
+    const wchar_t* tooltip_at(POINT p) const override;
     void drag_to(POINT p);
     void show_presets_menu();
     void render_normal(Canvas& c);

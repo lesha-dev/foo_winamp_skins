@@ -16,20 +16,20 @@
 - [x] Preferences page (Display > Winamp Skins): skin list with preview, folder actions; Options subpage (hotkeys / balance DSP / centre snap, dim titlebars).
 - [x] Balance via own DSP ("Winamp Skins balance"), auto-inserted last in the chain on first off-centre use. Lags by the output buffer length.
 - [x] Equalizer window (drives fb2k's built-in Equalizer: 10 Winamp bands + preamp mapped onto its 18 bands, synced both ways; built-in presets) and playlist editor (active fb2k playlist).
-- [ ] EQ: AUTO button is a toggle only (no per-track presets); no preset saving.
+- [ ] EQ: AUTO button is a toggle only (no per-track presets, keyed by file path, applied on track start). Preset load/save is via .feq files.
 - [x] Playlist switching: Playlists submenu in the context menu (sets fb2k's active playlist). No double size for the playlist (Winamp never had it).
 - [x] Visualizer matches Winamp's classic analyser/scope (verified against recordings); Winamp vis options on the Preferences > Display > Winamp Skins > Visualization page (mode, analyzer style, thin/thick bands, peaks, scope style, refresh rate, falloffs).
 - [ ] Skin cursors (*.cur) are ignored.
 - [x] Main window title bar shows wrong active/inactive colours when focus changes.
 - [x] Dragging the song title (marquee) scrolls the text by hand, like Winamp.
-- [ ] Tooltips on controls (main, EQ, playlist windows), like Winamp.
+- [x] Tooltips on controls (main, EQ, playlist windows), like Winamp; unimplemented features say "(doesn't work)".
 - [x] Shuffle/repeat: buttons open menus of fb2k playback orders (None/Random/Shuffle tracks/albums/folders; None/Repeat playlist/track); lit when such an order is active.
 - [x] Winamp logo (lower right of the main window, Winamp opens About): opens Preferences -> Display -> Winamp Skins.
 - [ ] Options from Winamp's "Classic Skin Options" prefs tab, for the Winamp Skins page:
   - [x] Dim window titlebars when not in focus (Options page)
   - [x] Dock skinned windows at N pixels (Options page; Shift inverts while dragging)
   - [x] Enable smooth window resizing for resizeable skinned windows (playlist, Options page)
-  - [ ] Display tooltips in Winamp's windows (see tooltips item)
+  - [x] Display tooltips in Winamp's windows (Options page)
   - [ ] Use skinned mouse cursors (see *.cur item)
   - [ ] Display playlist position in the song scroller
   - [x] Always show Winamp "Clutterbar" in main window (Options page)

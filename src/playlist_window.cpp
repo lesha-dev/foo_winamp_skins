@@ -229,6 +229,30 @@ void PlaylistWindow::recompute_lengths() {
 // ---------------------------------------------------------------------------------------------
 // hit testing
 
+const wchar_t* PlaylistWindow::tooltip_at(POINT p) const {
+    if (m_menu_open) return nullptr;
+    switch (hit(p)) {
+    case Part::close: return L"Close";
+    case Part::shade: return L"Toggle Windowshade Mode";
+    case Part::menu_add: return L"Add Files to Playlist";
+    case Part::menu_rem: return L"Remove Files from Playlist";
+    case Part::menu_sel: return L"Select Files in Playlist";
+    case Part::menu_misc: return L"Misc Actions";
+    case Part::menu_list: return L"Manage Playlist";
+    case Part::scroll_up: return L"Scroll Up";
+    case Part::scroll_down: return L"Scroll Down";
+    case Part::resize: return m_shade ? L"Adjust Horizontal Size" : nullptr;
+    case Part::prev: return L"Previous Track";
+    case Part::play: return L"Play";
+    case Part::pause: return L"Pause";
+    case Part::stop: return L"Stop";
+    case Part::next: return L"Next Track";
+    case Part::eject: return L"Open file(s)";
+    case Part::mini_time: return L"Time Display (click to toggle elapsed/remaining)";
+    default: return nullptr;
+    }
+}
+
 PlaylistWindow::Part PlaylistWindow::hit(POINT p) const {
     const int w = width(), h = height();
     if (Rc{ w - 11, 3, 9, 9 }.in(p)) return Part::close;

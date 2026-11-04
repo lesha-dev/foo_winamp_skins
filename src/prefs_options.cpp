@@ -40,6 +40,7 @@ public:
         config::eq_double_size = checked(IDC_EQ_DSIZE);
         config::clutterbar = checked(IDC_CLUTTERBAR);
         config::oldschool_pl_buttons = checked(IDC_OLDSCHOOL_PL);
+        config::tooltips = checked(IDC_TOOLTIPS);
         if (MainWindow* w = MainWindow::instance()) w->apply_display_options();
         changed();
     }
@@ -55,6 +56,7 @@ public:
         CheckDlgButton(m_wnd, IDC_EQ_DSIZE, BST_CHECKED);
         CheckDlgButton(m_wnd, IDC_CLUTTERBAR, BST_CHECKED);
         CheckDlgButton(m_wnd, IDC_OLDSCHOOL_PL, BST_UNCHECKED);
+        CheckDlgButton(m_wnd, IDC_TOOLTIPS, BST_CHECKED);
         changed();
     }
 
@@ -97,6 +99,7 @@ private:
         CheckDlgButton(m_wnd, IDC_EQ_DSIZE, config::eq_double_size.get() ? BST_CHECKED : BST_UNCHECKED);
         CheckDlgButton(m_wnd, IDC_CLUTTERBAR, config::clutterbar.get() ? BST_CHECKED : BST_UNCHECKED);
         CheckDlgButton(m_wnd, IDC_OLDSCHOOL_PL, config::oldschool_pl_buttons.get() ? BST_CHECKED : BST_UNCHECKED);
+        CheckDlgButton(m_wnd, IDC_TOOLTIPS, config::tooltips.get() ? BST_CHECKED : BST_UNCHECKED);
         m_initialized = true;
     }
 
@@ -125,7 +128,8 @@ private:
             || checked(IDC_SMOOTH_RESIZE) != config::smooth_resize.get()
             || checked(IDC_EQ_DSIZE) != config::eq_double_size.get()
             || checked(IDC_CLUTTERBAR) != config::clutterbar.get()
-            || checked(IDC_OLDSCHOOL_PL) != config::oldschool_pl_buttons.get();
+            || checked(IDC_OLDSCHOOL_PL) != config::oldschool_pl_buttons.get()
+            || checked(IDC_TOOLTIPS) != config::tooltips.get();
     }
 
     void changed() { m_callback->on_state_changed(); }

@@ -114,6 +114,24 @@ void EqWindow::on_visibility_changed(bool visible) {
     if (MainWindow* w = MainWindow::instance()) w->invalidate();
 }
 
+const wchar_t* EqWindow::tooltip_at(POINT p) const {
+    static const wchar_t* const bands[eq::band_count] = { L"70Hz", L"180Hz", L"320Hz", L"600Hz", L"1KHz", L"3KHz", L"6KHz", L"12KHz", L"14KHz", L"16KHz" };
+    const Part part = hit(p);
+    switch (part) {
+    case Part::close: return L"Close";
+    case Part::shade: return L"Toggle Windowshade Mode";
+    case Part::on: return L"EQ on/off";
+    case Part::autob: return L"EQ auto-load by track (doesn't work)";
+    case Part::presets: return L"Open presets";
+    case Part::preamp: return L"Preamp";
+    case Part::volume: return L"Volume";
+    case Part::balance: return L"Balance";
+    default: break;
+    }
+    const int band = static_cast<int>(part) - static_cast<int>(Part::band0);
+    return band >= 0 && band < eq::band_count ? bands[band] : nullptr;
+}
+
 EqWindow::Part EqWindow::hit(POINT p) const {
     if (R{ pos_close.x, pos_close.y, 9, 9 }.in(p)) return Part::close;
     if (R{ pos_shade_btn.x, pos_shade_btn.y, 9, 9 }.in(p)) return Part::shade;

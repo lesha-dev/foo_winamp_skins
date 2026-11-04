@@ -46,6 +46,7 @@ void SkinWindow::create(HWND owner, const wchar_t* title, int x, int y) {
                             core_api::get_my_instance(), this);
     if (!m_wnd) throw exception_win32(GetLastError());
     docking::add(m_wnd);
+    m_tooltip.attach(m_wnd);
     apply_geometry();
 }
 
@@ -54,6 +55,7 @@ void SkinWindow::destroy() {
     docking::remove(m_wnd);
     HWND wnd = m_wnd;
     m_wnd = nullptr;
+    m_tooltip.destroy();
     SetWindowLongPtrW(wnd, GWLP_USERDATA, 0);
     DestroyWindow(wnd);
 }
@@ -173,10 +175,13 @@ LRESULT SkinWindow::wndproc(UINT msg, WPARAM wp, LPARAM lp) {
         on_mouse_down(p, msg == WM_LBUTTONDBLCLK);
         return 0;
     }
-    case WM_MOUSEMOVE:
-        if (docking::moving(m_wnd)) { docking::move_to_cursor(m_wnd); return 0; }
-        on_mouse_move(to_skin({ GET_X_LPARAM(lp), GET_Y_LPARAM(lp) }));
+    case WM_MOUSEMOVE: {
+        if (docking::moving(m_wnd)) { m_tooltip.set(nullptr); docking::move_to_cursor(m_wnd); return 0; }
+        const POINT p = to_skin({ GET_X_LPARAM(lp), GET_Y_LPARAM(lp) });
+        m_tooltip.set(GetCapture() == m_wnd || !m_skin ? nullptr : tooltip_at(p));
+        on_mouse_move(p);
         return 0;
+    }
     case WM_LBUTTONUP:
         if (docking::end_move(m_wnd)) { save_window_position(); return 0; }
         on_mouse_up(to_skin({ GET_X_LPARAM(lp), GET_Y_LPARAM(lp) }));

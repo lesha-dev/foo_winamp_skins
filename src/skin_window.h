@@ -2,6 +2,7 @@
 
 #include "canvas.h"
 #include "skin.h"
+#include "tooltip.h"
 
 namespace wsz {
 
@@ -33,6 +34,8 @@ protected:
     virtual void on_mouse_leave_capture() {}
     // While true, the window keeps the mouse captured after button-up and gets every click (open popup).
     virtual bool holds_mouse() const { return false; }
+    // Tooltip text for the point (skin coordinates), or null.
+    virtual const wchar_t* tooltip_at(POINT) const { return nullptr; }
     virtual void on_right_click(POINT screen_pt);
     virtual void on_wheel(int /*delta*/) {}
     virtual bool on_key(WPARAM /*vk*/) { return false; }
@@ -53,6 +56,7 @@ protected:
     const Skin* m_skin = nullptr;
     bool m_active = false;
     Canvas m_canvas;
+    Tooltip m_tooltip;
 
 private:
     static LRESULT CALLBACK s_wndproc(HWND, UINT, WPARAM, LPARAM);
