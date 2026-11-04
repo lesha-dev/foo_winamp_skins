@@ -38,7 +38,7 @@ const MenuRoot menu_roots[] = {
 };
 constexpr UINT menu_id_stride = 0x1000;
 enum : UINT { id_always_on_top = 1, id_double_size, id_shade, id_vis_spectrum, id_vis_osc, id_vis_off,
-    id_open_skins_folder, id_toggle_eq, id_toggle_pl,
+    id_open_skins_folder, id_toggle_eq, id_toggle_pl, id_lock_ui,
     id_skin_first = 0x100, id_skin_last = 0x7FF,
     id_playlist_first = 0x800, id_playlist_last = 0xBFF,
     id_element_first = 0xC00, id_element_last = 0xFFF }; // must stay below menu_id_stride
@@ -893,6 +893,7 @@ void MainWindow::show_context_menu(POINT pt, HWND owner) {
     AppendMenuW(menu, MF_STRING | (m_always_on_top ? MF_CHECKED : 0), id_always_on_top, shortcut_label(L"Always on &top", L"Ctrl+A").c_str());
     AppendMenuW(menu, MF_STRING | (m_scale == 2 ? MF_CHECKED : 0), id_double_size, shortcut_label(L"&Double size", L"Ctrl+D").c_str());
     AppendMenuW(menu, MF_STRING | (m_shade ? MF_CHECKED : 0), id_shade, shortcut_label(L"&Windowshade", L"Ctrl+W").c_str());
+    AppendMenuW(menu, MF_STRING | (config::lock_ui.get() ? MF_CHECKED : 0), id_lock_ui, L"Loc&k UI");
     AppendMenuW(menu, MF_STRING | (m_eq && m_eq->visible() ? MF_CHECKED : 0), id_toggle_eq, shortcut_label(L"&Equalizer", L"Alt+G").c_str());
     AppendMenuW(menu, MF_STRING | (m_pl && m_pl->visible() ? MF_CHECKED : 0), id_toggle_pl, shortcut_label(L"&Playlist editor", L"Alt+E").c_str());
     // Elements submenu: foobar2000's UI elements by group, like Default UI's "Replace UI Element" list.
@@ -957,6 +958,7 @@ void MainWindow::show_context_menu(POINT pt, HWND owner) {
     case id_always_on_top: set_always_on_top(!m_always_on_top); break;
     case id_double_size: set_double_size(m_scale == 1); break;
     case id_shade: set_shade(!m_shade); break;
+    case id_lock_ui: config::lock_ui = !config::lock_ui.get(); break;
     case id_vis_spectrum: set_vis_mode(VisMode::spectrum); break;
     case id_vis_osc: set_vis_mode(VisMode::oscilloscope); break;
     case id_vis_off: set_vis_mode(VisMode::off); break;

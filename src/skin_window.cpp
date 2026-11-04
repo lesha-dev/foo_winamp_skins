@@ -168,7 +168,7 @@ LRESULT SkinWindow::wndproc(UINT msg, WPARAM wp, LPARAM lp) {
         // Everything that isn't a control drags the window, like Winamp.
         if (!holds_mouse() && (!m_skin || !is_control(p))) {
             if (msg == WM_LBUTTONDBLCLK) on_caption_dblclick();
-            else docking::begin_move(m_wnd, false);
+            else docking::begin_move(m_wnd, config::lock_ui.get()); // Lock UI: docked windows follow
             return 0;
         }
         SetCapture(m_wnd);

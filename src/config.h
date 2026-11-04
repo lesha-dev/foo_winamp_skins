@@ -25,6 +25,7 @@ constexpr const char default_format_playlist_shade[] = "[%artist% - ]%title%";
 extern cfg_string format_main;           // main window song title
 extern cfg_string format_playlist;       // playlist editor rows (track length stays right-aligned)
 extern cfg_string format_playlist_shade; // playlist editor in windowshade mode
+extern cfg_bool lock_ui;              // dragging any skinned window moves everything docked to it
 extern cfg_bool skin_cursors;         // mouse cursors from the skin's *.cur files
 extern cfg_bool snap;                 // dock windows to each other / screen edges (Shift inverts while dragging)
 extern cfg_int snap_distance;         // px

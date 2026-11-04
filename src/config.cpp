@@ -22,6 +22,7 @@ cfg_bool title_font_alt(guids::cfg_title_font_alt, false);
 cfg_string format_main(guids::cfg_format_main, default_format_main);
 cfg_string format_playlist(guids::cfg_format_playlist, default_format_playlist);
 cfg_string format_playlist_shade(guids::cfg_format_playlist_shade, default_format_playlist_shade);
+cfg_bool lock_ui(guids::cfg_lock_ui, false);
 cfg_bool skin_cursors(guids::cfg_skin_cursors, true);
 cfg_bool snap(guids::cfg_snap, true);
 cfg_int snap_distance(guids::cfg_snap_distance, 10);
