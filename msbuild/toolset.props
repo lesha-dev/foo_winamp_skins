@@ -5,4 +5,17 @@
     <WszToolset Condition="'$(WszToolset)' == ''">v145</WszToolset>
     <PlatformToolset>$(WszToolset)</PlatformToolset>
   </PropertyGroup>
+  <!-- All build output in one place, the SDK projects included (they'd otherwise write to Release\, x64\):
+       binaries in out\<Platform>\<Configuration>\, intermediates in out\obj\<Project>\<Platform>\<Configuration>\. -->
+  <PropertyGroup>
+    <WszRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\'))</WszRoot>
+    <OutDir>$(WszRoot)out\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(WszRoot)out\obj\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <!-- The build log otherwise goes to <project>\<Configuration>\ next to the project file. -->
+  <ItemDefinitionGroup>
+    <BuildLog>
+      <Path>$(WszRoot)out\obj\$(ProjectName)\$(Platform)\$(Configuration)\$(MSBuildProjectName).log</Path>
+    </BuildLog>
+  </ItemDefinitionGroup>
 </Project>

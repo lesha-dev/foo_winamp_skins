@@ -38,8 +38,6 @@
     <Fb2kUserComponents Condition="'$(Platform)'=='Win32'">$(Fb2kDir)profile\user-components\$(ProjectName)\</Fb2kUserComponents>
   </PropertyGroup>
   <PropertyGroup>
-    <OutDir>$(SolutionDir)out\$(Platform)\$(Configuration)\</OutDir>
-    <IntDir>$(SolutionDir)obj\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
     <LocalDebuggerCommand>$(Fb2kDir)foobar2000.exe</LocalDebuggerCommand>
     <LocalDebuggerWorkingDirectory>$(Fb2kDir)</LocalDebuggerWorkingDirectory>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
