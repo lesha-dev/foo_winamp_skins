@@ -18,6 +18,16 @@ public:
 
     void set_skin(const Skin* skin);
     bool visible() const { return m_wnd && IsWindowVisible(m_wnd); }
+
+    // Window actions at the top of its context menu; unsupported ones are shown disabled.
+    virtual bool can_double_size() const { return false; }
+    virtual bool is_double_size() const { return false; }
+    virtual void toggle_double_size() {}
+    virtual bool can_shade() const { return false; }
+    virtual bool is_shaded() const { return false; }
+    virtual void toggle_shade() {}
+    virtual bool can_rename() const { return false; }
+    virtual void rename() {}
     void show(bool on);
     void invalidate();
 

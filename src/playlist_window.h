@@ -15,6 +15,9 @@ public:
 
     void set_shade(bool on);
     bool shade() const { return m_shade; }
+    bool can_shade() const override { return true; }
+    bool is_shaded() const override { return m_shade; }
+    void toggle_shade() override { set_shade(!m_shade); }
     void save_position();
     void on_skin_changed();
     // Mini time display, fed by the main window so both always show the same value.

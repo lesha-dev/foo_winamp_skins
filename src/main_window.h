@@ -42,7 +42,10 @@ public:
     void apply_display_options(); // after the Options page changed
     void on_eq_changed();
     void set_status(const char* text);  // slider feedback in the title area; empty/null restores the title
-    void show_context_menu(POINT pt_screen, HWND owner = nullptr); // owner: the clicked window (default: main)
+    // The clicked window's actions (Double size, Windowshade, Rename, Close), then the common menu.
+    // panel: the clicked window; null = the main window.
+    void show_context_menu(POINT pt_screen, SkinWindow* panel = nullptr);
+    void toggle_double_size() { set_double_size(m_scale == 1); }
     void set_vis_mode(VisMode mode);
     void set_vis_options(const VisOptions& o); // also stored in config
     // Winamp hotkeys, also used by the EQ and playlist windows. Returns true if handled.
@@ -50,6 +53,7 @@ public:
     void toggle_eq();
     void toggle_playlist();
     void toggle_element(const GUID& guid); // shows/hides the element's window, creating it on first use
+    void save_element_windows();
 
 private:
     class Callbacks;
@@ -133,7 +137,6 @@ private:
     std::unique_ptr<PlaylistWindow> m_pl;
     std::vector<std::unique_ptr<ElementWindow>> m_elements;
     ElementWindow* create_element_window(ElementWindow::State s);
-    void save_element_windows();
     ui_selection_holder::ptr m_selection; // selection viewers (Album Art, Properties) follow the playlist selection
     bool m_vis_running = false;
 };

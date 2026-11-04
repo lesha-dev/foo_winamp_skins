@@ -17,6 +17,7 @@ public:
         int x = CW_USEDEFAULT, y = CW_USEDEFAULT;
         int w = GenFrame::full_width, h = GenFrame::full_height + 4 * GenFrame::step_h;
         std::vector<uint8_t> config;
+        pfc::string8 title; // user's title; empty = the element's label or name
     };
 
     explicit ElementWindow(const State& state);
@@ -41,6 +42,8 @@ protected:
     SkinCursor cursor_at(POINT p) const override;
     void on_position_saved(int x, int y) override;
     void on_visibility_changed(bool visible) override;
+    bool can_rename() const override { return true; }
+    void rename() override;
     bool on_message(UINT msg, WPARAM wp, LPARAM lp, LRESULT& ret) override;
 
 private:
@@ -56,9 +59,14 @@ private:
     bool query_color(const GUID& what, t_ui_color& out) override;
     t_ui_font query_font_ex(const GUID& what) override;
     bool request_activation(service_ptr_t<ui_element_instance>) override;
+    t_size host_notify(ui_element_instance* source, const GUID& what, t_size param1, const void* param2, t_size param2size) override;
+
+    // Title shown: the user's, else the label the element asked for, else the element's name.
+    const char* title() const;
 
     State m_state;
-    pfc::string8 m_title;
+    pfc::string8 m_title; // element's name
+    pfc::string8 m_label; // element-provided label
     Part m_pressed = Part::none;
     bool m_inside = false;
     POINT m_drag_origin = {};

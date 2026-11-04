@@ -12,6 +12,14 @@ public:
     void set_double_size(bool on);
     void set_shade(bool on);
     bool shade() const { return m_shade; }
+
+    // Double size follows the main window, when the Options page lets the equalizer use it.
+    bool can_double_size() const override;
+    bool is_double_size() const override { return m_scale == 2; }
+    void toggle_double_size() override;
+    bool can_shade() const override { return true; }
+    bool is_shaded() const override { return m_shade; }
+    void toggle_shade() override { set_shade(!m_shade); }
     void save_position();
 
     // Refreshes from eq state / playback (volume, balance shown in shade mode).

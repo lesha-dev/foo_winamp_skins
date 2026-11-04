@@ -37,13 +37,18 @@ const MenuRoot menu_roots[] = {
     { &mainmenu_groups::help,     L"&Help" },
 };
 constexpr UINT menu_id_stride = 0x1000;
-enum : UINT { id_always_on_top = 1, id_double_size, id_shade, id_vis_spectrum, id_vis_osc, id_vis_off,
-    id_open_skins_folder, id_toggle_eq, id_toggle_pl, id_lock_ui,
+enum : UINT { id_lock_ui = 1, id_vis_spectrum, id_vis_osc, id_vis_off,
+    id_open_skins_folder, id_toggle_eq, id_toggle_pl,
+    id_panel_double = 0x80, id_panel_shade, id_panel_rename, id_panel_close,
     id_skin_first = 0x100, id_skin_last = 0x7FF,
     id_playlist_first = 0x800, id_playlist_last = 0xBFF,
     id_element_first = 0xC00, id_element_last = 0xFFF }; // must stay below menu_id_stride
 
-// Element windows are stored as: u32 count, then per window: GUID, u8 visible, i32 x, y, w, h, u32 size, config bytes.
+// Element windows are stored as: u32 magic, u32 count, then per window: GUID, u8 visible, i32 x, y, w, h,
+// u32 size + config bytes, u32 size + title (UTF-8). Blobs without the magic are the first format (no
+// magic, no title).
+constexpr uint32_t element_states_magic = 0x32455357; // "WSE2"
+
 std::vector<ElementWindow::State> load_element_states() {
     std::vector<ElementWindow::State> out;
     auto blob = config::element_windows.get();
@@ -58,6 +63,8 @@ std::vector<ElementWindow::State> load_element_states() {
     };
     uint32_t count = 0;
     if (!read(&count, 4)) return out;
+    const bool with_title = count == element_states_magic;
+    if (with_title && !read(&count, 4)) return out;
     for (uint32_t i = 0; i < count; ++i) {
         ElementWindow::State s;
         uint8_t vis = 0;
@@ -69,6 +76,12 @@ std::vector<ElementWindow::State> load_element_states() {
         s.x = v[0]; s.y = v[1]; s.w = v[2]; s.h = v[3];
         s.config.assign(p, p + size);
         p += size;
+        if (with_title) {
+            uint32_t len = 0;
+            if (!read(&len, 4) || static_cast<size_t>(end - p) < len) break;
+            s.title.set_string(reinterpret_cast<const char*>(p), len);
+            p += len;
+        }
         out.push_back(std::move(s));
     }
     return out;
@@ -78,6 +91,7 @@ void save_element_states(const std::vector<ElementWindow::State>& states) {
     std::vector<uint8_t> buf;
     auto write = [&](const void* src, size_t n) { const auto* b = static_cast<const uint8_t*>(src); buf.insert(buf.end(), b, b + n); };
     const uint32_t count = static_cast<uint32_t>(states.size());
+    write(&element_states_magic, 4);
     write(&count, 4);
     for (const auto& s : states) {
         const uint8_t vis = s.visible ? 1 : 0;
@@ -88,6 +102,9 @@ void save_element_states(const std::vector<ElementWindow::State>& states) {
         write(v, sizeof(v));
         write(&size, 4);
         write(s.config.data(), s.config.size());
+        const uint32_t len = static_cast<uint32_t>(s.title.length());
+        write(&len, 4);
+        write(s.title.get_ptr(), len);
     }
     config::element_windows.set(buf.data(), buf.size());
 }
@@ -266,6 +283,15 @@ HWND MainWindow::create(HookProc hook) {
         RECT rc = { x, y, x + w, y + h };
         if (!MonitorFromRect(&rc, MONITOR_DEFAULTTONULL)) x = y = CW_USEDEFAULT;
     }
+    if (x == CW_USEDEFAULT) {
+        // First start (CW_USEDEFAULT means 0,0 for popups): centre the main/equalizer/playlist stack
+        // on the primary monitor's work area.
+        RECT work{};
+        SystemParametersInfoW(SPI_GETWORKAREA, 0, &work, 0);
+        const int stack_h = h + EqWindow::height * m_scale + PlaylistWindow::min_height + 4 * PlaylistWindow::step_h;
+        x = work.left + std::max(0, static_cast<int>(work.right - work.left - w) / 2);
+        y = work.top + std::max(0, static_cast<int>(work.bottom - work.top - stack_h) / 2);
+    }
 
     m_wnd = CreateWindowExW(WS_EX_APPWINDOW | (m_always_on_top ? WS_EX_TOPMOST : 0), window_class, L"foobar2000",
         WS_POPUP | WS_SYSMENU | WS_MINIMIZEBOX | WS_CLIPCHILDREN,
@@ -293,7 +319,13 @@ HWND MainWindow::create(HookProc hook) {
     m_pl = std::make_unique<PlaylistWindow>();
     int px = remember ? static_cast<int>(config::pl_x.get()) : CW_USEDEFAULT;
     int py = remember ? static_cast<int>(config::pl_y.get()) : CW_USEDEFAULT;
-    if (px == CW_USEDEFAULT) { px = mrc.left; py = mrc.bottom + EqWindow::height * m_scale; }
+    if (px == CW_USEDEFAULT) {
+        // Below the equalizer, whatever its size (shade, double size).
+        RECT erc{};
+        GetWindowRect(m_eq->hwnd(), &erc);
+        px = erc.left;
+        py = erc.bottom;
+    }
     m_pl->create(m_wnd, L"Winamp Playlist Editor", px, py);
     m_pl->set_skin(m_skin.get());
     m_pl->on_skin_changed();
@@ -871,31 +903,24 @@ bool MainWindow::on_key(WPARAM vk) {
     return false;
 }
 
-void MainWindow::show_context_menu(POINT pt, HWND owner) {
-    if (!owner) owner = m_wnd;
+void MainWindow::show_context_menu(POINT pt, SkinWindow* panel) {
+    const HWND owner = panel ? panel->hwnd() : m_wnd;
     const bool shortcuts = standard_config_objects::query_show_keyboard_shortcuts_in_menus();
     HMENU menu = CreatePopupMenu();
 
-    // Skins submenu: contents of the skins folder.
-    const auto skins = skins_folder::list();
-    const std::wstring current = pfc::stringcvt::string_wide_from_utf8(config::skin_path.get()).get_ptr();
-    HMENU skins_menu = CreatePopupMenu();
-    const size_t max_skins = id_skin_last - id_skin_first + 1;
-    for (size_t i = 0; i < skins.size() && i < max_skins; ++i) {
-        const bool sel = m_skin && _wcsicmp(skins[i].path.c_str(), current.c_str()) == 0;
-        AppendMenuW(skins_menu, MF_STRING | (sel ? MF_CHECKED : 0), id_skin_first + i, menu_label(skins[i].name).c_str());
+    // The clicked window's own actions.
+    {
+        auto flags = [](bool can, bool on) { return MF_STRING | (can ? 0u : UINT(MF_GRAYED)) | (on ? UINT(MF_CHECKED) : 0u); };
+        const bool dbl_can = panel ? panel->can_double_size() : true, dbl_on = panel ? panel->is_double_size() : m_scale == 2;
+        const bool shade_can = panel ? panel->can_shade() : true, shade_on = panel ? panel->is_shaded() : m_shade;
+        AppendMenuW(menu, flags(dbl_can, dbl_on), id_panel_double, panel ? L"&Double size" : shortcut_label(L"&Double size", L"Ctrl+D").c_str());
+        AppendMenuW(menu, flags(shade_can, shade_on), id_panel_shade, panel ? L"&Windowshade" : shortcut_label(L"&Windowshade", L"Ctrl+W").c_str());
+        AppendMenuW(menu, flags(panel && panel->can_rename(), false), id_panel_rename, L"&Rename...");
+        AppendMenuW(menu, MF_STRING, id_panel_close, L"&Close");
+        AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
     }
-    if (skins.empty()) AppendMenuW(skins_menu, MF_STRING | MF_GRAYED, 0, L"(skins folder is empty)");
-    AppendMenuW(skins_menu, MF_SEPARATOR, 0, nullptr);
-    AppendMenuW(skins_menu, MF_STRING, id_open_skins_folder, L"&Open skins folder");
-    AppendMenuW(menu, MF_POPUP | MF_STRING, reinterpret_cast<UINT_PTR>(skins_menu), L"&Skins");
-    AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
-    AppendMenuW(menu, MF_STRING | (m_always_on_top ? MF_CHECKED : 0), id_always_on_top, shortcut_label(L"Always on &top", L"Ctrl+A").c_str());
-    AppendMenuW(menu, MF_STRING | (m_scale == 2 ? MF_CHECKED : 0), id_double_size, shortcut_label(L"&Double size", L"Ctrl+D").c_str());
-    AppendMenuW(menu, MF_STRING | (m_shade ? MF_CHECKED : 0), id_shade, shortcut_label(L"&Windowshade", L"Ctrl+W").c_str());
-    AppendMenuW(menu, MF_STRING | (config::lock_ui.get() ? MF_CHECKED : 0), id_lock_ui, L"Loc&k UI");
-    AppendMenuW(menu, MF_STRING | (m_eq && m_eq->visible() ? MF_CHECKED : 0), id_toggle_eq, shortcut_label(L"&Equalizer", L"Alt+G").c_str());
-    AppendMenuW(menu, MF_STRING | (m_pl && m_pl->visible() ? MF_CHECKED : 0), id_toggle_pl, shortcut_label(L"&Playlist editor", L"Alt+E").c_str());
+    AppendMenuW(menu, MF_STRING | (m_eq && m_eq->visible() ? MF_CHECKED : 0), id_toggle_eq, shortcut_label(L"E&qualizer", L"Alt+G").c_str());
+    AppendMenuW(menu, MF_STRING | (m_pl && m_pl->visible() ? MF_CHECKED : 0), id_toggle_pl, shortcut_label(L"Pla&ylist", L"Alt+E").c_str());
     // Elements submenu: foobar2000's UI elements by group, like Default UI's "Replace UI Element" list.
     const std::vector<ElementInfo> elements = list_elements();
     HMENU elements_menu = CreatePopupMenu();
@@ -919,7 +944,24 @@ void MainWindow::show_context_menu(POINT pt, HWND owner) {
         }
         if (elements.empty()) AppendMenuW(elements_menu, MF_STRING | MF_GRAYED, 0, L"(no UI elements)");
     }
-    AppendMenuW(menu, MF_POPUP | MF_STRING, reinterpret_cast<UINT_PTR>(elements_menu), L"E&lements");
+    AppendMenuW(menu, MF_POPUP | MF_STRING, reinterpret_cast<UINT_PTR>(elements_menu), L"Ele&ments");
+    AppendMenuW(menu, MF_STRING | (config::lock_ui.get() ? MF_CHECKED : 0), id_lock_ui, L"Loc&k UI");
+    // Skins submenu: contents of the skins folder.
+    const auto skins = skins_folder::list();
+    const std::wstring current = pfc::stringcvt::string_wide_from_utf8(config::skin_path.get()).get_ptr();
+    HMENU skins_menu = CreatePopupMenu();
+    const size_t max_skins = id_skin_last - id_skin_first + 1;
+    for (size_t i = 0; i < skins.size() && i < max_skins; ++i) {
+        const bool sel = m_skin && _wcsicmp(skins[i].path.c_str(), current.c_str()) == 0;
+        AppendMenuW(skins_menu, MF_STRING | (sel ? MF_CHECKED : 0), id_skin_first + i, menu_label(skins[i].name).c_str());
+    }
+    if (skins.empty()) AppendMenuW(skins_menu, MF_STRING | MF_GRAYED, 0, L"(skins folder is empty)");
+    AppendMenuW(skins_menu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(skins_menu, MF_STRING, id_open_skins_folder, L"&Open skins folder");
+    AppendMenuW(menu, MF_POPUP | MF_STRING, reinterpret_cast<UINT_PTR>(skins_menu), L"&Skins");
+    HMENU vis = CreatePopupMenu();
+    append_vis_items(vis);
+    AppendMenuW(menu, MF_POPUP | MF_STRING, reinterpret_cast<UINT_PTR>(vis), L"Visuali&zation");
     // Playlists submenu: fb2k's playlists; picking one makes it active (shown in the playlist editor).
     auto pm = playlist_manager::get();
     HMENU playlists = CreatePopupMenu();
@@ -932,10 +974,7 @@ void MainWindow::show_context_menu(POINT pt, HWND owner) {
         AppendMenuW(playlists, MF_STRING | (i == pl_active ? MF_CHECKED : 0), id_playlist_first + i, label.c_str());
     }
     if (!pl_count) AppendMenuW(playlists, MF_STRING | MF_GRAYED, 0, L"(no playlists)");
-    AppendMenuW(menu, MF_POPUP | MF_STRING, reinterpret_cast<UINT_PTR>(playlists), L"P&laylists");
-    HMENU vis = CreatePopupMenu();
-    append_vis_items(vis);
-    AppendMenuW(menu, MF_POPUP | MF_STRING, reinterpret_cast<UINT_PTR>(vis), L"&Visualization");
+    AppendMenuW(menu, MF_POPUP | MF_STRING, reinterpret_cast<UINT_PTR>(playlists), L"Pl&aylists");
     AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
 
     std::vector<mainmenu_manager::ptr> managers;
@@ -955,9 +994,10 @@ void MainWindow::show_context_menu(POINT pt, HWND owner) {
 
     switch (cmd) {
     case 0: break;
-    case id_always_on_top: set_always_on_top(!m_always_on_top); break;
-    case id_double_size: set_double_size(m_scale == 1); break;
-    case id_shade: set_shade(!m_shade); break;
+    case id_panel_double: if (panel) panel->toggle_double_size(); else set_double_size(m_scale == 1); break;
+    case id_panel_shade: if (panel) panel->toggle_shade(); else set_shade(!m_shade); break;
+    case id_panel_rename: if (panel) panel->rename(); break;
+    case id_panel_close: if (panel) panel->show(false); else PostMessageW(m_wnd, WM_CLOSE, 0, 0); break;
     case id_lock_ui: config::lock_ui = !config::lock_ui.get(); break;
     case id_vis_spectrum: set_vis_mode(VisMode::spectrum); break;
     case id_vis_osc: set_vis_mode(VisMode::oscilloscope); break;

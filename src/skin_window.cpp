@@ -131,7 +131,7 @@ void SkinWindow::paint() {
 }
 
 void SkinWindow::on_right_click(POINT screen_pt) {
-    if (MainWindow* w = MainWindow::instance()) w->show_context_menu(screen_pt, m_wnd);
+    if (MainWindow* w = MainWindow::instance()) w->show_context_menu(screen_pt, this);
 }
 
 LRESULT CALLBACK SkinWindow::s_wndproc(HWND wnd, UINT msg, WPARAM wp, LPARAM lp) {

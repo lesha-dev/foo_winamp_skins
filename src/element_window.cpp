@@ -2,6 +2,9 @@
 #include "element_window.h"
 #include "config.h"
 #include "main_window.h"
+#include "resource.h"
+
+#include <foobar2000/SDK/coreDarkMode.h>
 
 #include <cmath>
 
@@ -75,7 +78,49 @@ RECT ElementWindow::content_rect() const {
 }
 
 void ElementWindow::render(Canvas& c) {
-    GenFrame::render(c, *m_skin, m_state.w, m_state.h, m_title, title_lit(), m_pressed == Part::close && m_inside);
+    GenFrame::render(c, *m_skin, m_state.w, m_state.h, title(), title_lit(), m_pressed == Part::close && m_inside);
+}
+
+const char* ElementWindow::title() const {
+    if (!m_state.title.is_empty()) return m_state.title;
+    if (!m_label.is_empty()) return m_label;
+    return m_title;
+}
+
+t_size ElementWindow::host_notify(ui_element_instance*, const GUID& what, t_size, const void* param2, t_size param2size) {
+    if (what != ui_element_host_notify_set_elem_label) return 0;
+    m_label.set_string(static_cast<const char*>(param2), param2size);
+    invalidate();
+    return 1;
+}
+
+void ElementWindow::rename() {
+    struct Ctx { pfc::string8 text; fb2k::CCoreDarkModeHooks dark; } ctx;
+    ctx.text = title();
+    auto proc = [](HWND dlg, UINT msg, WPARAM wp, LPARAM lp) -> INT_PTR {
+        auto* c = reinterpret_cast<Ctx*>(GetWindowLongPtrW(dlg, DWLP_USER));
+        switch (msg) {
+        case WM_INITDIALOG:
+            SetWindowLongPtrW(dlg, DWLP_USER, lp);
+            c = reinterpret_cast<Ctx*>(lp);
+            c->dark.AddDialogWithControls(dlg);
+            uSetDlgItemText(dlg, IDC_RENAME_EDIT, c->text);
+            SendDlgItemMessageW(dlg, IDC_RENAME_EDIT, EM_SETSEL, 0, -1);
+            return TRUE;
+        case WM_COMMAND:
+            if (LOWORD(wp) == IDOK) { c->text = uGetDlgItemText(dlg, IDC_RENAME_EDIT); EndDialog(dlg, IDOK); return TRUE; }
+            if (LOWORD(wp) == IDCANCEL) { EndDialog(dlg, IDCANCEL); return TRUE; }
+            break;
+        }
+        return FALSE;
+    };
+    if (DialogBoxParamW(core_api::get_my_instance(), MAKEINTRESOURCEW(IDD_RENAME), m_wnd, proc, reinterpret_cast<LPARAM>(&ctx)) != IDOK) return;
+    // The default title (label or name) typed back means "no custom title".
+    const char* fallback = !m_label.is_empty() ? m_label.get_ptr() : m_title.get_ptr();
+    if (ctx.text.is_empty() || strcmp(ctx.text, fallback) == 0) m_state.title.reset();
+    else m_state.title = ctx.text;
+    invalidate();
+    if (MainWindow* w = MainWindow::instance()) w->save_element_windows();
 }
 
 ElementWindow::Part ElementWindow::hit(POINT p) const {

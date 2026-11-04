@@ -99,6 +99,12 @@ void EqWindow::set_shade(bool on) {
     apply_geometry();
 }
 
+bool EqWindow::can_double_size() const { return config::eq_double_size.get(); }
+
+void EqWindow::toggle_double_size() {
+    if (MainWindow* w = MainWindow::instance()) w->toggle_double_size();
+}
+
 void EqWindow::save_position() {
     RECT rc;
     if (m_wnd && GetWindowRect(m_wnd, &rc)) on_position_saved(rc.left, rc.top);

@@ -3,6 +3,7 @@
 #define IDD_PREFS           101
 #define IDD_PREFS_VIS       102
 #define IDD_PREFS_OPTIONS   103
+#define IDD_RENAME          104
 
 #define IDC_SKIN_LIST       1001
 #define IDC_PREVIEW         1002
@@ -27,6 +28,7 @@
 #define IDC_FORMAT_MAIN     1023
 #define IDC_FORMAT_PL       1024
 #define IDC_FORMAT_PL_SHADE 1025
+#define IDC_RENAME_EDIT     1026
 
 #define IDC_VIS_SPECTRUM    1101
 #define IDC_VIS_SCOPE       1102
