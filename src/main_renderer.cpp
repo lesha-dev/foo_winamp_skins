@@ -67,6 +67,42 @@ void draw_marquee(Canvas& c, const Image& font, const MainState& st) {
     c.reset_clip();
 }
 
+} // namespace
+
+// Winamp's area: background over x 111..265, y 24..36; text from y 23, scrolling once wider than 146 px.
+void draw_title_font(HDC dc, int scale, HFONT font, const MainState& st) {
+    if (!font) return;
+    const std::wstring text = pfc::stringcvt::string_wide_from_utf8(st.marquee.c_str()).get_ptr();
+    const RECT area = { 111 * scale, 24 * scale, 265 * scale, 36 * scale };
+    const int saved = SaveDC(dc);
+    IntersectClipRect(dc, area.left, area.top, area.right, area.bottom);
+    HBRUSH bg = CreateSolidBrush(st.title_bg);
+    FillRect(dc, &area, bg);
+    DeleteObject(bg);
+    SelectObject(dc, font);
+    SetTextColor(dc, st.title_fg);
+    SetBkMode(dc, TRANSPARENT);
+    auto width_of = [&](const std::wstring& s) {
+        RECT r = {};
+        DrawTextW(dc, s.c_str(), static_cast<int>(s.size()), &r, DT_CALCRECT | DT_SINGLELINE | DT_NOPREFIX);
+        return static_cast<int>(r.right - r.left);
+    };
+    std::wstring shown = text;
+    int offset = 0;
+    const int text_w = width_of(text);
+    if (text_w > 146 * scale) {
+        static const wchar_t separator[] = L"  ***  ";
+        const int loop = text_w + width_of(separator);
+        offset = ((st.marquee_px * scale) % loop + loop) % loop;
+        shown = text + separator + text;
+    }
+    RECT r = { 111 * scale - offset, 23 * scale, 265 * scale, area.bottom };
+    DrawTextW(dc, shown.c_str(), static_cast<int>(shown.size()), &r, DT_LEFT | DT_SINGLELINE | DT_NOPREFIX);
+    RestoreDC(dc, saved);
+}
+
+namespace {
+
 void draw_number(Canvas& c, const Image& font, L::Pos pos, int value, int width) {
     if (value < 0) return;
     char buf[16];
@@ -151,7 +187,12 @@ void render_main(Canvas& c, const Skin& skin, const MainState& st) {
 
     draw_time(c, skin, st);
     if (st.vis) st.vis->render(c, skin, L::pos_visualizer, false);
-    draw_marquee(c, font, st);
+    if (st.title_font) {
+        draw_title_font(c.dc(), 1, st.title_font, st);
+        GdiFlush();
+    } else {
+        draw_marquee(c, font, st);
+    }
     draw_number(c, font, L::pos_kbps, st.kbps, 3);
     draw_number(c, font, L::pos_khz, st.khz, 2);
 

@@ -34,7 +34,7 @@
   - [ ] Display playlist position in the song scroller
   - [x] Always show Winamp "Clutterbar" in main window (Options page)
   - [x] Use doublesize setting on equalizer as well as main window (Options page)
-  - [ ] Use skinned font for main window title display (+ alternative font style when 'Double size' is enabled)
+  - [x] Use skinned font for main window title display (+ alternative font style when 'Double size' is enabled)
   - [x] Oldschool playlist button behavior (Options page; default is Winamp's click-to-open)
 - [ ] Integrate as panels into Default UI
 - [ ] Use foobar's playlist view inside Winamp's playlist

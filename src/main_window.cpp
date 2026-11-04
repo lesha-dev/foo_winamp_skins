@@ -146,7 +146,27 @@ private:
 };
 
 MainWindow::MainWindow() = default;
-MainWindow::~MainWindow() = default;
+MainWindow::~MainWindow() {
+    if (m_title_font) DeleteObject(m_title_font);
+    if (m_title_font2x) DeleteObject(m_title_font2x);
+}
+
+// Winamp draws the non-bitmap title with the playlist font; the 2x one serves the double-size alternative style.
+void MainWindow::update_title_fonts() {
+    if (m_title_font) DeleteObject(m_title_font);
+    if (m_title_font2x) DeleteObject(m_title_font2x);
+    m_title_font = m_title_font2x = nullptr;
+    if (!m_skin) return;
+    LOGFONTW lf = {};
+    lf.lfWeight = FW_NORMAL;
+    lf.lfCharSet = DEFAULT_CHARSET;
+    lf.lfQuality = NONANTIALIASED_QUALITY;
+    wcsncpy_s(lf.lfFaceName, pfc::stringcvt::string_wide_from_utf8(m_skin->playlist_colors().font.c_str()), _TRUNCATE);
+    lf.lfHeight = -10;
+    m_title_font = CreateFontIndirectW(&lf);
+    lf.lfHeight = -20;
+    m_title_font2x = CreateFontIndirectW(&lf);
+}
 
 // ---------------------------------------------------------------------------------------------
 // lifetime
@@ -448,8 +468,11 @@ void MainWindow::on_paint() {
     PAINTSTRUCT ps;
     HDC dc = BeginPaint(m_wnd, &ps);
     if (m_skin) {
-        render_main(m_canvas, *m_skin, build_state());
+        const MainState st = build_state();
+        render_main(m_canvas, *m_skin, st);
         m_canvas.present(dc, m_scale);
+        if (m_scale == 2 && !m_shade && st.title_font && config::title_font_alt.get())
+            draw_title_font(dc, 2, m_title_font2x, st);
     } else {
         paint_placeholder(dc);
     }
@@ -527,6 +550,11 @@ MainState MainWindow::build_state() {
 
     st.marquee = !m_status.is_empty() ? m_status.get_ptr() : current_title().get_ptr();
     st.marquee_px = m_status.is_empty() ? m_marquee_px : 0;
+    if (!config::title_bitmap_font.get()) {
+        st.title_font = m_title_font;
+        st.title_fg = m_skin->playlist_colors().normal;
+        st.title_bg = m_skin->playlist_colors().normal_bg;
+    }
     if (st.play != PlayState::stopped) {
         st.kbps = m_kbps;
         st.khz = m_khz;
@@ -1051,6 +1079,7 @@ bool MainWindow::load_skin(const char* path, bool interactive) {
         if (m_eq) m_eq->set_skin(m_skin.get());
         if (m_pl) { m_pl->set_skin(m_skin.get()); m_pl->on_skin_changed(); }
         if (m_art) { m_art->set_skin(m_skin.get()); m_art->on_skin_changed(); }
+        update_title_fonts();
         apply_region();
         invalidate();
         return true;

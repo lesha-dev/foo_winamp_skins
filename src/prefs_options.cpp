@@ -42,6 +42,8 @@ public:
         config::oldschool_pl_buttons = checked(IDC_OLDSCHOOL_PL);
         config::tooltips = checked(IDC_TOOLTIPS);
         config::skin_cursors = checked(IDC_SKIN_CURSORS);
+        config::title_bitmap_font = checked(IDC_TITLE_BITMAP);
+        config::title_font_alt = checked(IDC_TITLE_ALT);
         if (MainWindow* w = MainWindow::instance()) w->apply_display_options();
         changed();
     }
@@ -59,6 +61,9 @@ public:
         CheckDlgButton(m_wnd, IDC_OLDSCHOOL_PL, BST_UNCHECKED);
         CheckDlgButton(m_wnd, IDC_TOOLTIPS, BST_CHECKED);
         CheckDlgButton(m_wnd, IDC_SKIN_CURSORS, BST_CHECKED);
+        CheckDlgButton(m_wnd, IDC_TITLE_BITMAP, BST_CHECKED);
+        CheckDlgButton(m_wnd, IDC_TITLE_ALT, BST_UNCHECKED);
+        update_enabled();
         changed();
     }
 
@@ -76,6 +81,7 @@ private:
             self->on_init();
             return TRUE;
         case WM_COMMAND:
+            if (LOWORD(wp) == IDC_TITLE_BITMAP) self->update_enabled();
             if (HIWORD(wp) == BN_CLICKED || (HIWORD(wp) == EN_CHANGE && self->m_initialized))
                 self->changed();
             return TRUE;
@@ -103,8 +109,14 @@ private:
         CheckDlgButton(m_wnd, IDC_OLDSCHOOL_PL, config::oldschool_pl_buttons.get() ? BST_CHECKED : BST_UNCHECKED);
         CheckDlgButton(m_wnd, IDC_TOOLTIPS, config::tooltips.get() ? BST_CHECKED : BST_UNCHECKED);
         CheckDlgButton(m_wnd, IDC_SKIN_CURSORS, config::skin_cursors.get() ? BST_CHECKED : BST_UNCHECKED);
+        CheckDlgButton(m_wnd, IDC_TITLE_BITMAP, config::title_bitmap_font.get() ? BST_CHECKED : BST_UNCHECKED);
+        CheckDlgButton(m_wnd, IDC_TITLE_ALT, config::title_font_alt.get() ? BST_CHECKED : BST_UNCHECKED);
+        update_enabled();
         m_initialized = true;
     }
+
+    // The alternative style only applies to the Windows-font title, like Winamp.
+    void update_enabled() { EnableWindow(GetDlgItem(m_wnd, IDC_TITLE_ALT), !checked(IDC_TITLE_BITMAP)); }
 
     bool checked(int id) const { return IsDlgButtonChecked(m_wnd, id) == BST_CHECKED; }
 
@@ -133,7 +145,9 @@ private:
             || checked(IDC_CLUTTERBAR) != config::clutterbar.get()
             || checked(IDC_OLDSCHOOL_PL) != config::oldschool_pl_buttons.get()
             || checked(IDC_TOOLTIPS) != config::tooltips.get()
-            || checked(IDC_SKIN_CURSORS) != config::skin_cursors.get();
+            || checked(IDC_SKIN_CURSORS) != config::skin_cursors.get()
+            || checked(IDC_TITLE_BITMAP) != config::title_bitmap_font.get()
+            || checked(IDC_TITLE_ALT) != config::title_font_alt.get();
     }
 
     void changed() { m_callback->on_state_changed(); }

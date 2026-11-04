@@ -107,6 +107,8 @@ private:
     std::unique_ptr<Skin> m_skin;
     Canvas m_canvas;
     titleformat_object::ptr m_title_script;
+    HFONT m_title_font = nullptr, m_title_font2x = nullptr; // playlist font for the non-bitmap title
+    void update_title_fonts();
 
     int m_scale = 1;
     bool m_shade = false;

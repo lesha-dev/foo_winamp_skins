@@ -16,6 +16,8 @@ extern cfg_bool dim_titlebars;        // inactive windows show the dimmed titleb
 extern cfg_bool clutterbar;           // always show the clutterbar (else only while pressed)
 extern cfg_bool oldschool_pl_buttons; // playlist menus: hold, pick on release (else click to open, click to pick)
 extern cfg_bool tooltips;             // tooltips on the skinned windows
+extern cfg_bool title_bitmap_font;    // main window title in the skin's text.bmp font (else playlist font)
+extern cfg_bool title_font_alt;       // double size: draw the font title at full resolution
 extern cfg_bool skin_cursors;         // mouse cursors from the skin's *.cur files
 extern cfg_bool snap;                 // dock windows to each other / screen edges (Shift inverts while dragging)
 extern cfg_int snap_distance;         // px

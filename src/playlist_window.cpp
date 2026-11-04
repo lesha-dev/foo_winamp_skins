@@ -806,6 +806,33 @@ void PlaylistWindow::render_shade(Canvas& c) {
             len = pm->activeplaylist_get_item_handle(focus)->get_length();
         }
     }
+    if (!config::title_bitmap_font.get()) {
+        // Like Winamp: the playlist font and colours over x 4..w-29, time right-aligned as " m:ss ".
+        const PlaylistColors& col = m_skin->playlist_colors();
+        const int right = w - 29;
+        c.fill_rect(4, 2, right - 4, 10, to_bgrx(col.normal_bg));
+        HDC dc = c.dc();
+        const int saved = SaveDC(dc);
+        IntersectClipRect(dc, 4, 2, right, 12);
+        SelectObject(dc, m_font);
+        SetBkMode(dc, TRANSPARENT);
+        SetTextColor(dc, col.normal);
+        int text_right = right;
+        if (len > 0) {
+            const std::wstring t = wide(pfc::format(" ", time_str(len, false), " ").c_str());
+            RECT tr = { 4, 1, right, 11 };
+            DrawTextW(dc, t.c_str(), -1, &tr, DT_RIGHT | DT_SINGLELINE | DT_NOPREFIX);
+            RECT m = {};
+            DrawTextW(dc, t.c_str(), -1, &m, DT_CALCRECT | DT_SINGLELINE | DT_NOPREFIX);
+            text_right -= m.right - m.left;
+        }
+        RECT r = { 4, 2, text_right, 12 };
+        const std::wstring wt = wide(title.c_str());
+        DrawTextW(dc, wt.c_str(), -1, &r, DT_LEFT | DT_SINGLELINE | DT_NOPREFIX);
+        RestoreDC(dc, saved);
+        GdiFlush();
+        return;
+    }
     const int time_x = w - 30 - 5 * font_char_w;
     c.set_clip(5, 4, time_x - 8, font_char_h);
     draw_text(c, font, 5, 4, title);
