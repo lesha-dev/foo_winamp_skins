@@ -12,7 +12,8 @@ void remove(HWND wnd);
 // WM_WINDOWPOSCHANGING: snaps a move to the work area and to the other visible windows.
 void snap(HWND wnd, WINDOWPOS* wp);
 
-// Visible windows docked to `leader`, transitively (leader excluded).
+// Windows docked to `leader`, transitively through visible ones; hidden windows touching them are
+// included too (leader excluded).
 std::vector<HWND> docked_to(HWND leader);
 
 // Main window drag: WM_ENTERSIZEMOVE -> begin, WM_MOVE -> moved, WM_EXITSIZEMOVE -> end.

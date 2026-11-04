@@ -52,7 +52,7 @@ void set_vis_options(const VisOptions& o) {
     vis_peak_falloff = o.peak_falloff;
 }
 
-cfg_bool eq_visible(guids::cfg_eq_visible, false);
+cfg_bool eq_visible(guids::cfg_eq_visible, true);
 cfg_int eq_x(guids::cfg_eq_x, CW_USEDEFAULT);
 cfg_int eq_y(guids::cfg_eq_y, CW_USEDEFAULT);
 cfg_bool eq_shade(guids::cfg_eq_shade, false);
@@ -60,7 +60,7 @@ cfg_bool eq_on(guids::cfg_eq_on, false);
 cfg_bool eq_auto(guids::cfg_eq_auto, false);
 cfg_string eq_values(guids::cfg_eq_values, "");
 
-cfg_bool pl_visible(guids::cfg_pl_visible, false);
+cfg_bool pl_visible(guids::cfg_pl_visible, true);
 cfg_int pl_x(guids::cfg_pl_x, CW_USEDEFAULT);
 cfg_int pl_y(guids::cfg_pl_y, CW_USEDEFAULT);
 cfg_int pl_w(guids::cfg_pl_w, 0);

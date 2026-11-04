@@ -101,6 +101,8 @@ void snap(HWND wnd, WINDOWPOS* wp) {
     if (std::abs(best_y) < snap_distance) wp->y += best_y;
 }
 
+// Like Winamp, closed (hidden) windows touching the group move with it, so they reopen docked;
+// only open windows extend the chain further.
 std::vector<HWND> docked_to(HWND leader) {
     std::vector<HWND> group;
     std::vector<RECT> rects = { rect_of(leader) };
@@ -108,14 +110,13 @@ std::vector<HWND> docked_to(HWND leader) {
     while (grew) {
         grew = false;
         for (HWND w : g_windows) {
-            if (w == leader || !IsWindowVisible(w) || IsIconic(w)) continue;
+            if (w == leader || IsIconic(w)) continue;
             if (std::find(group.begin(), group.end(), w) != group.end()) continue;
             const RECT r = rect_of(w);
             for (auto& g : rects) {
                 if (touching(r, g)) {
                     group.push_back(w);
-                    rects.push_back(r);
-                    grew = true;
+                    if (IsWindowVisible(w)) { rects.push_back(r); grew = true; }
                     break;
                 }
             }
