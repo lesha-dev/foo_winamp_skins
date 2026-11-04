@@ -28,6 +28,8 @@
     <ClCompile Include="src\text_font.cpp"><Filter>Source Files</Filter></ClCompile>
     <ClCompile Include="src\ui_module.cpp"><Filter>Source Files</Filter></ClCompile>
     <ClCompile Include="src\tooltip.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClCompile Include="src\art_window.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClCompile Include="src\gen_frame.cpp"><Filter>Source Files</Filter></ClCompile>
     <ClCompile Include="src\visualizer.cpp"><Filter>Source Files</Filter></ClCompile>
     <ClCompile Include="3rdParty\miniz\miniz.c"><Filter>3rdParty</Filter></ClCompile>
   </ItemGroup>
@@ -55,6 +57,8 @@
     <ClInclude Include="src\version.h"><Filter>Header Files</Filter></ClInclude>
     <ClInclude Include="src\vis_options.h"><Filter>Header Files</Filter></ClInclude>
     <ClInclude Include="src\tooltip.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="src\art_window.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="src\gen_frame.h"><Filter>Header Files</Filter></ClInclude>
     <ClInclude Include="src\visualizer.h"><Filter>Header Files</Filter></ClInclude>
     <ClInclude Include="3rdParty\miniz\miniz.h"><Filter>3rdParty</Filter></ClInclude>
   </ItemGroup>

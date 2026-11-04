@@ -47,4 +47,9 @@ extern cfg_int pl_x, pl_y;
 extern cfg_int pl_w, pl_h;            // legacy: size steps beyond the 275x116 minimum (25 / 29 px each)
 extern cfg_int pl_width, pl_height;   // px beyond the 275x116 minimum; -1 = take the legacy steps
 extern cfg_bool pl_shade;             // VisMode
+
+extern cfg_bool art_visible;          // Album Art window
+extern cfg_int art_x, art_y;
+extern cfg_int art_width, art_height; // px
+extern cfg_blob art_element;          // hosted Album Art element's configuration
 }

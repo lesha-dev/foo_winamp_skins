@@ -13,6 +13,7 @@ namespace wsz {
 
 class EqWindow;
 class PlaylistWindow;
+class ArtWindow;
 
 // The skinned Winamp main window. Owned by the UI module; lives on the main thread.
 class MainWindow {
@@ -48,6 +49,7 @@ public:
     bool handle_key(WPARAM vk, bool alt = false);
     void toggle_eq();
     void toggle_playlist();
+    void toggle_album_art();
 
 private:
     class Callbacks;
@@ -125,6 +127,8 @@ private:
     Tooltip m_tooltip;
     std::unique_ptr<EqWindow> m_eq;
     std::unique_ptr<PlaylistWindow> m_pl;
+    std::unique_ptr<ArtWindow> m_art;
+    ui_selection_holder::ptr m_selection; // selection viewers (Album Art, Properties) follow the playlist selection
     bool m_vis_running = false;
 };
 

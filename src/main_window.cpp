@@ -7,6 +7,7 @@
 #include "guids.h"
 #include "eq_window.h"
 #include "playlist_window.h"
+#include "art_window.h"
 #include "player.h"
 #include "skins_folder.h"
 #include "text_font.h"
@@ -37,7 +38,7 @@ const MenuRoot menu_roots[] = {
 };
 constexpr UINT menu_id_stride = 0x1000;
 enum : UINT { id_always_on_top = 1, id_double_size, id_shade, id_vis_spectrum, id_vis_osc, id_vis_off,
-    id_open_skins_folder, id_toggle_eq, id_toggle_pl,
+    id_open_skins_folder, id_toggle_eq, id_toggle_pl, id_toggle_art,
     id_skin_first = 0x100, id_skin_last = 0x7FF,
     id_playlist_first = 0x800, id_playlist_last = 0xFFF }; // must stay below menu_id_stride
 
@@ -215,8 +216,20 @@ HWND MainWindow::create(HookProc hook) {
     m_pl->create(m_wnd, L"Winamp Playlist Editor", px, py);
     m_pl->set_skin(m_skin.get());
     m_pl->on_skin_changed();
+    // Like Default UI's playlist view: the active playlist's selection is the UI selection.
+    m_selection = ui_selection_manager::get()->acquire();
+    m_selection->set_playlist_selection_tracking();
+
+    // Album Art: default to the right of the main window.
+    m_art = std::make_unique<ArtWindow>();
+    int ax = remember ? static_cast<int>(config::art_x.get()) : CW_USEDEFAULT;
+    int ay = remember ? static_cast<int>(config::art_y.get()) : CW_USEDEFAULT;
+    if (ax == CW_USEDEFAULT) { ax = mrc.right; ay = mrc.top; }
+    m_art->create(m_wnd, L"Album Art", ax, ay);
+    m_art->set_skin(m_skin.get());
     if (config::eq_visible.get()) m_eq->show(true);
     if (config::pl_visible.get()) m_pl->show(true);
+    if (config::art_visible.get()) m_art->show(true);
 
     m_callbacks = std::make_unique<Callbacks>(*this);
     on_track_changed();
@@ -232,6 +245,8 @@ void MainWindow::destroy() {
     // Keep the visibility flags: hiding during teardown would clear them.
     if (m_eq) { m_eq->save_position(); m_eq->destroy(); m_eq.reset(); }
     if (m_pl) { m_pl->save_position(); m_pl->destroy(); m_pl.reset(); }
+    if (m_art) { m_art->save_position(); m_art->release_element(); m_art->destroy(); m_art.reset(); }
+    m_selection.release();
     s_instance = nullptr;
     m_tooltip.destroy();
     docking::remove(m_wnd);
@@ -384,6 +399,7 @@ void MainWindow::invalidate() {
 void MainWindow::apply_display_options() {
     if (m_eq) m_eq->set_double_size(m_scale == 2 && config::eq_double_size.get());
     if (m_pl) m_pl->apply_resize_mode();
+    if (m_art) m_art->apply_resize_mode();
     invalidate_all();
 }
 
@@ -391,6 +407,7 @@ void MainWindow::invalidate_all() {
     invalidate();
     if (m_eq) m_eq->invalidate();
     if (m_pl) m_pl->invalidate();
+    if (m_art) m_art->invalidate();
 }
 
 void MainWindow::set_status(const char* text) {
@@ -412,11 +429,16 @@ void MainWindow::toggle_playlist() {
     invalidate();
 }
 
+void MainWindow::toggle_album_art() {
+    if (m_art) m_art->show(!m_art->visible());
+}
+
 bool MainWindow::handle_key(WPARAM vk, bool alt) {
     if (alt) {
         if (!config::winamp_hotkeys.get()) return false;
         if (vk == 'G') { toggle_eq(); return true; }
         if (vk == 'E') { toggle_playlist(); return true; }
+        if (vk == 'A') { toggle_album_art(); return true; }
         return false;
     }
     return on_key(vk);
@@ -550,6 +572,7 @@ void MainWindow::save_positions() {
     save_position();
     if (m_eq) m_eq->save_position();
     if (m_pl) m_pl->save_position();
+    if (m_art) m_art->save_position();
 }
 
 void MainWindow::on_lbutton_down(POINT p) {
@@ -745,6 +768,7 @@ void MainWindow::show_context_menu(POINT pt, HWND owner) {
     AppendMenuW(menu, MF_STRING | (m_shade ? MF_CHECKED : 0), id_shade, shortcut_label(L"&Windowshade", L"Ctrl+W").c_str());
     AppendMenuW(menu, MF_STRING | (m_eq && m_eq->visible() ? MF_CHECKED : 0), id_toggle_eq, shortcut_label(L"&Equalizer", L"Alt+G").c_str());
     AppendMenuW(menu, MF_STRING | (m_pl && m_pl->visible() ? MF_CHECKED : 0), id_toggle_pl, shortcut_label(L"&Playlist editor", L"Alt+E").c_str());
+    AppendMenuW(menu, MF_STRING | (m_art && m_art->visible() ? MF_CHECKED : 0), id_toggle_art, shortcut_label(L"&Album art", L"Alt+A").c_str());
     // Playlists submenu: fb2k's playlists; picking one makes it active (shown in the playlist editor).
     auto pm = playlist_manager::get();
     HMENU playlists = CreatePopupMenu();
@@ -789,6 +813,7 @@ void MainWindow::show_context_menu(POINT pt, HWND owner) {
     case id_open_skins_folder: skins_folder::open_in_explorer(); break;
     case id_toggle_eq: toggle_eq(); break;
     case id_toggle_pl: toggle_playlist(); break;
+    case id_toggle_art: toggle_album_art(); break;
     default:
         if (cmd >= id_playlist_first && cmd <= id_playlist_last) {
             const size_t i = cmd - id_playlist_first;
@@ -1025,6 +1050,7 @@ bool MainWindow::load_skin(const char* path, bool interactive) {
         config::skin_path = path;
         if (m_eq) m_eq->set_skin(m_skin.get());
         if (m_pl) { m_pl->set_skin(m_skin.get()); m_pl->on_skin_changed(); }
+        if (m_art) { m_art->set_skin(m_skin.get()); m_art->on_skin_changed(); }
         apply_region();
         invalidate();
         return true;
