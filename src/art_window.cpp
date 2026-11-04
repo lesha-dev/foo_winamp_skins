@@ -131,7 +131,7 @@ void ArtWindow::apply_size(int w, int h) {
     m_h = h;
     config::art_width = w;
     config::art_height = h;
-    apply_geometry();
+    apply_geometry(false);
 }
 
 void ArtWindow::apply_resize_mode() {

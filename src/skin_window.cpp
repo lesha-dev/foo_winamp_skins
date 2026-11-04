@@ -77,7 +77,7 @@ void SkinWindow::invalidate() {
     if (m_wnd) InvalidateRect(m_wnd, nullptr, FALSE);
 }
 
-void SkinWindow::apply_geometry() {
+void SkinWindow::apply_geometry(bool move_docked) {
     if (!m_wnd) return;
     const SIZE sz = skin_size();
     m_canvas.resize(sz.cx, sz.cy);
@@ -87,7 +87,7 @@ void SkinWindow::apply_geometry() {
     SetWindowPos(m_wnd, nullptr, 0, 0, sz.cx * scale(), sz.cy * scale(), SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
     RECT after{};
     GetWindowRect(m_wnd, &after);
-    docking::resized(m_wnd, before, after, docked);
+    if (move_docked) docking::resized(m_wnd, before, after, docked);
     apply_region();
     invalidate();
 }

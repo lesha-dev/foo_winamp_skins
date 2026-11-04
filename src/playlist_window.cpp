@@ -184,7 +184,7 @@ void PlaylistWindow::apply_size(int w_extra, int h_extra) {
     config::pl_width = w_extra;
     config::pl_height = h_extra;
     clamp_scroll();
-    apply_geometry();
+    apply_geometry(false);
 }
 
 void PlaylistWindow::apply_resize_mode() {

@@ -48,8 +48,9 @@ protected:
     // Return true to swallow the message.
     virtual bool on_message(UINT, WPARAM, LPARAM, LRESULT&) { return false; }
 
-    // Recomputes window size, canvas and region from skin_size()/scale(); keeps docked windows attached.
-    void apply_geometry();
+    // Recomputes window size, canvas and region from skin_size()/scale(). With move_docked, windows docked
+    // to it follow (shade, double size); user resizing leaves them in place, like Winamp.
+    void apply_geometry(bool move_docked = true);
     // Highlighted titlebar: focused, or always when dimming is off.
     bool title_lit() const;
     POINT to_skin(POINT client) const { return { client.x / scale(), client.y / scale() }; }
