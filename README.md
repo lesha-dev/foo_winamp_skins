@@ -1,8 +1,15 @@
 # foo_winamp_skins
 
+<img src="https://www.foobar2000.org/foobarlogo.svg" height="50px"> **+**
+<img src="https://upload.wikimedia.org/wikipedia/en/4/41/Winamp_media_player_logomark.png" height="50px">
+
 foobar2000 user interface module that renders classic Winamp 2.x skins (`.wsz`).
 
-Select it in *Preferences → Display → User interface module*.
+Download zip from releas page, extract its content into foobar/profile/user-components-x64 or foobar/profile/user-components.
+Select view in *Preferences → Display → User interface module*.
+
+Now you can finally kick a llama's ass in foobar2000!
+
 
 ## Layout
 
@@ -66,7 +73,13 @@ MIT, see [LICENSE](LICENSE). Third-party code keeps its own license:
 | Webamp | MIT, see `licenses/webamp-LICENSE.txt` | EQ presets data; its notice ships with binaries |
 | WTL | MS-PL, see `3rdParty/WTL/MS-PL.txt` | not used yet |
 
-Winamp skins are the property of their authors and are not part of this project.
+Winamp is a trademark of its respective owner.
+
+foobar2000 is a trademark of its respective owner.
+
+foo_winamp_skins is an independent project and is not affiliated with, sponsored by or endorsed by either.
+
+Winamp skins remain the property of their authors and are not included here.
 
 ## Credits
 
