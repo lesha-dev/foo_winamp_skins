@@ -36,10 +36,13 @@
   - [x] Use doublesize setting on equalizer as well as main window (Options page)
   - [ ] Use skinned font for main window title display (+ alternative font style when 'Double size' is enabled)
   - [x] Oldschool playlist button behavior (Options page; default is Winamp's click-to-open)
-- [ ] Credits: Webamp (sprite layout, EQ presets data), miniz, foobar2000 SDK; show in README / About.
 - [ ] Integrate as panels into Default UI
 - [ ] Use foobar's playlist view inside Winamp's playlist
 - [ ] Add support for cover art
+
+## Release
+- [ ] Credits: Webamp (sprite layout, EQ presets data), miniz, foobar2000 SDK; show in README / About.
+- [ ] Readme
 
 ## Backlog later
 - [ ] Double click on the visualizer: Winamp opens MilkDrop; decide what fb2k should open (e.g. a vis component / Spectrum popup). Support winamp visualizations.

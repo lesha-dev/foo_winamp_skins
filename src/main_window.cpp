@@ -73,6 +73,13 @@ const wchar_t* tooltip_text(Control id) {
     }
 }
 
+// Menu text with its shortcut, honouring foobar2000's "Show keyboard shortcuts in menus".
+std::wstring shortcut_label(const wchar_t* text, const wchar_t* keys) {
+    std::wstring s = text;
+    if (standard_config_objects::query_show_keyboard_shortcuts_in_menus()) { s += L'\t'; s += keys; }
+    return s;
+}
+
 std::wstring menu_label(const std::wstring& s) {
     std::wstring out;
     for (wchar_t ch : s) { if (ch == L'&') out += L'&'; out += ch; }
@@ -168,8 +175,10 @@ HWND MainWindow::create(HookProc hook) {
     m_vis.set_options(config::vis_options());
     titleformat_compiler::get()->compile_safe(m_title_script, "[%artist% - ]%title%[ '('%length%')']");
 
-    int x = static_cast<int>(config::window_x.get());
-    int y = static_cast<int>(config::window_y.get());
+    // foobar2000's "Remember window positions" decides whether saved positions are used.
+    const bool remember = standard_config_objects::query_remember_window_positions();
+    int x = remember ? static_cast<int>(config::window_x.get()) : CW_USEDEFAULT;
+    int y = remember ? static_cast<int>(config::window_y.get()) : CW_USEDEFAULT;
     const int w = base_width * m_scale, h = (m_shade ? L::shade_height : base_height) * m_scale;
     if (x != CW_USEDEFAULT) {
         RECT rc = { x, y, x + w, y + h };
@@ -196,10 +205,12 @@ HWND MainWindow::create(HookProc hook) {
     m_eq = std::make_unique<EqWindow>();
     m_eq->set_double_size(m_scale == 2 && config::eq_double_size.get());
     if (config::eq_shade.get()) m_eq->set_shade(true);
-    m_eq->create(m_wnd, L"Winamp Equalizer", static_cast<int>(config::eq_x.get()), static_cast<int>(config::eq_y.get()));
+    m_eq->create(m_wnd, L"Winamp Equalizer", remember ? static_cast<int>(config::eq_x.get()) : CW_USEDEFAULT,
+        remember ? static_cast<int>(config::eq_y.get()) : CW_USEDEFAULT);
     m_eq->set_skin(m_skin.get());
     m_pl = std::make_unique<PlaylistWindow>();
-    int px = static_cast<int>(config::pl_x.get()), py = static_cast<int>(config::pl_y.get());
+    int px = remember ? static_cast<int>(config::pl_x.get()) : CW_USEDEFAULT;
+    int py = remember ? static_cast<int>(config::pl_y.get()) : CW_USEDEFAULT;
     if (px == CW_USEDEFAULT) { px = mrc.left; py = mrc.bottom + EqWindow::height * m_scale; }
     m_pl->create(m_wnd, L"Winamp Playlist Editor", px, py);
     m_pl->set_skin(m_skin.get());
@@ -637,7 +648,10 @@ void MainWindow::activate_control(Control id) {
     case Control::prev: player::previous(); break;
     case Control::play: player::play(); break;
     case Control::pause: player::pause(); break;
-    case Control::stop: player::stop(); break;
+    case Control::stop:
+        if (GetKeyState(VK_CONTROL) < 0) player::toggle_stop_after_current();
+        else player::stop();
+        break;
     case Control::next: player::next(); break;
     case Control::eject: player::open_files(); break;
     case Control::shuffle: show_order_menu(true); break;
@@ -660,6 +674,7 @@ bool MainWindow::on_key(WPARAM vk) {
         case 'D': set_double_size(m_scale == 1); return true;
         case 'A': set_always_on_top(!m_always_on_top); return true;
         case 'W': set_shade(!m_shade); return true;
+        case 'V': player::toggle_stop_after_current(); return true;
         }
         return false;
     }
@@ -680,6 +695,7 @@ bool MainWindow::on_key(WPARAM vk) {
 
 void MainWindow::show_context_menu(POINT pt, HWND owner) {
     if (!owner) owner = m_wnd;
+    const bool shortcuts = standard_config_objects::query_show_keyboard_shortcuts_in_menus();
     HMENU menu = CreatePopupMenu();
 
     // Skins submenu: contents of the skins folder.
@@ -696,11 +712,11 @@ void MainWindow::show_context_menu(POINT pt, HWND owner) {
     AppendMenuW(skins_menu, MF_STRING, id_open_skins_folder, L"&Open skins folder");
     AppendMenuW(menu, MF_POPUP | MF_STRING, reinterpret_cast<UINT_PTR>(skins_menu), L"&Skins");
     AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
-    AppendMenuW(menu, MF_STRING | (m_always_on_top ? MF_CHECKED : 0), id_always_on_top, L"Always on &top\tCtrl+A");
-    AppendMenuW(menu, MF_STRING | (m_scale == 2 ? MF_CHECKED : 0), id_double_size, L"&Double size\tCtrl+D");
-    AppendMenuW(menu, MF_STRING | (m_shade ? MF_CHECKED : 0), id_shade, L"&Windowshade\tCtrl+W");
-    AppendMenuW(menu, MF_STRING | (m_eq && m_eq->visible() ? MF_CHECKED : 0), id_toggle_eq, L"&Equalizer\tAlt+G");
-    AppendMenuW(menu, MF_STRING | (m_pl && m_pl->visible() ? MF_CHECKED : 0), id_toggle_pl, L"&Playlist editor\tAlt+E");
+    AppendMenuW(menu, MF_STRING | (m_always_on_top ? MF_CHECKED : 0), id_always_on_top, shortcut_label(L"Always on &top", L"Ctrl+A").c_str());
+    AppendMenuW(menu, MF_STRING | (m_scale == 2 ? MF_CHECKED : 0), id_double_size, shortcut_label(L"&Double size", L"Ctrl+D").c_str());
+    AppendMenuW(menu, MF_STRING | (m_shade ? MF_CHECKED : 0), id_shade, shortcut_label(L"&Windowshade", L"Ctrl+W").c_str());
+    AppendMenuW(menu, MF_STRING | (m_eq && m_eq->visible() ? MF_CHECKED : 0), id_toggle_eq, shortcut_label(L"&Equalizer", L"Alt+G").c_str());
+    AppendMenuW(menu, MF_STRING | (m_pl && m_pl->visible() ? MF_CHECKED : 0), id_toggle_pl, shortcut_label(L"&Playlist editor", L"Alt+E").c_str());
     // Playlists submenu: fb2k's playlists; picking one makes it active (shown in the playlist editor).
     auto pm = playlist_manager::get();
     HMENU playlists = CreatePopupMenu();
@@ -725,7 +741,7 @@ void MainWindow::show_context_menu(POINT pt, HWND owner) {
         mgr->instantiate(*menu_roots[i].guid);
         HMENU sub = CreatePopupMenu();
         const UINT base = static_cast<UINT>((i + 1) * menu_id_stride);
-        mgr->generate_menu_win32(sub, base, menu_id_stride - 1, mainmenu_manager::flag_show_shortcuts);
+        mgr->generate_menu_win32(sub, base, menu_id_stride - 1, shortcuts ? mainmenu_manager::flag_show_shortcuts : 0);
         AppendMenuW(menu, MF_POPUP | MF_STRING, reinterpret_cast<UINT_PTR>(sub), menu_roots[i].label);
         managers.push_back(std::move(mgr));
     }

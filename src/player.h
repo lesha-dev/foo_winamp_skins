@@ -20,6 +20,7 @@ double slider_to_db(double slider);
 void play();
 void pause();
 void stop();
+void toggle_stop_after_current();
 void previous();
 void next();
 void open_files();

@@ -68,6 +68,10 @@ void pause() {
 }
 
 void stop() { playback_control::get()->stop(); }
+void toggle_stop_after_current() {
+    auto pc = playback_control::get();
+    pc->set_stop_after_current(!pc->get_stop_after_current());
+}
 void previous() { standard_commands::main_previous(); }
 void next() { standard_commands::main_next(); }
 void open_files() { standard_commands::main_open(); }
