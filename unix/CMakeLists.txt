@@ -12,12 +12,11 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
 
 set(SDK ${REPO}/3rdParty/foobar2000_sdk)
-set(WTL_INCLUDE ${REPO}/3rdParty/WTL/Include)
 
 add_compile_definitions(UNICODE _UNICODE WIN32 _WINDOWS)
 add_compile_options(/EHsc /Zc:__cplusplus /utf-8 /GR
 )
-# SDK and WTL are not clang-clean; silence them, our target re-enables warnings.
+# The SDK is not clang-clean; silence them, our target re-enables warnings.
 set_property(DIRECTORY APPEND PROPERTY COMPILE_OPTIONS $<$<NOT:$<STREQUAL:$<TARGET_PROPERTY:NAME>,foo_winamp_skins>>:-Wno-everything>)
 if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
   include(cmake/case_shim.cmake)
@@ -25,7 +24,6 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
   include_directories(SYSTEM ${CMAKE_BINARY_DIR}/case-shim)
 endif()
 include_directories(SYSTEM ${SDK} ${SDK}/foobar2000)
-include_directories(SYSTEM ${WTL_INCLUDE})
 
 # Read <ClCompile Include="..."> entries from a vcxproj.
 function(vcxproj_sources out vcxproj)
