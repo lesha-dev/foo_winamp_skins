@@ -5,60 +5,20 @@
 
 foobar2000 user interface module that renders classic Winamp 2.x skins (`.wsz`).
 
-Download zip from releas page, extract its content into foobar/profile/user-components-x64 or foobar/profile/user-components.
-Select view in *Preferences → Display → User interface module*.
+Requires foobar2000 2.0 or newer (x86 or x64).
+
+Download `foo_winamp_skins-<version>.fb2k-component` from the [releases page](https://github.com/lesha-dev/foo_winamp_skins/releases)
+and open it with foobar2000 (or *Preferences → Components → Install...*), then restart foobar2000.
+Select *Winamp Skins* in *Preferences → Display → User interface module*.
+
+You can download skins from the [Winamp Skin Museum](https://skins.webamp.org).
+Put them into the skins folder (*Preferences → Display → Winamp Skins*; `<profile>\winamp-skins` by default).
 
 Now you can finally kick a llama's ass in foobar2000!
 
+## Building
 
-## Layout
-
-- `src/` — component sources
-- `3rdParty/` — all dependencies (not in git; copy manually):
-  - `foobar2000_sdk/` — foobar2000 SDK 2026-10-01 (unmodified)
-  - `WTL/` — WTL 10.0.10320 headers
-- `msbuild/`, `Directory.Build.props` — forces toolset v145 (v143 under VS 2022) on all projects, SDK included
-- `unix/` — Linux cross-build (CMake + clang-cl + xwin) for compile checks, plus its package/deploy scripts
-- `scripts/` — Windows packaging
-
-## Versions used
-
-| Dependency / tool | Version | Source |
-|---|---|---|
-| foobar2000 SDK | 2026-10-01 (`FOOBAR2000_SDK_VERSION 20261001`) | https://www.foobar2000.org/SDK |
-| WTL | 10.0.10320 | https://sourceforge.net/projects/wtl/ |
-| foobar2000 (test target) | 2.26.2, portable x64 + x86 | https://www.foobar2000.org/download |
-| Visual Studio | 2026 (18.x), toolset v145 | |
-| clang-cl / lld-link | 21.1.8 (Ubuntu 26.04 packages) | apt `clang lld llvm` |
-| CMake / Ninja | 4.2.3 / 1.13.2 | apt |
-| xwin | 0.10.0 | https://github.com/Jake-Shadle/xwin |
-| MSVC CRT + ATL (xwin, manifest 18) | 14.51.36244 | |
-| Windows SDK (xwin) | 10.0.28000 | |
-
-## Build (Windows)
-
-VS 2026, workload *Desktop development with C++* + *C++ ATL for v145*.
-Open `foo_winamp_skins.sln`, or run `scripts\release.bat` to rebuild Release x86 + x64 and pack `out\foo_winamp_skins-<ver>.fb2k-component`.
-
-`scripts\redeploy.bat [x64|x86]` closes the portable foobar2000, copies the newest build (WSL or VS) into it and restarts it.
-Post-build copies the DLL into `..\foobar2000_x64` / `..\foobar2000_x32` portable installs if present;
-F5 launches that foobar2000.
-
-## Build (Linux, compile check)
-
-Requires clang-cl, lld-link, llvm-rc/lib/mt, cmake, ninja and an xwin sysroot in `~/.xwin`
-(`xwin --accept-license --arch x86,x86_64 --include-atl --manifest-version 18 splat --output ~/.xwin`).
-
-```sh
-cd unix
-cmake -G Ninja -B build-x64 -DCMAKE_TOOLCHAIN_FILE=cmake/clang-cl-xwin.cmake -DXWIN_ARCH=x86_64
-cmake -G Ninja -B build-x86 -DCMAKE_TOOLCHAIN_FILE=cmake/clang-cl-xwin.cmake -DXWIN_ARCH=x86
-ninja -C build-x64 && ninja -C build-x86
-./deploy.sh    # -> ../foobar2000_x64, ../foobar2000_x32
-```
-
-Source lists come from `foo_winamp_skins.vcxproj`; add files there only.
-Windows headers included with non-lowercase names need an entry in `unix/cmake/case_shim.txt`.
+See [BUILD.md](BUILD.md).
 
 ## License
 
@@ -69,11 +29,8 @@ MIT, see [LICENSE](LICENSE). Third-party code keeps its own license:
 | foobar2000 SDK (incl. pfc) | BSD-style, see `3rdParty/foobar2000_sdk/sdk-license.txt` | linked statically |
 | miniz | MIT, see `3rdParty/miniz/LICENSE` | compiled in; its notice must ship with binaries |
 | Webamp | MIT, see `licenses/webamp-LICENSE.txt` | EQ presets data; its notice ships with binaries |
-| WTL | MS-PL, see `3rdParty/WTL/MS-PL.txt` | not used yet |
 
-Winamp is a trademark of its respective owner.
-
-foobar2000 is a trademark of its respective owner.
+Winamp and foobar2000 are trademarks of their respective owners.
 
 foo_winamp_skins is an independent project and is not affiliated with, sponsored by or endorsed by either.
 
