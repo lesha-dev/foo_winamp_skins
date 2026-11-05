@@ -34,12 +34,11 @@ Now you can finally kick a llama's ass in foobar2000!
 | xwin | 0.10.0 | https://github.com/Jake-Shadle/xwin |
 | MSVC CRT + ATL (xwin, manifest 18) | 14.51.36244 | |
 | Windows SDK (xwin) | 10.0.28000 | |
-| 7-Zip | 26.00 | apt `7zip` |
 
 ## Build (Windows)
 
 VS 2026, workload *Desktop development with C++* + *C++ ATL for v145*.
-Open `foo_winamp_skins.sln`, build Release x64 and Release x86, then `scripts\package.ps1`.
+Open `foo_winamp_skins.sln`, or run `scripts\release.bat` to rebuild Release x86 + x64 and pack `out\foo_winamp_skins-<ver>.fb2k-component`.
 
 `scripts\redeploy.bat [x64|x86]` closes the portable foobar2000, copies the newest build (WSL or VS) into it and restarts it.
 Post-build copies the DLL into `..\foobar2000_x64` / `..\foobar2000_x32` portable installs if present;
@@ -55,7 +54,6 @@ cd unix
 cmake -G Ninja -B build-x64 -DCMAKE_TOOLCHAIN_FILE=cmake/clang-cl-xwin.cmake -DXWIN_ARCH=x86_64
 cmake -G Ninja -B build-x86 -DCMAKE_TOOLCHAIN_FILE=cmake/clang-cl-xwin.cmake -DXWIN_ARCH=x86
 ninja -C build-x64 && ninja -C build-x86
-./package.sh   # -> out/foo_winamp_skins-<ver>.fb2k-component
 ./deploy.sh    # -> ../foobar2000_x64, ../foobar2000_x32
 ```
 
