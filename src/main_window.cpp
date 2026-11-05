@@ -343,8 +343,8 @@ HWND MainWindow::create(HookProc hook) {
     for (auto& s : load_element_states()) {
         if (s.guid == playlist_view) continue; // older builds gave it a window of its own
         if (!remember) s.x = s.y = CW_USEDEFAULT;
-        ElementPanel* w = create_element_window(s);
-        if (s.visible) w->window().show(true);
+        ElementPanel* panel = create_element_window(s);
+        if (s.visible) panel->window().show(true);
     }
 
     m_callbacks = std::make_unique<Callbacks>(*this);
@@ -815,7 +815,7 @@ void MainWindow::on_mouse_move(POINT p) {
     }
 }
 
-void MainWindow::on_lbutton_up(POINT p) {
+void MainWindow::on_lbutton_up(POINT) {
     if (m_pressed == Control::none) return;
     const Control id = m_pressed;
     const bool inside = m_pressed_inside;

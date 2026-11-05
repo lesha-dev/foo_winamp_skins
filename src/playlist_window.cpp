@@ -68,7 +68,7 @@ std::wstring wide(const char* s) { return pfc::stringcvt::string_wide_from_utf8(
 
 class PlaylistWindow::Callbacks : public playlist_callback_single_impl_base, public play_callback_impl_base {
 public:
-    explicit Callbacks(PlaylistWindow& w) : playlist_callback_single_impl_base(flag_all), m_w(w) {}
+    explicit Callbacks(PlaylistWindow& w) : playlist_callback_single_impl_base(static_cast<t_uint32>(flag_all)), m_w(w) {}
 
     void on_items_added(t_size, metadb_handle_list_cref, const bit_array&) override { m_w.playlist_changed(); }
     void on_items_reordered(const t_size*, t_size) override { m_w.playlist_changed(); }
@@ -922,7 +922,7 @@ void PlaylistWindow::render_list(Canvas& c) {
     const size_t rows = static_cast<size_t>(visible_rows());
 
     HDC dc = c.dc();
-    c.set_clip(r.x, r.y, r.w, rows * row_h);
+    c.set_clip(r.x, r.y, r.w, static_cast<int>(rows) * row_h);
     HGDIOBJ old_font = SelectObject(dc, m_font);
     SetBkMode(dc, TRANSPARENT);
     const bool has_focus = GetFocus() == m_wnd;
