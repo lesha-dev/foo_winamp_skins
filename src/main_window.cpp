@@ -38,7 +38,7 @@ const MenuRoot menu_roots[] = {
 };
 constexpr UINT menu_id_stride = 0x1000;
 enum : UINT { id_lock_ui = 1, id_vis_spectrum, id_vis_osc, id_vis_off,
-    id_open_skins_folder, id_toggle_eq, id_toggle_pl,
+    id_open_skins_folder, id_choose_skins_folder, id_toggle_eq, id_toggle_pl,
     id_panel_double = 0x80, id_panel_shade, id_panel_rename, id_panel_close, id_panel_view,
     id_skin_first = 0x100, id_skin_last = 0x7FF,
     id_playlist_first = 0x800, id_playlist_last = 0xBFF,
@@ -973,7 +973,8 @@ void MainWindow::show_context_menu(POINT pt, SkinWindow* panel) {
     }
     if (skins.empty()) AppendMenuW(skins_menu, MF_STRING | MF_GRAYED, 0, L"(skins folder is empty)");
     AppendMenuW(skins_menu, MF_SEPARATOR, 0, nullptr);
-    AppendMenuW(skins_menu, MF_STRING, id_open_skins_folder, L"&Open skins folder");
+    AppendMenuW(skins_menu, MF_STRING, id_choose_skins_folder, L"&Choose skins folder...");
+    AppendMenuW(skins_menu, MF_STRING, id_open_skins_folder, L"&Open skins folder in Explorer");
     AppendMenuW(menu, MF_POPUP | MF_STRING, reinterpret_cast<UINT_PTR>(skins_menu), L"&Skins");
     HMENU vis = CreatePopupMenu();
     append_vis_items(vis);
@@ -1020,6 +1021,11 @@ void MainWindow::show_context_menu(POINT pt, SkinWindow* panel) {
     case id_vis_osc: set_vis_mode(VisMode::oscilloscope); break;
     case id_vis_off: set_vis_mode(VisMode::off); break;
     case id_open_skins_folder: skins_folder::open_in_explorer(); break;
+    case id_choose_skins_folder: {
+        std::wstring dir;
+        if (skins_folder::browse(m_wnd, skins_folder::path(), dir)) skins_folder::set_path(dir);
+        break;
+    }
     case id_toggle_eq: toggle_eq(); break;
     case id_toggle_pl: toggle_playlist(); break;
     default:
@@ -1253,18 +1259,28 @@ void MainWindow::save_position() {
 // ---------------------------------------------------------------------------------------------
 // skins
 
+void MainWindow::unload_skin() {
+    m_skin.reset();
+    config::skin_path = "";
+    skin_changed();
+}
+
+void MainWindow::skin_changed() {
+    if (m_eq) m_eq->set_skin(m_skin.get());
+    if (m_pl) { m_pl->set_skin(m_skin.get()); m_pl->on_skin_changed(); }
+    for (auto& w : m_elements) { w->window().set_skin(m_skin.get()); w->on_skin_changed(); }
+    update_title_fonts();
+    apply_region();
+    invalidate_all();
+}
+
 bool MainWindow::load_skin(const char* path, bool interactive) {
     try {
         auto skin = Skin::load(path);
         for (auto& w : skin->warnings()) FB2K_console_formatter() << COMPONENT_NAME ": " << path << ": " << w.c_str();
         m_skin = std::move(skin);
         config::skin_path = path;
-        if (m_eq) m_eq->set_skin(m_skin.get());
-        if (m_pl) { m_pl->set_skin(m_skin.get()); m_pl->on_skin_changed(); }
-        for (auto& w : m_elements) { w->window().set_skin(m_skin.get()); w->on_skin_changed(); }
-        update_title_fonts();
-        apply_region();
-        invalidate();
+        skin_changed();
         return true;
     } catch (const std::exception& e) {
         const pfc::string8 msg = pfc::format("Cannot load skin:\n", path, "\n\n", e.what());

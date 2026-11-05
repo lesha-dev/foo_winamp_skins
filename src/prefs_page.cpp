@@ -10,6 +10,9 @@
 
 #include <foobar2000/SDK/coreDarkMode.h>
 
+#include <commctrl.h>
+#include <shellapi.h>
+
 namespace wsz {
 namespace {
 
@@ -35,6 +38,43 @@ std::wstring file_title(const std::wstring& path) {
     return name;
 }
 
+int CALLBACK font_found(const LOGFONTW*, const TEXTMETRICW*, DWORD, LPARAM lp) {
+    *reinterpret_cast<bool*>(lp) = true;
+    return 0;
+}
+
+bool font_installed(const wchar_t* face) {
+    LOGFONTW lf = {};
+    lf.lfCharSet = DEFAULT_CHARSET;
+    wcsncpy_s(lf.lfFaceName, face, _TRUNCATE);
+    bool found = false;
+    HDC dc = GetDC(nullptr);
+    EnumFontFamiliesExW(dc, &lf, &font_found, reinterpret_cast<LPARAM>(&found), 0);
+    ReleaseDC(nullptr, dc);
+    return found;
+}
+
+// Windows' own icon font: Segoe Fluent Icons (Windows 11), Segoe MDL2 Assets (Windows 10).
+const wchar_t* icon_font_face() {
+    for (const wchar_t* face : { L"Segoe Fluent Icons", L"Segoe MDL2 Assets" })
+        if (font_installed(face)) return face;
+    return nullptr;
+}
+
+struct FolderButton {
+    int id;
+    const wchar_t* glyph;  // in the icon font
+    const wchar_t* symbol; // in Segoe UI Symbol (Windows 7); null = shell folder icon
+    const wchar_t* text;   // last resort
+    const wchar_t* tip;
+};
+
+const FolderButton folder_buttons[] = {
+    { IDC_BROWSE_FOLDER, L"\xE712", L"\x2026", L"...", L"Choose skins folder" },
+    { IDC_OPEN_FOLDER, L"\xE8B7", nullptr, L"Open", L"Open skins folder in Explorer" },
+    { IDC_REFRESH, L"\xE72C", L"\x21BB", L"R", L"Refresh skin list" },
+};
+
 // Skin selection is edited here and only take effect on Apply.
 class PrefsInstance : public preferences_page_instance {
 public:
@@ -54,10 +94,17 @@ public:
     fb2k::hwnd_t get_wnd() override { return m_wnd; }
 
     void apply() override {
+        if (folder_changed()) skins_folder::set_path(m_folder);
         const std::wstring current = wide(config::skin_path.get());
-        if (!m_pending.empty() && _wcsicmp(m_pending.c_str(), current.c_str()) != 0) {
-            if (MainWindow* w = MainWindow::instance()) w->load_skin(utf8(m_pending), true);
-            else config::skin_path = utf8(m_pending);
+        if (_wcsicmp(m_pending.c_str(), current.c_str()) != 0) {
+            MainWindow* w = MainWindow::instance();
+            if (m_pending.empty()) {
+                if (w) w->unload_skin();
+                else config::skin_path = "";
+            } else {
+                if (w) w->load_skin(utf8(m_pending), true);
+                else config::skin_path = utf8(m_pending);
+            }
         }
         changed();
     }
@@ -79,6 +126,8 @@ private:
         if (msg == WM_DESTROY) {
             SetWindowLongPtrW(wnd, DWLP_USER, 0);
             self->m_wnd = nullptr;
+            if (self->m_icon_font) { DeleteObject(self->m_icon_font); self->m_icon_font = nullptr; }
+            if (self->m_folder_icon) { DestroyIcon(self->m_folder_icon); self->m_folder_icon = nullptr; }
         }
         return ret;
     }
@@ -104,7 +153,9 @@ private:
     void on_init() {
         m_dark.AddDialogWithControls(m_wnd);
         m_pending = wide(config::skin_path.get());
-        uSetDlgItemText(m_wnd, IDC_FOLDER, utf8(skins_folder::path()));
+        m_folder = skins_folder::path();
+        uSetDlgItemText(m_wnd, IDC_FOLDER, utf8(m_folder));
+        init_folder_buttons();
         refresh_list();
         load_preview();
     }
@@ -118,8 +169,19 @@ private:
                 if (sel >= 0 && idx < m_skins.size()) select_pending(m_skins[idx].path);
             }
             break;
+        case IDC_BROWSE_FOLDER:
+            if (code == BN_CLICKED) {
+                std::wstring dir;
+                if (skins_folder::browse(m_wnd, m_folder, dir)) {
+                    m_folder = dir;
+                    uSetDlgItemText(m_wnd, IDC_FOLDER, utf8(m_folder));
+                    refresh_list();
+                    changed();
+                }
+            }
+            break;
         case IDC_OPEN_FOLDER:
-            if (code == BN_CLICKED) skins_folder::open_in_explorer();
+            if (code == BN_CLICKED) skins_folder::open_in_explorer(m_folder);
             break;
         case IDC_REFRESH:
             if (code == BN_CLICKED) refresh_list();
@@ -127,8 +189,55 @@ private:
         }
     }
 
+    void init_folder_buttons() {
+        const wchar_t* face = icon_font_face();
+        const bool fluent = face != nullptr;
+        if (!face && font_installed(L"Segoe UI Symbol")) face = L"Segoe UI Symbol";
+        if (face) {
+            RECT rc;
+            GetClientRect(GetDlgItem(m_wnd, IDC_REFRESH), &rc);
+            LOGFONTW lf = {};
+            lf.lfHeight = -std::max(8L, (rc.bottom - rc.top) * (fluent ? 9 : 11) / 16);
+            lf.lfCharSet = DEFAULT_CHARSET;
+            lf.lfQuality = CLEARTYPE_QUALITY;
+            wcsncpy_s(lf.lfFaceName, face, _TRUNCATE);
+            m_icon_font = CreateFontIndirectW(&lf);
+        }
+        HWND tip = CreateWindowExW(WS_EX_TOPMOST, TOOLTIPS_CLASSW, nullptr, WS_POPUP | TTS_ALWAYSTIP | TTS_NOPREFIX,
+            CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, m_wnd, nullptr, core_api::get_my_instance(), nullptr);
+        if (tip) m_dark.AddCtrlAuto(tip);
+        for (const auto& b : folder_buttons) {
+            HWND btn = GetDlgItem(m_wnd, b.id);
+            const wchar_t* text = m_icon_font ? (fluent ? b.glyph : b.symbol) : b.text;
+            if (!text) {
+                // Windows 7: the shell's own small folder icon.
+                SHSTOCKICONINFO sii = {};
+                sii.cbSize = sizeof(sii);
+                if (SUCCEEDED(SHGetStockIconInfo(SIID_FOLDER, SHGSI_ICON | SHGSI_SMALLICON, &sii))) {
+                    m_folder_icon = sii.hIcon;
+                    SetWindowLongPtrW(btn, GWL_STYLE, GetWindowLongPtrW(btn, GWL_STYLE) | BS_ICON);
+                    SendMessageW(btn, BM_SETIMAGE, IMAGE_ICON, reinterpret_cast<LPARAM>(m_folder_icon));
+                    SetWindowTextW(btn, L"");
+                } else {
+                    SetWindowTextW(btn, b.text);
+                }
+            } else {
+                if (m_icon_font) SendMessageW(btn, WM_SETFONT, reinterpret_cast<WPARAM>(m_icon_font), FALSE);
+                SetWindowTextW(btn, text);
+            }
+            if (!tip) continue;
+            TTTOOLINFOW ti = {};
+            ti.cbSize = sizeof(ti);
+            ti.uFlags = TTF_IDISHWND | TTF_SUBCLASS;
+            ti.hwnd = m_wnd;
+            ti.uId = reinterpret_cast<UINT_PTR>(btn);
+            ti.lpszText = const_cast<wchar_t*>(b.tip);
+            SendMessageW(tip, TTM_ADDTOOLW, 0, reinterpret_cast<LPARAM>(&ti));
+        }
+    }
+
     void refresh_list() {
-        m_skins = skins_folder::list();
+        m_skins = skins_folder::list(m_folder);
         HWND list = GetDlgItem(m_wnd, IDC_SKIN_LIST);
         SendMessageW(list, WM_SETREDRAW, FALSE, 0);
         SendMessageW(list, LB_RESETCONTENT, 0, 0);
@@ -140,6 +249,8 @@ private:
         SendMessageW(list, LB_SETCURSEL, static_cast<WPARAM>(sel), 0);
         SendMessageW(list, WM_SETREDRAW, TRUE, 0);
         InvalidateRect(list, nullptr, TRUE);
+        // The selected skin is gone (deleted, or another folder): select none.
+        if (sel < 0 && !m_pending.empty()) select_pending({});
     }
 
     void select_pending(const std::wstring& path) {
@@ -191,17 +302,22 @@ private:
 
     bool has_changed() const {
         if (!m_wnd) return false;
-        return _wcsicmp(m_pending.c_str(), wide(config::skin_path.get()).c_str()) != 0;
+        return folder_changed() || _wcsicmp(m_pending.c_str(), wide(config::skin_path.get()).c_str()) != 0;
     }
+
+    bool folder_changed() const { return _wcsicmp(m_folder.c_str(), skins_folder::path().c_str()) != 0; }
 
     void changed() { m_callback->on_state_changed(); }
 
     HWND m_wnd = nullptr;
     preferences_page_callback::ptr m_callback;
     fb2k::CCoreDarkModeHooks m_dark;
+    HFONT m_icon_font = nullptr;
+    HICON m_folder_icon = nullptr;
 
     std::vector<skins_folder::Entry> m_skins;
     std::wstring m_pending; // skin path applied on Apply; empty = no skin
+    std::wstring m_folder;  // skins folder applied on Apply
     std::unique_ptr<Skin> m_preview;
     Canvas m_canvas;
 };

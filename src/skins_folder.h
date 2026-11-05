@@ -10,12 +10,20 @@ struct Entry {
     std::wstring path; // full path
 };
 
-// <profile>\winamp-skins, created on first use.
+// Custom folder chosen in Preferences, else <profile>\winamp-skins (created on first use).
 std::wstring path();
+
+// Store a new folder; the default folder is stored as empty.
+void set_path(const std::wstring& dir);
+
+// Folder picker starting at `start`; returns true and sets `out` if a folder was chosen.
+bool browse(HWND owner, const std::wstring& start, std::wstring& out);
 
 // .wsz/.zip files and unpacked skin directories (containing main.bmp) in the folder, naturally sorted.
 std::vector<Entry> list();
+std::vector<Entry> list(const std::wstring& dir);
 
 void open_in_explorer();
+void open_in_explorer(const std::wstring& dir);
 
 } // namespace wsz::skins_folder

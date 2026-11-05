@@ -37,6 +37,7 @@ public:
     void sync_always_on_top();
 
     bool load_skin(const char* path, bool interactive);
+    void unload_skin();
     void invalidate();
     void invalidate_all(); // main + eq + playlist
     void apply_display_options(); // after the Options page changed
@@ -115,6 +116,7 @@ private:
     void update_title_formats();
     HFONT m_title_font = nullptr, m_title_font2x = nullptr; // playlist font for the non-bitmap title
     void update_title_fonts();
+    void skin_changed(); // propagate m_skin to all windows
 
     int m_scale = 1;
     bool m_shade = false;

@@ -6,6 +6,7 @@ namespace wsz::config {
 extern cfg_int window_x;
 extern cfg_int window_y;
 extern cfg_string skin_path;
+extern cfg_string skins_folder;        // custom skins folder; empty = <profile>\winamp-skins
 extern cfg_bool time_remaining;
 extern cfg_bool double_size;
 extern cfg_bool shade;
