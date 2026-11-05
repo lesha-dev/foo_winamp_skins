@@ -66,6 +66,7 @@ private:
     // painting
     void on_paint();
     void paint_placeholder(HDC dc);
+    void layout_placeholder(); // "Choose a skin" button, shown only without a skin
     MainState build_state();
     pfc::string8 current_title();
 
@@ -107,6 +108,7 @@ private:
     static MainWindow* s_instance;
 
     HWND m_wnd = nullptr;
+    HWND m_choose_skin = nullptr;
     HookProc m_hook = nullptr;
     std::unique_ptr<Callbacks> m_callbacks;
     std::unique_ptr<Skin> m_skin;

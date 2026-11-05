@@ -396,13 +396,19 @@ LRESULT MainWindow::wndproc(UINT msg, WPARAM wp, LPARAM lp) {
     case WM_PAINT:
         on_paint();
         return 0;
+    case WM_COMMAND:
+        if (reinterpret_cast<HWND>(lp) == m_choose_skin && m_choose_skin && HIWORD(wp) == BN_CLICKED) {
+            ui_control::get()->show_preferences(guids::prefs_page);
+            return 0;
+        }
+        break;
     case WM_ERASEBKGND:
         return 1;
     case WM_LBUTTONDOWN:
     case WM_LBUTTONDBLCLK: {
         const POINT p = to_skin({ GET_X_LPARAM(lp), GET_Y_LPARAM(lp) });
         // Everything that isn't a control drags the window, like Winamp; double-click on the title bar toggles shade.
-        if (m_skin && !hit(p)) {
+        if (!hit(p)) {
             if (msg == WM_LBUTTONDBLCLK && p.y < titlebar_height) set_shade(!m_shade);
             else docking::begin_move(m_wnd, true);
             return 0;
@@ -608,6 +614,7 @@ bool MainWindow::handle_key(WPARAM vk, bool alt) {
 }
 
 void MainWindow::on_paint() {
+    layout_placeholder();
     PAINTSTRUCT ps;
     HDC dc = BeginPaint(m_wnd, &ps);
     if (m_skin) {
@@ -634,10 +641,33 @@ void MainWindow::paint_placeholder(HDC dc) {
 
     SetBkMode(dc, TRANSPARENT);
     SetTextColor(dc, RGB(0, 230, 0));
-    RECT text = m_shade ? title : rc;
-    if (!m_shade) text.top = title.bottom;
-    DrawTextW(dc, m_shade ? L"no skin loaded" : L"no skin loaded\nright-click → Load skin...", -1, &text,
-        DT_CENTER | DT_VCENTER | DT_NOPREFIX | (m_shade ? DT_SINGLELINE : 0));
+    HGDIOBJ old_font = SelectObject(dc, GetStockObject(DEFAULT_GUI_FONT));
+    RECT text = title;
+    if (!m_shade) {
+        // Body: text in the upper half, the button below it.
+        text = { 0, title.bottom, rc.right, title.bottom + (rc.bottom - title.bottom) / 2 };
+    }
+    DrawTextW(dc, L"No skin selected", -1, &text, DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
+    SelectObject(dc, old_font);
+}
+
+void MainWindow::layout_placeholder() {
+    const bool show = !m_skin && !m_shade;
+    if (!show) {
+        if (m_choose_skin) ShowWindow(m_choose_skin, SW_HIDE);
+        return;
+    }
+    if (!m_choose_skin) {
+        m_choose_skin = CreateWindowExW(0, L"BUTTON", L"Choose a skin...", WS_CHILD | WS_TABSTOP | BS_PUSHBUTTON,
+            0, 0, 0, 0, m_wnd, nullptr, core_api::get_my_instance(), nullptr);
+        if (!m_choose_skin) return;
+        SendMessageW(m_choose_skin, WM_SETFONT, reinterpret_cast<WPARAM>(GetStockObject(DEFAULT_GUI_FONT)), FALSE);
+    }
+    RECT rc; GetClientRect(m_wnd, &rc);
+    const int top = titlebar_height * m_scale;
+    const int body_mid = top + (rc.bottom - top) / 2;
+    const int bw = 110, bh = 24;
+    SetWindowPos(m_choose_skin, nullptr, (rc.right - bw) / 2, body_mid + 2, bw, bh, SWP_NOZORDER | SWP_NOACTIVATE | SWP_SHOWWINDOW);
 }
 
 pfc::string8 MainWindow::current_title() {
