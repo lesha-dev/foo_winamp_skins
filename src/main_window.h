@@ -5,6 +5,7 @@
 #include "element_window.h"
 #include "main_renderer.h"
 #include "skin.h"
+#include "taskbar_buttons.h"
 #include "tooltip.h"
 #include "visualizer.h"
 
@@ -137,6 +138,7 @@ private:
 
     Visualizer m_vis;
     Tooltip m_tooltip;
+    TaskbarButtons m_taskbar_buttons;
     std::unique_ptr<EqWindow> m_eq;
     std::unique_ptr<PlaylistWindow> m_pl;
     std::vector<std::unique_ptr<ElementPanel>> m_elements; // Elements menu windows

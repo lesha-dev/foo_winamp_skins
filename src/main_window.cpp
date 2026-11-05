@@ -299,6 +299,7 @@ HWND MainWindow::create(HookProc hook) {
         x, y, w, h, nullptr, nullptr, core_api::get_my_instance(), this);
     if (!m_wnd) throw exception_win32(GetLastError());
     m_tooltip.attach(m_wnd);
+    m_taskbar_buttons.attach(m_wnd);
 
     const pfc::string8 path = config::skin_path.get();
     if (!path.is_empty()) load_skin(path, false);
@@ -356,6 +357,7 @@ HWND MainWindow::create(HookProc hook) {
 void MainWindow::destroy() {
     if (!m_wnd) return;
     m_callbacks.reset();
+    m_taskbar_buttons.detach();
     save_position();
     // Keep the visibility flags: hiding during teardown would clear them.
     if (m_eq) { m_eq->save_position(); m_eq->destroy(); m_eq.reset(); }
@@ -392,11 +394,16 @@ LRESULT CALLBACK MainWindow::s_wndproc(HWND wnd, UINT msg, WPARAM wp, LPARAM lp)
 }
 
 LRESULT MainWindow::wndproc(UINT msg, WPARAM wp, LPARAM lp) {
+    if (m_taskbar_buttons.on_message(msg)) return 0;
     switch (msg) {
     case WM_PAINT:
         on_paint();
         return 0;
     case WM_COMMAND:
+        if (const Control c = m_taskbar_buttons.on_command(wp); c != Control::none) {
+            activate_control(c);
+            return 0;
+        }
         if (reinterpret_cast<HWND>(lp) == m_choose_skin && m_choose_skin && HIWORD(wp) == BN_CLICKED) {
             ui_control::get()->show_preferences(guids::prefs_page);
             return 0;
@@ -1296,6 +1303,7 @@ void MainWindow::unload_skin() {
 }
 
 void MainWindow::skin_changed() {
+    m_taskbar_buttons.set_skin(m_skin.get());
     if (m_eq) m_eq->set_skin(m_skin.get());
     if (m_pl) { m_pl->set_skin(m_skin.get()); m_pl->on_skin_changed(); }
     for (auto& w : m_elements) { w->window().set_skin(m_skin.get()); w->on_skin_changed(); }

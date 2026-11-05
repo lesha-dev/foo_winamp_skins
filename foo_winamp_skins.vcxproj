@@ -107,6 +107,7 @@ exit /b 0</Command>
     <ClInclude Include="src\skin_layout.h" />
     <ClInclude Include="src\stdafx.h" />
     <ClInclude Include="src\skins_folder.h" />
+    <ClInclude Include="src\taskbar_buttons.h" />
     <ClInclude Include="src\text_font.h" />
     <ClInclude Include="src\version.h" />
     <ClInclude Include="src\vis_options.h" />
@@ -136,6 +137,7 @@ exit /b 0</Command>
     <ClCompile Include="src\prefs_options.cpp" />
     <ClCompile Include="src\prefs_vis.cpp" />
     <ClCompile Include="src\skins_folder.cpp" />
+    <ClCompile Include="src\taskbar_buttons.cpp" />
     <ClCompile Include="src\text_font.cpp" />
     <ClCompile Include="src\ui_module.cpp" />
     <ClCompile Include="src\tooltip.cpp" />
