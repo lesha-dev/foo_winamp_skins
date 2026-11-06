@@ -236,8 +236,15 @@ void PlaylistWindow::set_use_view(bool on) {
     invalidate();
 }
 
+// The element keeps its own size: at double size it fills the scaled list area.
 RECT PlaylistWindow::host_rect() const {
-    return { left_w, top_h, width() - right_w, height() - bottom_h };
+    const int s = scale();
+    return { left_w * s, top_h * s, (width() - right_w) * s, (height() - bottom_h) * s };
+}
+
+void PlaylistWindow::on_double_size_changed() {
+    config::pl_double = is_double_size();
+    layout_host();
 }
 
 void PlaylistWindow::ensure_host() {
@@ -275,8 +282,9 @@ void PlaylistWindow::update_host_clip() {
     const int x = d.from_right ? width() - d.x_from_left : d.x_from_left;
     const int top = height() - 12 - 18 * static_cast<int>(d.items.size());
     const RECT hr = host_rect();
+    const int s = scale();
     HRGN rgn = CreateRectRgn(0, 0, hr.right - hr.left, hr.bottom - hr.top);
-    HRGN cut = CreateRectRgn(x - 3 - hr.left, top - hr.top, x + 22 - hr.left, height() - 12 - hr.top);
+    HRGN cut = CreateRectRgn((x - 3) * s - hr.left, top * s - hr.top, (x + 22) * s - hr.left, (height() - 12) * s - hr.top);
     CombineRgn(rgn, rgn, cut, RGN_DIFF);
     DeleteObject(cut);
     SetWindowRgn(m_container, rgn, TRUE); // the window owns the region now
@@ -579,7 +587,7 @@ void PlaylistWindow::on_mouse_move(POINT p) {
     case Part::resize: {
         POINT now;
         GetCursorPos(&now);
-        const int dx = now.x - m_drag_origin.x, dy = now.y - m_drag_origin.y;
+        const int dx = (now.x - m_drag_origin.x) / scale(), dy = (now.y - m_drag_origin.y) / scale();
         // Steps of 25x29 px like Winamp, or per pixel with smooth resizing.
         const bool smooth = config::smooth_resize.get();
         auto step = [&](int d, int s) { return smooth ? d : static_cast<int>(std::floor(d / double(s) + 0.5)) * s; };

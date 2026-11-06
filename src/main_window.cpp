@@ -45,10 +45,11 @@ enum : UINT { id_lock_ui = 1, id_vis_spectrum, id_vis_osc, id_vis_off,
     id_element_first = 0xC00, id_element_last = 0xFFF }; // must stay below menu_id_stride
 
 // Element windows are stored as: u32 magic, u32 count, then per window: GUID, u8 visible, i32 x, y, w, h,
-// u32 size + config bytes, u32 size + title (UTF-8), u8 shade. Older blobs: "WSE2" has no shade byte;
-// without a magic there's no title either.
+// u32 size + config bytes, u32 size + title (UTF-8), u8 shade, u8 double size. Older blobs: "WSE3" has no
+// double size byte, "WSE2" no shade byte either; without a magic there's no title either.
 constexpr uint32_t element_states_magic_v2 = 0x32455357; // "WSE2"
-constexpr uint32_t element_states_magic = 0x33455357;    // "WSE3"
+constexpr uint32_t element_states_magic_v3 = 0x33455357; // "WSE3"
+constexpr uint32_t element_states_magic = 0x34455357;    // "WSE4"
 
 std::vector<ElementState> load_element_states() {
     std::vector<ElementState> out;
@@ -64,7 +65,8 @@ std::vector<ElementState> load_element_states() {
     };
     uint32_t count = 0;
     if (!read(&count, 4)) return out;
-    const bool with_shade = count == element_states_magic;
+    const bool with_double = count == element_states_magic;
+    const bool with_shade = with_double || count == element_states_magic_v3;
     const bool with_title = with_shade || count == element_states_magic_v2;
     if (with_title && !read(&count, 4)) return out;
     for (uint32_t i = 0; i < count; ++i) {
@@ -88,6 +90,11 @@ std::vector<ElementState> load_element_states() {
             uint8_t shade = 0;
             if (!read(&shade, 1)) break;
             s.shade = shade != 0;
+        }
+        if (with_double) {
+            uint8_t dbl = 0;
+            if (!read(&dbl, 1)) break;
+            s.double_size = dbl != 0;
         }
         out.push_back(std::move(s));
     }
@@ -114,6 +121,8 @@ void save_element_states(const std::vector<ElementState>& states) {
         write(s.title.get_ptr(), len);
         const uint8_t shade = s.shade ? 1 : 0;
         write(&shade, 1);
+        const uint8_t dbl = s.double_size ? 1 : 0;
+        write(&dbl, 1);
     }
     config::element_windows.set(buf.data(), buf.size());
 }
@@ -313,12 +322,13 @@ HWND MainWindow::create(HookProc hook) {
     RECT mrc{};
     GetWindowRect(m_wnd, &mrc);
     m_eq = std::make_unique<EqWindow>();
-    m_eq->set_double_size(m_scale == 2 && config::eq_double_size.get());
+    m_eq->set_double_size(config::eq_double.get());
     if (config::eq_shade.get()) m_eq->set_shade(true);
     m_eq->create(m_wnd, L"Winamp Equalizer", remember ? static_cast<int>(config::eq_x.get()) : CW_USEDEFAULT,
         remember ? static_cast<int>(config::eq_y.get()) : CW_USEDEFAULT);
     m_eq->set_skin(m_skin.get());
     m_pl = std::make_unique<PlaylistWindow>();
+    m_pl->set_double_size(config::pl_double.get());
     int px = remember ? static_cast<int>(config::pl_x.get()) : CW_USEDEFAULT;
     int py = remember ? static_cast<int>(config::pl_y.get()) : CW_USEDEFAULT;
     if (px == CW_USEDEFAULT) {
@@ -533,7 +543,6 @@ void MainWindow::update_title_formats() {
 
 void MainWindow::apply_display_options() {
     update_title_formats();
-    if (m_eq) m_eq->set_double_size(m_scale == 2 && config::eq_double_size.get());
     if (m_pl) m_pl->apply_resize_mode();
     for (auto& w : m_elements) w->apply_resize_mode();
     invalidate_all();
@@ -599,6 +608,8 @@ void MainWindow::toggle_element(const GUID& guid) {
     }
     ElementState s;
     s.guid = guid;
+    // New windows join the others' double size when it applies to all windows.
+    s.double_size = config::double_size_all.get() && m_scale == 2;
     create_element_window(s)->window().show(true);
     save_element_windows();
 }
@@ -896,7 +907,7 @@ void MainWindow::activate_control(Control id) {
     case Control::close: PostMessageW(m_wnd, WM_CLOSE, 0, 0); break;
     case Control::clutter_a: set_always_on_top(!m_always_on_top); break;
     case Control::clutter_i: player::show_file_info(); break;
-    case Control::clutter_d: set_double_size(m_scale == 1); break;
+    case Control::clutter_d: toggle_double_size(); break;
     case Control::clutter_v: {
         const ControlRect* r = find_control(normal_controls, id);
         POINT pt = { (r->x + r->w) * m_scale, r->y * m_scale };
@@ -931,7 +942,7 @@ bool MainWindow::on_key(WPARAM vk) {
     auto pc = playback_control::get();
     if (ctrl) {
         switch (vk) {
-        case 'D': set_double_size(m_scale == 1); return true;
+        case 'D': toggle_double_size(); return true;
         case 'A': set_always_on_top(!m_always_on_top); return true;
         case 'W': set_shade(!m_shade); return true;
         case 'V': player::toggle_stop_after_current(); return true;
@@ -961,9 +972,9 @@ void MainWindow::show_context_menu(POINT pt, SkinWindow* panel) {
     // The clicked window's own actions.
     {
         auto flags = [](bool can, bool on) { return MF_STRING | (can ? 0u : UINT(MF_GRAYED)) | (on ? UINT(MF_CHECKED) : 0u); };
-        const bool dbl_can = panel ? panel->can_double_size() : true, dbl_on = panel ? panel->is_double_size() : m_scale == 2;
+        const bool dbl_can = true, dbl_on = panel ? panel->is_double_size() : m_scale == 2;
         const bool shade_can = panel ? panel->can_shade() : true, shade_on = panel ? panel->is_shaded() : m_shade;
-        AppendMenuW(menu, flags(dbl_can, dbl_on), id_panel_double, panel ? L"&Double size" : shortcut_label(L"&Double size", L"Ctrl+D").c_str());
+        AppendMenuW(menu, flags(dbl_can, dbl_on), id_panel_double, shortcut_label(L"&Double size", L"Ctrl+D").c_str());
         AppendMenuW(menu, flags(shade_can, shade_on), id_panel_shade, panel ? L"&Windowshade" : shortcut_label(L"&Windowshade", L"Ctrl+W").c_str());
         AppendMenuW(menu, flags(panel && panel->can_rename(), false), id_panel_rename, L"&Rename...");
         AppendMenuW(menu, MF_STRING, id_panel_close, L"&Close");
@@ -1048,7 +1059,7 @@ void MainWindow::show_context_menu(POINT pt, SkinWindow* panel) {
 
     switch (cmd) {
     case 0: break;
-    case id_panel_double: if (panel) panel->toggle_double_size(); else set_double_size(m_scale == 1); break;
+    case id_panel_double: toggle_double_size(panel); break;
     case id_panel_shade: if (panel) panel->toggle_shade(); else set_shade(!m_shade); break;
     case id_panel_rename: if (panel) panel->rename(); break;
     case id_panel_close: if (panel) panel->show(false); else PostMessageW(m_wnd, WM_CLOSE, 0, 0); break;
@@ -1233,7 +1244,31 @@ void MainWindow::set_double_size(bool on) {
     m_scale = scale;
     config::double_size = on;
     apply_geometry();
-    if (m_eq) m_eq->set_double_size(on && config::eq_double_size.get());
+}
+
+void MainWindow::toggle_double_size(SkinWindow* source) {
+    const bool on = source ? !source->is_double_size() : m_scale == 1;
+    if (!config::double_size_all.get()) {
+        if (source) source->set_double_size(on);
+        else set_double_size(on);
+    } else {
+        docking::begin_relayout(m_wnd);
+        set_double_size(on);
+        sync_double_size();
+        docking::end_relayout();
+    }
+    save_element_windows();
+}
+
+void MainWindow::sync_double_size() {
+    const bool on = m_scale == 2;
+    const bool outer = !docking::relayout_active();
+    if (outer) docking::begin_relayout(m_wnd);
+    if (m_eq) m_eq->set_double_size(on);
+    if (m_pl) m_pl->set_double_size(on);
+    for (auto& w : m_elements) w->window().set_double_size(on);
+    if (outer) docking::end_relayout();
+    save_element_windows();
 }
 
 void MainWindow::set_always_on_top(bool on) {

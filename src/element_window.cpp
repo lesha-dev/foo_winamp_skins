@@ -38,6 +38,7 @@ ElementWindow::ElementWindow(const State& state) : m_state(state), m_host(state.
         m_state.w = std::max(GenFrame::min_width, m_state.w - m_state.w % GenFrame::step_w);
         m_state.h = std::max(GenFrame::min_height, m_state.h - m_state.h % GenFrame::step_h);
     }
+    m_scale = m_state.double_size ? 2 : 1;
     m_host.on_label_changed = [this] { invalidate(); };
     m_host.on_activate = [this] { show(true); };
 }
@@ -65,6 +66,11 @@ void ElementWindow::on_visibility_changed(bool visible) {
     if (MainWindow* w = MainWindow::instance()) w->invalidate();
 }
 
+void ElementWindow::on_double_size_changed() {
+    m_state.double_size = is_double_size();
+    layout_element();
+}
+
 void ElementWindow::on_skin_changed() {
     m_host.set_skin(m_skin);
     layout_element();
@@ -77,7 +83,12 @@ RECT ElementWindow::content_rect() const {
     return { in.left, in.top, std::max<int>(in.left, w - in.right), std::max<int>(in.top, h - in.bottom) };
 }
 
-void ElementWindow::layout_element() { m_host.set_rect(content_rect()); }
+// The frame is drawn at the window's scale; the element itself fills the scaled content area at its own size.
+void ElementWindow::layout_element() {
+    const RECT r = content_rect();
+    const int s = scale();
+    m_host.set_rect({ r.left * s, r.top * s, r.right * s, r.bottom * s });
+}
 
 void ElementWindow::render(Canvas& c) {
     GenFrame::render(c, *m_skin, m_state.w, m_state.h, title(), title_lit(), m_pressed == Part::close && m_inside);
@@ -128,8 +139,8 @@ void ElementWindow::on_mouse_move(POINT p) {
         // Steps of 25x29 px like Winamp, or per pixel with smooth resizing.
         const bool smooth = config::smooth_resize.get();
         auto step = [&](int d, int s) { return smooth ? d : static_cast<int>(std::floor(d / double(s) + 0.5)) * s; };
-        apply_size(m_drag_size.cx + step(now.x - m_drag_origin.x, GenFrame::step_w),
-                   m_drag_size.cy + step(now.y - m_drag_origin.y, GenFrame::step_h));
+        apply_size(m_drag_size.cx + step((now.x - m_drag_origin.x) / scale(), GenFrame::step_w),
+                   m_drag_size.cy + step((now.y - m_drag_origin.y) / scale(), GenFrame::step_h));
         break;
     }
     default: break;

@@ -47,7 +47,11 @@ public:
     // The clicked window's actions (Double size, Windowshade, Rename, Close), then the common menu.
     // panel: the clicked window; null = the main window.
     void show_context_menu(POINT pt_screen, SkinWindow* panel = nullptr);
-    void toggle_double_size() { set_double_size(m_scale == 1); }
+    // Double size from a menu, the clutterbar or Ctrl+D on `source` (null = main window): per Options, every
+    // window takes the source's new state, or only the source changes.
+    void toggle_double_size(SkinWindow* source = nullptr);
+    // Every window takes the main window's double size (switching Options to "all windows").
+    void sync_double_size();
     void set_vis_mode(VisMode mode);
     void set_vis_options(const VisOptions& o); // also stored in config
     // Winamp hotkeys, also used by the EQ and playlist windows. Returns true if handled.

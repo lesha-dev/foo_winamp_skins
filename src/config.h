@@ -32,7 +32,9 @@ extern cfg_bool skin_cursors;         // mouse cursors from the skin's *.cur fil
 extern cfg_bool snap;                 // dock windows to each other / screen edges (Shift inverts while dragging)
 extern cfg_int snap_distance;         // px
 extern cfg_bool smooth_resize;        // playlist resizes per pixel instead of 25x29 steps
-extern cfg_bool eq_double_size;       // double size applies to the equalizer too
+extern cfg_bool double_size_all;      // Double size toggles all windows at once (else only the one it was used on)
+extern cfg_bool eq_double;             // equalizer is double size
+extern cfg_bool pl_double;             // playlist editor is double size
 extern cfg_int balance_snap;          // percent around centre that snaps to 0
 extern cfg_int vis_mode;
 // Winamp classic vis options (Winamp defaults): analyzer style 0 normal / 1 fire / 2 line; scope style

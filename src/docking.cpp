@@ -13,6 +13,11 @@ RECT g_leader_rect = {};
 std::vector<HWND> g_group;
 bool g_suppress = false; // programmatic moves: no snapping
 HWND g_move_wnd = nullptr; // window being dragged by hand
+
+enum class Side { below, above, right, left };
+struct Attachment { HWND wnd, parent; Side side; int offset; };
+std::vector<Attachment> g_layout; // begin_relayout .. end_relayout
+bool g_relayout = false;
 POINT g_grab = {};         // cursor offset from its top-left corner
 
 RECT rect_of(HWND w) { RECT rc{}; GetWindowRect(w, &rc); return rc; }
@@ -178,7 +183,59 @@ bool end_move(HWND wnd) {
     return true;
 }
 
+void begin_relayout(HWND root) {
+    g_layout.clear();
+    g_relayout = true;
+    // Same walk as docked_to(), remembering which window each one was found against.
+    std::vector<HWND> placed = { root };
+    std::vector<HWND> chain = { root }; // visible ones extend it
+    bool grew = true;
+    while (grew) {
+        grew = false;
+        for (HWND w : g_windows) {
+            if (IsIconic(w) || std::find(placed.begin(), placed.end(), w) != placed.end()) continue;
+            const RECT r = rect_of(w);
+            for (HWND p : chain) {
+                const RECT pr = rect_of(p);
+                if (!touching(r, pr)) continue;
+                Attachment a{ w, p, Side::below, 0 };
+                if (r.top == pr.bottom) a = { w, p, Side::below, r.left - pr.left };
+                else if (r.bottom == pr.top) a = { w, p, Side::above, r.left - pr.left };
+                else if (r.left == pr.right) a = { w, p, Side::right, r.top - pr.top };
+                else a = { w, p, Side::left, r.top - pr.top };
+                g_layout.push_back(a);
+                placed.push_back(w);
+                if (IsWindowVisible(w)) { chain.push_back(w); grew = true; }
+                break;
+            }
+        }
+    }
+}
+
+bool relayout_active() { return g_relayout; }
+
+void end_relayout() {
+    g_relayout = false;
+    g_suppress = true;
+    for (const Attachment& a : g_layout) {
+        if (!IsWindow(a.wnd) || !IsWindow(a.parent)) continue;
+        const RECT p = rect_of(a.parent), r = rect_of(a.wnd);
+        const int w = r.right - r.left, h = r.bottom - r.top;
+        POINT pos{};
+        switch (a.side) {
+        case Side::below: pos = { p.left + a.offset, p.bottom }; break;
+        case Side::above: pos = { p.left + a.offset, p.top - h }; break;
+        case Side::right: pos = { p.right, p.top + a.offset }; break;
+        case Side::left: pos = { p.left - w, p.top + a.offset }; break;
+        }
+        if (pos.x != r.left || pos.y != r.top) SetWindowPos(a.wnd, nullptr, pos.x, pos.y, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+    }
+    g_suppress = false;
+    g_layout.clear();
+}
+
 void resized(HWND wnd, const RECT& before, const RECT& after, const std::vector<HWND>& docked_before) {
+    if (g_relayout) return;
     const int dy = (after.bottom - after.top) - (before.bottom - before.top);
     const int dx = (after.right - after.left) - (before.right - before.left);
     if (!dx && !dy) return;

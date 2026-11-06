@@ -9,14 +9,9 @@ class EqWindow : public SkinWindow {
 public:
     static constexpr int width = 275, height = 116, shade_height = 14;
 
-    void set_double_size(bool on);
     void set_shade(bool on);
     bool shade() const { return m_shade; }
 
-    // Double size follows the main window, when the Options page lets the equalizer use it.
-    bool can_double_size() const override;
-    bool is_double_size() const override { return m_scale == 2; }
-    void toggle_double_size() override;
     bool can_shade() const override { return true; }
     bool is_shaded() const override { return m_shade; }
     void toggle_shade() override { set_shade(!m_shade); }
@@ -27,7 +22,7 @@ public:
 
 protected:
     SIZE skin_size() const override { return { width, m_shade ? shade_height : height }; }
-    int scale() const override { return m_scale; }
+    void on_double_size_changed() override;
     void render(Canvas& c) override;
     bool is_control(POINT p) const override;
     void on_mouse_down(POINT p, bool dbl) override;
@@ -50,7 +45,6 @@ private:
     void render_normal(Canvas& c);
     void render_shade(Canvas& c);
 
-    int m_scale = 1;
     bool m_shade = false;
     Part m_pressed = Part::none;
     bool m_inside = false;

@@ -33,4 +33,11 @@ bool end_move(HWND wnd);
 // shift by the height delta, those right of its old right edge by the width delta.
 void resized(HWND wnd, const RECT& before, const RECT& after, const std::vector<HWND>& docked_before);
 
+// Several windows resized at once (double size for all windows): begin records how the windows docked
+// to `root` attach to each other and suspends resized(); end puts each one back against the window it
+// was attached to, at the same side and offset, using the new sizes.
+void begin_relayout(HWND root);
+void end_relayout();
+bool relayout_active();
+
 } // namespace wsz::docking

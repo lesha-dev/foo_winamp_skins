@@ -37,7 +37,8 @@ public:
         config::snap = checked(IDC_SNAP);
         config::snap_distance = dock_value();
         config::smooth_resize = checked(IDC_SMOOTH_RESIZE);
-        config::eq_double_size = checked(IDC_EQ_DSIZE);
+        const bool dsize_all_now = checked(IDC_DSIZE_ALL) && !config::double_size_all.get();
+        config::double_size_all = checked(IDC_DSIZE_ALL);
         config::clutterbar = checked(IDC_CLUTTERBAR);
         config::oldschool_pl_buttons = checked(IDC_OLDSCHOOL_PL);
         config::tooltips = checked(IDC_TOOLTIPS);
@@ -48,7 +49,10 @@ public:
         config::format_main = text(IDC_FORMAT_MAIN);
         config::format_playlist = text(IDC_FORMAT_PL);
         config::format_playlist_shade = text(IDC_FORMAT_PL_SHADE);
-        if (MainWindow* w = MainWindow::instance()) w->apply_display_options();
+        if (MainWindow* w = MainWindow::instance()) {
+            if (dsize_all_now) w->sync_double_size(); // all windows take the main window's double size
+            w->apply_display_options();
+        }
         changed();
     }
 
@@ -60,7 +64,7 @@ public:
         CheckDlgButton(m_wnd, IDC_SNAP, BST_CHECKED);
         SetDlgItemInt(m_wnd, IDC_SNAP_PX, default_dock, FALSE);
         CheckDlgButton(m_wnd, IDC_SMOOTH_RESIZE, BST_UNCHECKED);
-        CheckDlgButton(m_wnd, IDC_EQ_DSIZE, BST_CHECKED);
+        CheckRadioButton(m_wnd, IDC_DSIZE_ALL, IDC_DSIZE_EACH, IDC_DSIZE_ALL);
         CheckDlgButton(m_wnd, IDC_CLUTTERBAR, BST_CHECKED);
         CheckDlgButton(m_wnd, IDC_OLDSCHOOL_PL, BST_UNCHECKED);
         CheckDlgButton(m_wnd, IDC_TOOLTIPS, BST_CHECKED);
@@ -112,7 +116,7 @@ private:
         SetDlgItemInt(m_wnd, IDC_SNAP_PX, static_cast<UINT>(config::snap_distance.get()), FALSE);
         SendDlgItemMessageW(m_wnd, IDC_SNAP_PX, EM_SETLIMITTEXT, 2, 0);
         CheckDlgButton(m_wnd, IDC_SMOOTH_RESIZE, config::smooth_resize.get() ? BST_CHECKED : BST_UNCHECKED);
-        CheckDlgButton(m_wnd, IDC_EQ_DSIZE, config::eq_double_size.get() ? BST_CHECKED : BST_UNCHECKED);
+        CheckRadioButton(m_wnd, IDC_DSIZE_ALL, IDC_DSIZE_EACH, config::double_size_all.get() ? IDC_DSIZE_ALL : IDC_DSIZE_EACH);
         CheckDlgButton(m_wnd, IDC_CLUTTERBAR, config::clutterbar.get() ? BST_CHECKED : BST_UNCHECKED);
         CheckDlgButton(m_wnd, IDC_OLDSCHOOL_PL, config::oldschool_pl_buttons.get() ? BST_CHECKED : BST_UNCHECKED);
         CheckDlgButton(m_wnd, IDC_TOOLTIPS, config::tooltips.get() ? BST_CHECKED : BST_UNCHECKED);
@@ -159,7 +163,7 @@ private:
             || checked(IDC_SNAP) != config::snap.get()
             || dock_value() != static_cast<int>(config::snap_distance.get())
             || checked(IDC_SMOOTH_RESIZE) != config::smooth_resize.get()
-            || checked(IDC_EQ_DSIZE) != config::eq_double_size.get()
+            || checked(IDC_DSIZE_ALL) != config::double_size_all.get()
             || checked(IDC_CLUTTERBAR) != config::clutterbar.get()
             || checked(IDC_OLDSCHOOL_PL) != config::oldschool_pl_buttons.get()
             || checked(IDC_TOOLTIPS) != config::tooltips.get()

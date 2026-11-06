@@ -52,6 +52,7 @@ protected:
     void on_caption_dblclick() override { set_shade(!m_shade); }
     void on_position_saved(int x, int y) override;
     void on_visibility_changed(bool visible) override;
+    void on_double_size_changed() override;
     bool on_message(UINT msg, WPARAM wp, LPARAM lp, LRESULT& ret) override;
 
 private:
@@ -94,7 +95,7 @@ private:
     std::unique_ptr<HostedElement> m_host;
     HWND m_container = nullptr;
     int m_last_scroll_pos = -1;
-    RECT host_rect() const;
+    RECT host_rect() const; // client pixels (scaled)
     void layout_host();
     void ensure_host();
     HWND list_hwnd() const;                 // the element's scrollable list window

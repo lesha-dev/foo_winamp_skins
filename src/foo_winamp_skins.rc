@@ -45,8 +45,10 @@ BEGIN
     EDITTEXT        IDC_SNAP_PX, 109, 76, 22, 12, ES_NUMBER
     LTEXT           "pixels (hold Shift while dragging to invert)", IDC_STATIC, 135, 78, 180, 8
     AUTOCHECKBOX    "Enable smooth resizing of the playlist window", IDC_SMOOTH_RESIZE, 14, 91, 300, 10
-    AUTOCHECKBOX    "Use double size setting on equalizer as well as main window", IDC_EQ_DSIZE, 14, 104, 300, 10
-    AUTOCHECKBOX    "Always show Clutterbar in main window", IDC_CLUTTERBAR, 14, 117, 300, 10
+    LTEXT           "Apply double size:", IDC_STATIC, 14, 105, 62, 8
+    AUTORADIOBUTTON "to all windows", IDC_DSIZE_ALL, 78, 104, 66, 10, WS_GROUP | WS_TABSTOP
+    AUTORADIOBUTTON "individually", IDC_DSIZE_EACH, 150, 104, 60, 10
+    AUTOCHECKBOX    "Always show Clutterbar in main window", IDC_CLUTTERBAR, 14, 117, 300, 10, WS_GROUP | WS_TABSTOP
     AUTOCHECKBOX    "Oldschool playlist button behavior (hold, pick on release)", IDC_OLDSCHOOL_PL, 14, 130, 300, 10
     AUTOCHECKBOX    "Display tooltips in Winamp's windows", IDC_TOOLTIPS, 14, 143, 300, 10
     AUTOCHECKBOX    "Use skinned mouse cursors", IDC_SKIN_CURSORS, 14, 156, 300, 10

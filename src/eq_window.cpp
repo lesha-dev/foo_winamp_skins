@@ -87,11 +87,6 @@ std::vector<double> spline(const std::vector<double>& xs, const std::vector<doub
 
 } // namespace
 
-void EqWindow::set_double_size(bool on) {
-    m_scale = on ? 2 : 1;
-    apply_geometry();
-}
-
 void EqWindow::set_shade(bool on) {
     m_shade = on;
     config::eq_shade = on;
@@ -99,11 +94,7 @@ void EqWindow::set_shade(bool on) {
     apply_geometry();
 }
 
-bool EqWindow::can_double_size() const { return config::eq_double_size.get(); }
-
-void EqWindow::toggle_double_size() {
-    if (MainWindow* w = MainWindow::instance()) w->toggle_double_size();
-}
+void EqWindow::on_double_size_changed() { config::eq_double = is_double_size(); }
 
 void EqWindow::save_position() {
     RECT rc;

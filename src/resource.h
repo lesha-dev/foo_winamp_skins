@@ -18,7 +18,7 @@
 #define IDC_SNAP            1013
 #define IDC_SNAP_PX         1014
 #define IDC_SMOOTH_RESIZE   1015
-#define IDC_EQ_DSIZE        1016
+#define IDC_DSIZE_ALL       1016
 #define IDC_CLUTTERBAR      1017
 #define IDC_OLDSCHOOL_PL    1018
 #define IDC_TOOLTIPS        1019
@@ -33,6 +33,7 @@
 #define IDC_BALANCE_SNAP_LABEL 1028
 #define IDC_BALANCE_SNAP_PCT   1029
 #define IDC_BROWSE_FOLDER   1030
+#define IDC_DSIZE_EACH      1031
 
 #define IDC_VIS_SPECTRUM    1101
 #define IDC_VIS_SCOPE       1102

@@ -15,6 +15,7 @@ struct ElementState {
     GUID guid = {};
     bool visible = false;
     bool shade = false;
+    bool double_size = false;
     int x = CW_USEDEFAULT, y = CW_USEDEFAULT;
     int w = GenFrame::full_width, h = GenFrame::full_height + 4 * GenFrame::step_h;
     std::vector<uint8_t> config;
