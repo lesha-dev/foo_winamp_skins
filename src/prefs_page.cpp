@@ -286,7 +286,9 @@ private:
     }
 
     void draw_preview(HDC dc, const RECT& rc) {
-        FillRect(dc, &rc, static_cast<HBRUSH>(GetStockObject(BLACK_BRUSH)));
+        // Page background (dark mode aware: the dialog answers WM_CTLCOLORDLG), seen around and through the skin's shape.
+        HBRUSH bg = reinterpret_cast<HBRUSH>(SendMessageW(m_wnd, WM_CTLCOLORDLG, reinterpret_cast<WPARAM>(dc), reinterpret_cast<LPARAM>(m_wnd)));
+        FillRect(dc, &rc, bg ? bg : GetSysColorBrush(COLOR_BTNFACE));
         if (!m_preview) return;
         const int aw = rc.right - rc.left, ah = rc.bottom - rc.top;
         const int bw = MainWindow::base_width, bh = MainWindow::base_height;
@@ -297,7 +299,23 @@ private:
         else if (aw * bh < ah * bw) { w = aw; h = aw * bh / bw; }
         else { h = ah; w = ah * bw / bh; }
         const RECT dst = { rc.left + (aw - w) / 2, rc.top + (ah - h) / 2, rc.left + (aw - w) / 2 + w, rc.top + (ah - h) / 2 + h };
+        // The skin's region.txt shapes the real main window: mask the preview the same way.
+        HRGN shape = nullptr;
+        auto& regions = m_preview->regions();
+        if (auto it = regions.find("normal"); it != regions.end()) {
+            std::vector<POINT> points;
+            std::vector<INT> counts;
+            for (auto& poly : it->second) {
+                for (auto pt : poly.points) points.push_back({ dst.left + pt.x * w / bw, dst.top + pt.y * h / bh });
+                counts.push_back(static_cast<INT>(poly.points.size()));
+            }
+            shape = CreatePolyPolygonRgn(points.data(), counts.data(), static_cast<int>(counts.size()), WINDING);
+        }
+        const int saved = SaveDC(dc);
+        if (shape) SelectClipRgn(dc, shape); // inside the preview control anyway
         m_canvas.present(dc, dst);
+        RestoreDC(dc, saved);
+        if (shape) DeleteObject(shape);
     }
 
     bool has_changed() const {
