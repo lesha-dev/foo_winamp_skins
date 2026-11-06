@@ -989,14 +989,16 @@ void MainWindow::show_context_menu(POINT pt, SkinWindow* panel) {
     HMENU elements_menu = CreatePopupMenu();
     {
         const GUID art = album_art_guid(), playlist_view = playlist_view_guid();
-        HMENU group_menu = nullptr;
+        // One flat list: each group starts with a separator and its name as an unclickable header.
+        bool first_group = true;
         pfc::string8 group;
         for (size_t i = 0; i < elements.size() && i <= id_element_last - id_element_first; ++i) {
             const ElementInfo& e = elements[i];
-            if (!group_menu || e.group != group) {
+            if (first_group || e.group != group) {
+                if (!first_group) AppendMenuW(elements_menu, MF_SEPARATOR, 0, nullptr);
+                first_group = false;
                 group = e.group;
-                group_menu = CreatePopupMenu();
-                AppendMenuW(elements_menu, MF_POPUP | MF_STRING, reinterpret_cast<UINT_PTR>(group_menu),
+                AppendMenuW(elements_menu, MF_STRING | MF_GRAYED, 0,
                     menu_label(pfc::stringcvt::string_wide_from_utf8(group).get_ptr()).c_str());
             }
             bool open = false;
@@ -1004,11 +1006,11 @@ void MainWindow::show_context_menu(POINT pt, SkinWindow* panel) {
             if (e.guid == playlist_view && m_pl) open = m_pl->is_view_switched();
             std::wstring label = menu_label(pfc::stringcvt::string_wide_from_utf8(e.name).get_ptr());
             if (e.guid == art && shortcuts) label += L"\tAlt+A";
-            AppendMenuW(group_menu, MF_STRING | (open ? MF_CHECKED : 0), id_element_first + i, label.c_str());
+            AppendMenuW(elements_menu, MF_STRING | (open ? MF_CHECKED : 0), id_element_first + i, label.c_str());
         }
         if (elements.empty()) AppendMenuW(elements_menu, MF_STRING | MF_GRAYED, 0, L"(no UI elements)");
     }
-    AppendMenuW(menu, MF_POPUP | MF_STRING, reinterpret_cast<UINT_PTR>(elements_menu), L"Ele&ments");
+    AppendMenuW(menu, MF_POPUP | MF_STRING, reinterpret_cast<UINT_PTR>(elements_menu), L"Default UI Ele&ments");
     AppendMenuW(menu, MF_STRING | (config::lock_ui.get() ? MF_CHECKED : 0), id_lock_ui, L"Loc&k UI");
     // Skins submenu: contents of the skins folder.
     const auto skins = skins_folder::list();
