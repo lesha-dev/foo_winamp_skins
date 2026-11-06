@@ -22,17 +22,34 @@ void stretch(Canvas& c, const Image& img, S s, int dx, int dy, int dw, int dh) {
     }
 }
 
-// Title font in gen.bmp: letters A-Z on one 7 px row, separated by the background colour found at x=0.
+// Title font in gen.bmp: letters A-Z on one 7 px row, separated by columns of the background colour found
+// at x=0. A column counts as a separator when most of its 7 pixels are that colour: some skins have a stray
+// glyph pixel in a separator (Secret of Evermore, between X and Y on the active row).
 struct Letter { int x = 0, w = 0; };
 std::array<Letter, 26> scan_letters(const Image& img, int y) {
     std::array<Letter, 26> out{};
     if (y >= img.height) return out;
-    const uint32_t* row = &img.pixels[size_t(y) * img.width];
-    const uint32_t bg = row[0];
+    const uint32_t bg = img.pixels[size_t(y) * img.width];
+    const int y_end = std::min(y + 7, img.height);
+    auto separator = [&](int cx) {
+        int n = 0;
+        for (int cy = y; cy < y_end; ++cy) n += img.pixels[size_t(cy) * img.width + cx] == bg;
+        return 2 * n > y_end - y;
+    };
     int x = 1;
     for (auto& l : out) {
         int n = x;
-        while (n < img.width && row[n] != bg) ++n;
+        while (n < img.width && !separator(n)) ++n;
+        // A run up to the image edge: RLE bitmaps may end the row early, and Windows decodes the missing
+        // pixels as black (base-2.91's gen.bmp after Z). Drop trailing all-black columns.
+        if (n == img.width) {
+            auto black_column = [&](int cx) {
+                for (int cy = y; cy < y_end; ++cy)
+                    if ((img.pixels[size_t(cy) * img.width + cx] & 0xffffff) != 0) return false;
+                return true;
+            };
+            while (n > x && black_column(n - 1)) --n;
+        }
         l = { x, n - x };
         x = n + 1;
     }
