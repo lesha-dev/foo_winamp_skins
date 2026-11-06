@@ -29,6 +29,7 @@ cfg_bool skin_cursors(guids::cfg_skin_cursors, true);
 cfg_bool snap(guids::cfg_snap, true);
 cfg_int snap_distance(guids::cfg_snap_distance, 10);
 cfg_bool smooth_resize(guids::cfg_smooth_resize, false);
+cfg_bool title_easter_egg(guids::cfg_title_easter_egg, false);
 cfg_bool double_size_all(guids::cfg_double_size_all, true);
 cfg_bool eq_double(guids::cfg_eq_double, false);
 cfg_bool pl_double(guids::cfg_pl_double, false);

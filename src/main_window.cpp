@@ -706,6 +706,7 @@ MainState MainWindow::build_state() {
     st.active = m_active || !config::dim_titlebars.get();
     st.clutterbar = config::clutterbar.get();
     st.shade = m_shade;
+    st.easter_egg = config::title_easter_egg.get();
     st.always_on_top = m_always_on_top;
     st.double_size = m_scale == 2;
     st.pressed = m_pressed_inside ? m_pressed : Control::none;

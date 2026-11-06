@@ -34,6 +34,7 @@
 #define IDC_BALANCE_SNAP_PCT   1029
 #define IDC_BROWSE_FOLDER   1030
 #define IDC_DSIZE_EACH      1031
+#define IDC_TITLE_EGG       1032
 
 #define IDC_VIS_SPECTRUM    1101
 #define IDC_VIS_SCOPE       1102

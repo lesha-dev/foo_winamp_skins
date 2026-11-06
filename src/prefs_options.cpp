@@ -43,6 +43,7 @@ public:
         config::oldschool_pl_buttons = checked(IDC_OLDSCHOOL_PL);
         config::tooltips = checked(IDC_TOOLTIPS);
         config::skin_cursors = checked(IDC_SKIN_CURSORS);
+        config::title_easter_egg = checked(IDC_TITLE_EGG);
         config::playlist_view_skin_font = checked(IDC_PLVIEW_FONT);
         config::title_bitmap_font = checked(IDC_TITLE_BITMAP);
         config::title_font_alt = checked(IDC_TITLE_ALT);
@@ -69,6 +70,7 @@ public:
         CheckDlgButton(m_wnd, IDC_OLDSCHOOL_PL, BST_UNCHECKED);
         CheckDlgButton(m_wnd, IDC_TOOLTIPS, BST_CHECKED);
         CheckDlgButton(m_wnd, IDC_SKIN_CURSORS, BST_CHECKED);
+        CheckDlgButton(m_wnd, IDC_TITLE_EGG, BST_UNCHECKED);
         CheckDlgButton(m_wnd, IDC_PLVIEW_FONT, BST_CHECKED);
         CheckDlgButton(m_wnd, IDC_TITLE_BITMAP, BST_CHECKED);
         CheckDlgButton(m_wnd, IDC_TITLE_ALT, BST_UNCHECKED);
@@ -121,6 +123,7 @@ private:
         CheckDlgButton(m_wnd, IDC_OLDSCHOOL_PL, config::oldschool_pl_buttons.get() ? BST_CHECKED : BST_UNCHECKED);
         CheckDlgButton(m_wnd, IDC_TOOLTIPS, config::tooltips.get() ? BST_CHECKED : BST_UNCHECKED);
         CheckDlgButton(m_wnd, IDC_SKIN_CURSORS, config::skin_cursors.get() ? BST_CHECKED : BST_UNCHECKED);
+        CheckDlgButton(m_wnd, IDC_TITLE_EGG, config::title_easter_egg.get() ? BST_CHECKED : BST_UNCHECKED);
         CheckDlgButton(m_wnd, IDC_PLVIEW_FONT, config::playlist_view_skin_font.get() ? BST_CHECKED : BST_UNCHECKED);
         CheckDlgButton(m_wnd, IDC_TITLE_BITMAP, config::title_bitmap_font.get() ? BST_CHECKED : BST_UNCHECKED);
         CheckDlgButton(m_wnd, IDC_TITLE_ALT, config::title_font_alt.get() ? BST_CHECKED : BST_UNCHECKED);
@@ -168,6 +171,7 @@ private:
             || checked(IDC_OLDSCHOOL_PL) != config::oldschool_pl_buttons.get()
             || checked(IDC_TOOLTIPS) != config::tooltips.get()
             || checked(IDC_SKIN_CURSORS) != config::skin_cursors.get()
+            || checked(IDC_TITLE_EGG) != config::title_easter_egg.get()
             || checked(IDC_PLVIEW_FONT) != config::playlist_view_skin_font.get()
             || checked(IDC_TITLE_BITMAP) != config::title_bitmap_font.get()
             || checked(IDC_TITLE_ALT) != config::title_font_alt.get()

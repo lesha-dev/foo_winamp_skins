@@ -50,8 +50,9 @@ BEGIN
     AUTORADIOBUTTON "individually", IDC_DSIZE_EACH, 150, 104, 60, 10
     AUTOCHECKBOX    "Always show Clutterbar in main window", IDC_CLUTTERBAR, 14, 117, 300, 10, WS_GROUP | WS_TABSTOP
     AUTOCHECKBOX    "Oldschool playlist button behavior (hold, pick on release)", IDC_OLDSCHOOL_PL, 14, 130, 300, 10
-    AUTOCHECKBOX    "Display tooltips in Winamp's windows", IDC_TOOLTIPS, 14, 143, 300, 10
-    AUTOCHECKBOX    "Use skinned mouse cursors", IDC_SKIN_CURSORS, 14, 156, 300, 10
+    AUTOCHECKBOX    "Display tooltips in Winamp's windows", IDC_TOOLTIPS, 14, 143, 140, 10
+    AUTOCHECKBOX    "Use skinned mouse cursors", IDC_SKIN_CURSORS, 160, 143, 154, 10
+    AUTOCHECKBOX    "Show Easter egg header in Main window", IDC_TITLE_EGG, 14, 156, 300, 10
     AUTOCHECKBOX    "Use bitmap font for main window title display (no international support)", IDC_TITLE_BITMAP, 14, 169, 300, 10
     AUTOCHECKBOX    "Use alternative font style when 'Double size' is enabled", IDC_TITLE_ALT, 24, 182, 290, 10
     AUTOCHECKBOX    "Use skin's font in Default UI's Playlist View", IDC_PLVIEW_FONT, 14, 195, 300, 10

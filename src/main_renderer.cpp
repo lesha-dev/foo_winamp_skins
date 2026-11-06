@@ -26,6 +26,17 @@ void draw_slider(Canvas& c, const Image& img, L::Sprite bg, L::Sprite thumb, L::
 }
 
 // Unpressed buttons come from the title bar background itself (active or inactive row), like Winamp.
+// The skin draws an easter egg title bar: both rows present and not a single flat colour (left empty).
+bool has_easter_egg(const Image& title) {
+    const auto s = L::title_egg;
+    if (title.width < s.x + s.w || title.height < s.y + s.h) return false;
+    const uint32_t first = title.pixels[size_t(s.y) * title.width + s.x];
+    for (int y = L::title_egg_active.y; y < s.y + s.h; ++y)
+        for (int x = s.x; x < s.x + s.w; ++x)
+            if (title.pixels[size_t(y) * title.width + x] != first) return true;
+    return false;
+}
+
 void draw_titlebar_buttons(Canvas& c, const Image& title, const MainState& st) {
     switch (st.pressed) {
     case Control::options:  c.blit(title, L::btn_options_down, L::pos_options); break;
@@ -151,7 +162,8 @@ void render_main(Canvas& c, const Skin& skin, const MainState& st) {
     c.clear(0);
     c.blit(main, 0, 0, c.width(), c.height(), 0, 0);
 
-    c.blit(title, st.active ? L::title_bar_active : L::title_bar, L::pos_title_bar);
+    if (st.easter_egg && has_easter_egg(title)) c.blit(title, st.active ? L::title_egg_active : L::title_egg, L::pos_title_bar);
+    else c.blit(title, st.active ? L::title_bar_active : L::title_bar, L::pos_title_bar);
     draw_titlebar_buttons(c, title, st);
 
     // Clutter bar: background plus selected states for pressed buttons and active toggles.

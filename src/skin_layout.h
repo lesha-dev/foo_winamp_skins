@@ -10,6 +10,9 @@ struct Pos { int x, y; };
 // --- titlebar.bmp ---
 constexpr Sprite title_bar          { 27, 15, 275, 14 };
 constexpr Sprite title_bar_active   { 27,  0, 275, 14 };
+// Winamp's easter egg title bar (type NULLSOFT in Winamp): "It really whips the llama's ass!" in the base skin.
+constexpr Sprite title_egg          { 27, 72, 275, 14 };
+constexpr Sprite title_egg_active   { 27, 57, 275, 14 };
 constexpr Sprite btn_options        {  0,  0, 9, 9 };
 constexpr Sprite btn_options_down   {  0,  9, 9, 9 };
 constexpr Sprite btn_minimize       {  9,  0, 9, 9 };

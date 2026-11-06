@@ -17,6 +17,7 @@ struct MainState {
     bool shade = false;          // windowshade mode (275x14)
     bool always_on_top = false;
     bool double_size = false;
+    bool easter_egg = false;     // titlebar.bmp's easter egg title bar (used only when the skin has one)
     bool clutterbar = true;      // always shown; otherwise only while one of its buttons is pressed
     Control pressed = Control::none; // control drawn in its pressed state
 
