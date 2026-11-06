@@ -1015,9 +1015,22 @@ void MainWindow::show_context_menu(POINT pt, SkinWindow* panel) {
     const std::wstring current = pfc::stringcvt::string_wide_from_utf8(config::skin_path.get()).get_ptr();
     HMENU skins_menu = CreatePopupMenu();
     const size_t max_skins = id_skin_last - id_skin_first + 1;
+    // A list taller than the screen wraps into columns instead of scrolling (a scrolled menu always opens at its top).
+    size_t per_column = SIZE_MAX;
+    {
+        MONITORINFO mi = {};
+        mi.cbSize = sizeof(mi);
+        if (GetMonitorInfoW(MonitorFromPoint(pt, MONITOR_DEFAULTTONEAREST), &mi)) {
+            // Themed popup items (Windows 11 especially) are taller than the menu bar metric.
+            const int item_h = std::max(1, GetSystemMetrics(SM_CYMENUSIZE) * 3 / 2);
+            const int rows = (mi.rcWork.bottom - mi.rcWork.top) / item_h - 3; // room for the folder items below
+            per_column = static_cast<size_t>(std::max(8, rows));
+        }
+    }
     for (size_t i = 0; i < skins.size() && i < max_skins; ++i) {
         const bool sel = m_skin && _wcsicmp(skins[i].path.c_str(), current.c_str()) == 0;
-        AppendMenuW(skins_menu, MF_STRING | (sel ? MF_CHECKED : 0), id_skin_first + i, menu_label(skins[i].name).c_str());
+        const UINT brk = i > 0 && i % per_column == 0 ? MF_MENUBARBREAK : 0;
+        AppendMenuW(skins_menu, MF_STRING | brk | (sel ? MF_CHECKED : 0), id_skin_first + i, menu_label(skins[i].name).c_str());
     }
     if (skins.empty()) AppendMenuW(skins_menu, MF_STRING | MF_GRAYED, 0, L"(skins folder is empty)");
     AppendMenuW(skins_menu, MF_SEPARATOR, 0, nullptr);
