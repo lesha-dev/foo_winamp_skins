@@ -667,6 +667,8 @@ void PlaylistWindow::on_mouse_leave_capture() {
 }
 
 void PlaylistWindow::on_wheel(int delta) {
+    // Windowshade: the wheel changes track, like Winamp (up = previous).
+    if (m_shade) { if (delta > 0) player::previous(); else player::next(); return; }
     if (m_host) {
         if (HWND list = list_hwnd()) SendMessageW(list, WM_MOUSEWHEEL, MAKEWPARAM(0, delta), 0);
         return;
@@ -795,6 +797,12 @@ void PlaylistWindow::move_focus(int delta, bool extend) {
 }
 
 bool PlaylistWindow::on_key(WPARAM vk) {
+    if (m_shade) {
+        // Windowshade: the list is hidden, so up/down change track instead; other keys go to foobar2000.
+        if (vk == VK_UP) { player::previous(); return true; }
+        if (vk == VK_DOWN) { player::next(); return true; }
+        return false;
+    }
     if (m_host) return false; // the element handles its own keys
     const bool shift = GetKeyState(VK_SHIFT) < 0, ctrl = GetKeyState(VK_CONTROL) < 0;
     auto pm = playlist_manager::get();

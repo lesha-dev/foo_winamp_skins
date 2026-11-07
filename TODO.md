@@ -39,7 +39,7 @@
   - [x] EQ:
       - Clicking the +12/0/−12 labels sets all bands.
       - One drag can sweep across several sliders.
-  - [ ] Shaded playlist: the wheel and ↑/↓ should change track; now they scroll the hidden list.
+  - [x] Shaded playlist: the wheel and ↑/↓ should change track; now they scroll the hidden list.
   - [ ] Playlist click on one item of a multi-selection should reduce the selection to it on mouse-up.
   - [ ] Clutterbar:
       - The song title shows the button's action while it is held.
