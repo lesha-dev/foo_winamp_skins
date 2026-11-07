@@ -17,6 +17,8 @@ enum class Control {
 
 struct ControlRect { Control id; int x, y, w, h; };
 
+inline bool is_clutter(Control c) { return c >= Control::clutter_o && c <= Control::clutter_v; }
+
 // Hit rects in skin coordinates. Order matters only where rects overlap (first match wins).
 inline constexpr ControlRect normal_controls[] = {
     { Control::options,   6,   3,  9,  9 },

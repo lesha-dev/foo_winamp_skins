@@ -739,6 +739,17 @@ MainState MainWindow::build_state() {
 
     st.marquee = !m_status.is_empty() ? m_status.get_ptr() : current_title().get_ptr();
     st.marquee_px = m_status.is_empty() ? m_marquee_px : 0;
+    // A held clutterbar button shows its action in the song title, like Winamp.
+    if (is_clutter(m_pressed) && m_pressed_inside) {
+        switch (m_pressed) {
+        case Control::clutter_o: st.marquee = "Options menu"; break;
+        case Control::clutter_a: st.marquee = m_always_on_top ? "Disable always on top" : "Enable always on top"; break;
+        case Control::clutter_i: st.marquee = "File info box"; break;
+        case Control::clutter_d: st.marquee = m_scale == 2 ? "Disable doublesize mode" : "Enable doublesize mode"; break;
+        default: st.marquee = "Visualization menu"; break;
+        }
+        st.marquee_px = 0;
+    }
     if (!config::title_bitmap_font.get()) {
         st.title_font = m_title_font;
         st.title_fg = m_skin->playlist_colors().normal;
@@ -840,6 +851,8 @@ void MainWindow::on_mouse_move(POINT p) {
         update_slider(p);
     } else {
         const ControlRect* r = hit(p);
+        // Holding the button down, the clutterbar follows the cursor from one button to the next.
+        if (r && is_clutter(m_pressed) && is_clutter(r->id) && r->id != m_pressed) { m_pressed = r->id; invalidate(); }
         const bool inside = r && r->id == m_pressed;
         if (inside != m_pressed_inside) { m_pressed_inside = inside; invalidate(); }
     }

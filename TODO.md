@@ -41,9 +41,7 @@
       - One drag can sweep across several sliders.
   - [x] Shaded playlist: the wheel and ↑/↓ should change track; now they scroll the hidden list.
   - [x] Playlist click on one item of a multi-selection should reduce the selection to it on mouse-up.
-  - [ ] Clutterbar:
-      - The song title shows the button's action while it is held.
-      - O and V open only their own submenus.
+  - [x] Clutterbar: The song title shows the button's action while it is held.
   - [ ] kbps of 1000 or more and tracks of 100 minutes or more (Winamp's "14H" and the hundreds digit); we clamp them now.
   - [x] Time:
       - Elapsed/remaining items in the menu.
