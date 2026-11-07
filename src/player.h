@@ -23,6 +23,7 @@ void stop();
 void toggle_stop_after_current();
 void previous();
 void next();
+void first_track(bool last); // Winamp's Start/End of list: playing playlist's first/last entry
 void open_files();
 void show_file_info();
 

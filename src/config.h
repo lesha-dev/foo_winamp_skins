@@ -8,6 +8,7 @@ extern cfg_int window_y;
 extern cfg_string skin_path;
 extern cfg_string skins_folder;        // custom skins folder; empty = <profile>\winamp-skins
 extern cfg_bool time_remaining;
+extern cfg_bool autoscroll;           // main window song title scrolls by itself
 extern cfg_bool double_size;
 extern cfg_bool shade;
 extern cfg_float balance;            // use wsz::balance, which caches it for the audio thread

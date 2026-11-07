@@ -38,7 +38,7 @@ const MenuRoot menu_roots[] = {
 };
 constexpr UINT menu_id_stride = 0x1000;
 enum : UINT { id_lock_ui = 1, id_vis_spectrum, id_vis_osc, id_vis_off,
-    id_open_skins_folder, id_choose_skins_folder, id_toggle_eq, id_toggle_pl,
+    id_open_skins_folder, id_choose_skins_folder, id_toggle_eq, id_toggle_pl, id_autoscroll,
     id_panel_double = 0x80, id_panel_shade, id_panel_rename, id_panel_close, id_panel_view,
     id_skin_first = 0x100, id_skin_last = 0x7FF,
     id_playlist_first = 0x800, id_playlist_last = 0xBFF,
@@ -478,11 +478,7 @@ LRESULT MainWindow::wndproc(UINT msg, WPARAM wp, LPARAM lp) {
             POINT client = pt;
             ScreenToClient(m_wnd, &client);
             const ControlRect* r = hit(to_skin(client));
-            if (r && r->id == Control::vis) {
-                show_vis_menu(pt);
-                return 0;
-            }
-            if (r && r->id == Control::marquee) return 0;
+            if (r && show_control_menu(r->id, pt)) return 0;
         }
         show_context_menu(pt);
         return 0;
@@ -490,7 +486,7 @@ LRESULT MainWindow::wndproc(UINT msg, WPARAM wp, LPARAM lp) {
     case WM_TIMER:
         if (wp == marquee_timer_id && m_skin) {
             // 5 px per tick like Winamp; paused while the title is dragged and for 10 ticks after.
-            if (m_pressed != Control::marquee) {
+            if (m_pressed != Control::marquee && config::autoscroll.get()) {
                 if (m_marquee_hold > 0) --m_marquee_hold;
                 else m_marquee_px += font_char_w;
             }
@@ -979,6 +975,7 @@ void MainWindow::show_context_menu(POINT pt, SkinWindow* panel) {
         AppendMenuW(menu, flags(shade_can, shade_on), id_panel_shade, panel ? L"&Windowshade" : shortcut_label(L"&Windowshade", L"Ctrl+W").c_str());
         AppendMenuW(menu, flags(panel && panel->can_rename(), false), id_panel_rename, L"&Rename...");
         AppendMenuW(menu, MF_STRING, id_panel_close, L"&Close");
+        if (!panel) AppendMenuW(menu, MF_STRING | (config::autoscroll.get() ? MF_CHECKED : 0), id_autoscroll, L"Autoscroll song &title");
         if (panel && panel->can_switch_view())
             AppendMenuW(menu, flags(true, panel->is_view_switched()), id_panel_view, L"Use foobar's Playlist &View");
         AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
@@ -1081,6 +1078,12 @@ void MainWindow::show_context_menu(POINT pt, SkinWindow* panel) {
     case id_panel_close: if (panel) panel->show(false); else PostMessageW(m_wnd, WM_CLOSE, 0, 0); break;
     case id_panel_view: if (panel) panel->toggle_view(); break;
     case id_lock_ui: config::lock_ui = !config::lock_ui.get(); break;
+    case id_autoscroll:
+        config::autoscroll = !config::autoscroll.get();
+        m_marquee_px = 0;
+        m_marquee_hold = 0;
+        invalidate();
+        break;
     case id_vis_spectrum: set_vis_mode(VisMode::spectrum); break;
     case id_vis_osc: set_vis_mode(VisMode::oscilloscope); break;
     case id_vis_off: set_vis_mode(VisMode::off); break;
@@ -1160,6 +1163,91 @@ void MainWindow::show_vis_menu(POINT pt) {
     case id_vis_off: set_vis_mode(VisMode::off); break;
     default: break;
     }
+}
+
+namespace {
+// foobar2000's main menu command as a menu item: its name, check state and key binding.
+void append_main_command(HMENU menu, UINT id, const GUID& guid) {
+    mainmenu_commands::ptr cmd;
+    uint32_t index = 0;
+    if (!menu_item_resolver::g_resolve_main_command(guid, cmd, index)) return;
+    pfc::string8 text;
+    uint32_t flags = 0;
+    if (!cmd->get_display(index, text, flags)) return;
+    pfc::string8 keys;
+    if (standard_config_objects::query_show_keyboard_shortcuts_in_menus()
+        && keyboard_shortcut_manager::get()->get_key_description_for_action(guid, pfc::guid_null, keys, keyboard_shortcut_manager::TYPE_MAIN, false))
+        text << "\t" << keys;
+    UINT mf = MF_STRING;
+    if (flags & mainmenu_commands::flag_disabled) mf |= MF_GRAYED;
+    if (flags & (mainmenu_commands::flag_checked | mainmenu_commands::flag_radiochecked)) mf |= MF_CHECKED;
+    AppendMenuW(menu, mf, id, pfc::stringcvt::string_wide_from_utf8(text).get_ptr());
+}
+}
+
+bool MainWindow::show_control_menu(Control id, POINT pt) {
+    using sc = standard_commands;
+    enum : UINT { id_start_of_list = 0x100, id_end_of_list, id_elapsed, id_remaining };
+    std::vector<GUID> commands; // menu item i + 1
+    bool start = false, end = false;
+    switch (id) {
+    case Control::vis: show_vis_menu(pt); return true;
+    case Control::shuffle: show_order_menu(true); return true;
+    case Control::repeat: show_order_menu(false); return true;
+    case Control::eject: case Control::eq: case Control::pl: return true; // none, like Winamp
+    case Control::marquee: {
+        // foobar2000's menu for the playing track.
+        contextmenu_manager::ptr cm;
+        contextmenu_manager::g_create(cm);
+        const unsigned flags = standard_config_objects::query_show_keyboard_shortcuts_in_menus() ? contextmenu_manager::flag_show_shortcuts : 0;
+        if (!cm->init_context_now_playing(flags)) return true;
+        HMENU menu = CreatePopupMenu();
+        cm->win32_build_menu(menu, 1, 0x7FFF);
+        SetForegroundWindow(m_wnd);
+        const UINT cmd = TrackPopupMenu(menu, TPM_RETURNCMD | TPM_RIGHTBUTTON | TPM_NONOTIFY, pt.x, pt.y, 0, m_wnd, nullptr);
+        DestroyMenu(menu);
+        if (cmd) cm->execute_by_id(cmd - 1);
+        return true;
+    }
+    case Control::time: {
+        HMENU menu = CreatePopupMenu();
+        AppendMenuW(menu, MF_STRING, id_elapsed, L"Time &elapsed");
+        AppendMenuW(menu, MF_STRING, id_remaining, L"Time &remaining");
+        CheckMenuRadioItem(menu, id_elapsed, id_remaining, config::time_remaining.get() ? id_remaining : id_elapsed, MF_BYCOMMAND);
+        SetForegroundWindow(m_wnd);
+        const UINT cmd = TrackPopupMenu(menu, TPM_RETURNCMD | TPM_RIGHTBUTTON | TPM_NONOTIFY, pt.x, pt.y, 0, m_wnd, nullptr);
+        DestroyMenu(menu);
+        if (cmd) {
+            config::time_remaining = cmd == id_remaining;
+            invalidate();
+        }
+        return true;
+    }
+    case Control::posbar: {
+        auto pc = playback_control::get();
+        if (!pc->is_playing() || !pc->playback_can_seek()) return true;
+        commands = { sc::guid_seek_back_5s, sc::guid_seek_ahead_5s };
+        break;
+    }
+    case Control::prev: commands = { sc::guid_main_previous, sc::guid_seek_back_5s }; start = true; break;
+    case Control::play: commands = { sc::guid_main_play, sc::guid_main_random }; break;
+    case Control::pause: commands = { sc::guid_main_pause, sc::guid_main_play_or_pause }; break;
+    case Control::stop: commands = { sc::guid_main_stop, sc::guid_main_stop_after_current }; break;
+    case Control::next: commands = { sc::guid_main_next, sc::guid_seek_ahead_5s }; end = true; break;
+    default: return false;
+    }
+    HMENU menu = CreatePopupMenu();
+    for (size_t i = 0; i < commands.size(); ++i) append_main_command(menu, static_cast<UINT>(i + 1), commands[i]);
+    if (start) AppendMenuW(menu, MF_STRING, id_start_of_list, L"&Start of list");
+    if (end) AppendMenuW(menu, MF_STRING, id_end_of_list, L"&End of list");
+    SetForegroundWindow(m_wnd);
+    const UINT cmd = TrackPopupMenu(menu, TPM_RETURNCMD | TPM_RIGHTBUTTON | TPM_NONOTIFY, pt.x, pt.y, 0, m_wnd, nullptr);
+    DestroyMenu(menu);
+    if (cmd == id_start_of_list) player::first_track(false);
+    else if (cmd == id_end_of_list) player::first_track(true);
+    else if (cmd >= 1 && cmd <= commands.size()) sc::run_main(commands[cmd - 1]);
+    invalidate();
+    return true;
 }
 
 // ---------------------------------------------------------------------------------------------

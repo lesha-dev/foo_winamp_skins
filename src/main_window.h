@@ -87,6 +87,8 @@ private:
     void activate_control(Control id);
     bool on_key(WPARAM vk);
     void show_vis_menu(POINT pt_screen);
+    // Right-click menu of a control. False: the control has none of its own (main context menu instead).
+    bool show_control_menu(Control id, POINT pt_screen);
     void show_order_menu(bool shuffle);
     void append_vis_items(HMENU menu);
 

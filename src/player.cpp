@@ -74,6 +74,21 @@ void toggle_stop_after_current() {
 }
 void previous() { standard_commands::main_previous(); }
 void next() { standard_commands::main_next(); }
+void first_track(bool last) {
+    auto pm = playlist_manager::get();
+    size_t pl = pm->get_playing_playlist();
+    if (pl == SIZE_MAX) pl = pm->get_active_playlist();
+    if (pl == SIZE_MAX) return;
+    const size_t n = pm->playlist_get_item_count(pl);
+    if (!n) return;
+    const size_t item = last ? n - 1 : 0;
+    // Like Winamp: plays it while playing, otherwise only moves there.
+    if (playback_control::get()->is_playing()) pm->playlist_execute_default_action(pl, item);
+    else {
+        pm->playlist_set_focus_item(pl, item);
+        pm->playlist_set_selection(pl, pfc::bit_array_true(), pfc::bit_array_one(item));
+    }
+}
 void open_files() { standard_commands::main_open(); }
 
 void show_file_info() {

@@ -8,6 +8,7 @@ cfg_int window_y(guids::cfg_window_y, CW_USEDEFAULT);
 cfg_string skin_path(guids::cfg_skin_path, "");
 cfg_string skins_folder(guids::cfg_skins_folder, "");
 cfg_bool time_remaining(guids::cfg_time_remaining, false);
+cfg_bool autoscroll(guids::cfg_autoscroll, true);
 cfg_bool double_size(guids::cfg_double_size, false);
 cfg_bool shade(guids::cfg_shade, false);
 cfg_float balance(guids::cfg_balance, 0.0);

@@ -6,13 +6,14 @@
 - [ ] Find a way to make Default UI Playlist View's rows as short as Winamp's (13 px)
 - [ ] Double click on the visualizer: Winamp opens MilkDrop; decide what fb2k should open (e.g. a vis component / Spectrum popup). Support winamp visualizations.
 - [ ] Support Winamp Modern skins (.wal: XML + MAKI scripts, freeform layouts) — essentially a separate engine.
+- [ ] Check compatibility with Columns UI
 - [ ] UX polishing/check againts Winamp features
   - [ ] Drag & drop. Winamp:
      - Main window: the drop replaces the playlist and plays; Shift adds instead.
      - Playlist: dropped files go in at the drop row.
      - Drops from fb2k's own panels (Album List etc.) are accepted.
      Use foobar's default drag'n'drop logic, read foobar's flags
-  - [ ] Right-click menus per control
+  - [x] Right-click menus per control
       - Song title: current track menu from foobar
       - Time display (and shade time): Time elapsed / Time remaining (radio)
       - Visualizer (and shade vis): leave current menu (vis radio)
@@ -46,7 +47,7 @@
       - The song title shows the button's action while it is held.
       - O and V open only their own submenus.
   - [ ] kbps of 1000 or more and tracks of 100 minutes or more (Winamp's "14H" and the hundreds digit); we clamp them now.
-  - [ ] Time:
+  - [x] Time:
       - Elapsed/remaining items in the menu.
       - An "Autoscroll songname" toggle.
   - [ ] Random skin option
