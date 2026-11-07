@@ -40,7 +40,7 @@ const MenuRoot menu_roots[] = {
 };
 constexpr UINT menu_id_stride = 0x1000;
 enum : UINT { id_lock_ui = 1, id_vis_spectrum, id_vis_osc, id_vis_off,
-    id_open_skins_folder, id_choose_skins_folder, id_toggle_eq, id_toggle_pl, id_autoscroll, id_random_skin,
+    id_open_skins_folder, id_choose_skins_folder, id_toggle_eq, id_toggle_pl, id_autoscroll, id_random_skin, id_reload_skin,
     id_panel_double = 0x80, id_panel_shade, id_panel_rename, id_panel_close, id_panel_view,
     id_skin_first = 0x100, id_skin_last = 0x7FF,
     id_playlist_first = 0x800, id_playlist_last = 0xBFF,
@@ -1051,6 +1051,7 @@ void MainWindow::show_context_menu(POINT pt, SkinWindow* panel) {
     }
     if (skins.empty()) AppendMenuW(skins_menu, MF_STRING | MF_GRAYED, 0, L"(skins folder is empty)");
     AppendMenuW(skins_menu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(skins_menu, MF_STRING | (m_skin ? 0 : MF_GRAYED), id_reload_skin, L"Re&load skin");
     AppendMenuW(skins_menu, MF_STRING | (skins.empty() ? MF_GRAYED : 0), id_random_skin, L"&Random skin");
     AppendMenuW(skins_menu, MF_STRING, id_choose_skins_folder, L"&Choose skins folder...");
     AppendMenuW(skins_menu, MF_STRING, id_open_skins_folder, L"&Open skins folder in Explorer");
@@ -1106,6 +1107,11 @@ void MainWindow::show_context_menu(POINT pt, SkinWindow* panel) {
     case id_vis_osc: set_vis_mode(VisMode::oscilloscope); break;
     case id_vis_off: set_vis_mode(VisMode::off); break;
     case id_open_skins_folder: skins_folder::open_in_explorer(); break;
+    case id_reload_skin: {
+        const pfc::string8 path = config::skin_path.get(); // re-read from disk, e.g. after editing the skin
+        if (!path.is_empty()) load_skin(path, true);
+        break;
+    }
     case id_random_skin: {
         const std::wstring r = skins_folder::random(pfc::stringcvt::string_wide_from_utf8(config::skin_path.get()).get_ptr());
         if (!r.empty()) load_skin(pfc::stringcvt::string_utf8_from_wide(r.c_str()), true);

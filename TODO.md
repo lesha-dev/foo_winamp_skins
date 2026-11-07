@@ -47,7 +47,7 @@
       - Elapsed/remaining items in the menu.
       - An "Autoscroll songname" toggle.
   - [x] Random skin option
-  - [ ] Reload skin button
+  - [x] Reload skin button
   - [ ] Visualizer: clicking should cycle modes only while playing.
   - [ ] Playlist: Bigger/smaller font.
   - [ ] Playlist: The "Current" colour should stay while stopped.
