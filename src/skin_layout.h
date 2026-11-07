@@ -1,7 +1,7 @@
 #pragma once
 
 // Classic Winamp 2.x main window geometry: sprite rects in the skin bitmaps and their
-// destination positions in the 275x116 window. Coordinates cross-checked against Webamp.
+// destination positions in the 275x116 window.
 namespace wsz::layout {
 
 struct Sprite { int x, y, w, h; };

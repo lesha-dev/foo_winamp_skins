@@ -7,7 +7,6 @@ DECLARE_COMPONENT_VERSION(COMPONENT_NAME, COMPONENT_VERSION,
     "Made by Alexey Komarov\n"
     COMPONENT_URL "\n\n"
     "Credits:\n"
-    "- Webamp by Jordan Eldredge (MIT): sprite layout cross-checks, EQ presets data\n"
     "- miniz by Rich Geldreich (MIT): .wsz archive reading\n"
     "- foobar2000 SDK by Peter Pawlowski\n"
     "Winamp is a trademark of its owners; its classic skin format and behaviour served as the reference. "

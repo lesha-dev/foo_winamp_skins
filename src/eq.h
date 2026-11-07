@@ -31,13 +31,6 @@ void sync();                    // reads the current chain state (startup)
 void begin_edit();
 void end_edit();
 
-struct Preset {
-    std::string name;
-    Values values;
-};
-// Winamp's built-in presets.
-const std::vector<Preset>& presets();
-
 // foobar2000 .feq preset files (text, one dB value per line for its 18 bands). Read and written
 // through fb2k's Equalizer bands directly (exact round trip); our 10 sliders follow from them.
 // load_feq applies the preset itself. Main thread only.

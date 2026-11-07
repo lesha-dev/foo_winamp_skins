@@ -5,6 +5,7 @@
 #include "main_window.h"
 #include "player.h"
 
+#include <array>
 #include <cmath>
 
 namespace wsz {
@@ -57,30 +58,21 @@ struct R { int x, y, w, h; bool in(POINT p) const { return p.x >= x && p.x < x +
 
 int slider_x(int i) { return i < 0 ? pos_preamp.x : band_x0 + i * band_dx; }
 
-// Natural cubic spline through the 10 band points (Webamp's EQ graph), evaluated per pixel.
-std::vector<double> spline(const std::vector<double>& xs, const std::vector<double>& ys) {
-    const size_t n = xs.size();
-    std::vector<double> a(ys), b(n), d(n), h(n - 1), alpha(n), c(n), l(n), mu(n), z(n);
-    for (size_t i = 0; i + 1 < n; ++i) h[i] = xs[i + 1] - xs[i];
-    for (size_t i = 1; i + 1 < n; ++i) alpha[i] = 3 / h[i] * (a[i + 1] - a[i]) - 3 / h[i - 1] * (a[i] - a[i - 1]);
-    l[0] = 1;
-    for (size_t i = 1; i + 1 < n; ++i) {
-        l[i] = 2 * (xs[i + 1] - xs[i - 1]) - h[i - 1] * mu[i - 1];
-        mu[i] = h[i] / l[i];
-        z[i] = (alpha[i] - h[i - 1] * z[i - 1]) / l[i];
-    }
-    l[n - 1] = 1;
-    for (size_t j = n - 1; j-- > 0;) {
-        c[j] = z[j] - mu[j] * c[j + 1];
-        b[j] = (a[j + 1] - a[j]) / h[j] - h[j] * (c[j + 1] + 2 * c[j]) / 3;
-        d[j] = (c[j + 1] - c[j]) / (3 * h[j]);
-    }
+// EQ graph curve as Winamp draws it: a cardinal spline (Kochanek-Bartels with tension 0.1, no
+// continuity/bias) through the 10 band heights, ends padded by repeating the first/last band, sampled
+// every 1/12 of a band for the 109 graph columns. Input/output are rows from the graph top (0..18.x).
+std::vector<double> eq_curve(const std::array<double, eq::band_count>& rows) {
+    constexpr double tension = 0.1, s = (1 - tension) / 2;
+    constexpr int n = eq::band_count;
+    auto key = [&](int i) { return rows[std::clamp(i, 0, n - 1)]; };
     std::vector<double> out;
-    for (int x = 0; x <= static_cast<int>(xs.back()); ++x) {
-        size_t j = std::min(n - 2, static_cast<size_t>(x / h[0]));
-        while (j > 0 && x < xs[j]) --j;
-        const double t = x - xs[j];
-        out.push_back(a[j] + b[j] * t + c[j] * t * t + d[j] * t * t * t);
+    for (int x = 0; x < 109; ++x) {
+        const int i = x / 12;
+        const double t = (x % 12) / 12.0;
+        const double p0 = key(i), p1 = key(i + 1);
+        const double m0 = s * (key(i + 1) - key(i - 1)), m1 = s * (key(i + 2) - key(i));
+        const double t2 = t * t, t3 = t2 * t;
+        out.push_back((2 * t3 - 3 * t2 + 1) * p0 + (t3 - 2 * t2 + t) * m0 + (-2 * t3 + 3 * t2) * p1 + (t3 - t2) * m1);
     }
     return out;
 }
@@ -251,37 +243,26 @@ void EqWindow::on_wheel(int delta) {
 }
 
 void EqWindow::show_presets_menu() {
-    enum : UINT { id_reset = 1, id_load_feq, id_save_feq, id_preset_first = 0x100 };
-    HMENU load = CreatePopupMenu();
-    const auto& list = eq::presets();
-    for (size_t i = 0; i < list.size(); ++i)
-        AppendMenuW(load, MF_STRING, id_preset_first + i, pfc::stringcvt::string_wide_from_utf8(list[i].name.c_str()));
+    // Same two actions as foobar2000's Equalizer: presets are .feq files.
+    enum : UINT { id_load = 1, id_save };
     HMENU menu = CreatePopupMenu();
-    AppendMenuW(menu, MF_POPUP | MF_STRING, reinterpret_cast<UINT_PTR>(load), L"&Load");
-    AppendMenuW(menu, MF_STRING, id_load_feq, L"Load from &FEQ file...");
-    AppendMenuW(menu, MF_STRING, id_save_feq, L"&Save to FEQ file...");
-    AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
-    AppendMenuW(menu, MF_STRING, id_reset, L"&Reset");
+    AppendMenuW(menu, MF_STRING, id_load, L"&Load preset...");
+    AppendMenuW(menu, MF_STRING, id_save, L"&Save preset...");
     POINT pt = { (pos_presets.x) * m_scale, (pos_presets.y + presets_btn.h) * m_scale };
     ClientToScreen(m_wnd, &pt);
     const UINT cmd = TrackPopupMenu(menu, TPM_RETURNCMD | TPM_RIGHTBUTTON | TPM_NONOTIFY, pt.x, pt.y, 0, m_wnd, nullptr);
     DestroyMenu(menu);
     static const char feq_filter[] = "foobar2000 EQ presets (*.feq)|*.feq|All files|*.*";
-    if (cmd == id_reset) {
-        eq::set(eq::Values{});
-    } else if (cmd == id_load_feq) {
-        pfc::string8 path;
+    pfc::string8 path;
+    if (cmd == id_load) {
         if (uGetOpenFileName(m_wnd, feq_filter, 0, "feq", "Load EQ preset", nullptr, path, FALSE)) {
             if (!eq::load_feq(path)) popup_message::g_show(pfc::format("Not a foobar2000 EQ preset file:\n", path), "Equalizer", popup_message::icon_error);
         }
-    } else if (cmd == id_save_feq) {
-        pfc::string8 path;
+    } else if (cmd == id_save) {
         if (uGetOpenFileName(m_wnd, feq_filter, 0, "feq", "Save EQ preset", nullptr, path, TRUE)) {
             if (!eq::save_feq(path))
                 popup_message::g_show(pfc::format("Cannot write file:\n", path), "Equalizer", popup_message::icon_error);
         }
-    } else if (cmd >= id_preset_first && cmd < id_preset_first + list.size()) {
-        eq::set(list[cmd - id_preset_first].values);
     }
     invalidate();
 }
@@ -328,15 +309,14 @@ void EqWindow::render_normal(Canvas& c) {
     constexpr int gh = 19;
     const int py = static_cast<int>(std::lround((100 - vals.preamp) / 100.0 * (gh - 1)));
     c.blit(img, preamp_line, { pos_graph.x, pos_graph.y + py });
-    std::vector<double> xs, ys;
-    for (int i = 0; i < eq::band_count; ++i) {
-        xs.push_back(i * 12.0);
-        ys.push_back((100 - vals.bands[i]) / 100.0 * (gh - 1));
-    }
-    const auto curve = spline(xs, ys);
-    int last = std::clamp(static_cast<int>(std::lround(curve[0])), 0, gh - 1);
+    // Winamp keeps bands as 0..63 from the top and maps them onto the 19 rows with *19/64, truncating.
+    std::array<double, eq::band_count> rows{};
+    for (int i = 0; i < eq::band_count; ++i) rows[i] = (100 - vals.bands[i]) * 63 / 100.0 * gh / 64.0;
+    const auto curve = eq_curve(rows);
+    int last = -1;
     for (size_t x = 0; x < curve.size(); ++x) {
-        const int y = std::clamp(static_cast<int>(std::lround(curve[x])), 0, gh - 1);
+        const int y = std::clamp(static_cast<int>(curve[x]), 0, gh - 1);
+        if (last < 0) last = y;
         for (int yy = std::min(y, last); yy <= std::max(y, last); ++yy) {
             const bool have = img.height > graph_colors.y + yy && img.width > graph_colors.x;
             const uint32_t col = have ? img.pixels[size_t(graph_colors.y + yy) * img.width + graph_colors.x] : 0x00ff00u;

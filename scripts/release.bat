@@ -1,6 +1,6 @@
 @echo off
 rem Prepare out\foo_winamp_skins-<ver>.fb2k-component: x86 DLL at the root, x64 DLL in x64\;
-rem README.md, LICENSE and the third-party license notices (miniz, Webamp) in both folders.
+rem README.md, LICENSE and the third-party license notice (miniz) in both folders.
 rem Rebuilds Release x86 and x64 with MSBuild first (found via vswhere), then packs
 rem out\Win32\Release and out\x64\Release.
 setlocal
@@ -59,13 +59,12 @@ for %%P in ("%PKG%" "%PKG%\x64") do (
     copy /y "%ROOT%\README.md" "%%~P\" >nul || exit /b 1
     copy /y "%ROOT%\LICENSE" "%%~P\LICENSE.txt" >nul || exit /b 1
     copy /y "%ROOT%\3rdParty\miniz\LICENSE" "%%~P\LICENSE-miniz.txt" >nul || exit /b 1
-    copy /y "%ROOT%\licenses\webamp-LICENSE.txt" "%%~P\LICENSE-webamp.txt" >nul || exit /b 1
 )
 rem Windows tar (bsdtar) writes zip entries with "/" separators; Compress-Archive in
 rem PowerShell 5.1 uses "\", so foobar2000 would not see the x64 folder. Files go at the archive root.
 set "COMPONENT=%OUT%\foo_winamp_skins-%VER%.fb2k-component"
 if exist "%COMPONENT%" del /q "%COMPONENT%"
-tar -c --format zip -f "%COMPONENT%" -C "%PKG%" foo_winamp_skins.dll README.md LICENSE.txt LICENSE-miniz.txt LICENSE-webamp.txt x64 || exit /b 1
+tar -c --format zip -f "%COMPONENT%" -C "%PKG%" foo_winamp_skins.dll README.md LICENSE.txt LICENSE-miniz.txt x64 || exit /b 1
 rmdir /s /q "%STAGE%"
 echo %COMPONENT%
 exit /b 0

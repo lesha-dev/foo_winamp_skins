@@ -7,7 +7,6 @@
 - [ ] Double click on the visualizer: Winamp opens MilkDrop; decide what fb2k should open (e.g. a vis component / Spectrum popup). Support winamp visualizations.
 - [ ] Support Winamp Modern skins (.wal: XML + MAKI scripts, freeform layouts) — essentially a separate engine.
 - [ ] After installing, the license is accepted twice
-- [ ] Get rid of webamp license
 - [ ] UX polishing/check againts Winamp features
   - [ ] Drag & drop. Winamp:
      - Main window: the drop replaces the playlist and plays; Shift adds instead.
@@ -73,7 +72,7 @@
 - [x] Skins folder `<profile>\winamp-skins`, listed in the context menu (Skins submenu).
 - [x] Preferences page (Display > Winamp Skins): skin list with preview, folder actions; Options subpage (hotkeys / balance DSP / centre snap, dim titlebars).
 - [x] Balance via own DSP ("Winamp Skins balance"), auto-inserted last in the chain on first off-centre use. Lags by the output buffer length.
-- [x] Equalizer window (drives fb2k's built-in Equalizer: 10 Winamp bands + preamp mapped onto its 18 bands, synced both ways; built-in presets) and playlist editor (active fb2k playlist).
+- [x] Equalizer window (drives fb2k's built-in Equalizer: 10 Winamp bands + preamp mapped onto its 18 bands, synced both ways; .feq preset load/save) and playlist editor (active fb2k playlist).
 - [x] Playlist switching: Playlists submenu in the context menu (sets fb2k's active playlist).
 - [x] Visualizer matches Winamp's classic analyser/scope (verified against recordings); Winamp vis options on the Preferences > Display > Winamp Skins > Visualization page (mode, analyzer style, thin/thick bands, peaks, scope style, refresh rate, falloffs).
 - [x] Skin cursors (*.cur) are ignored.
@@ -96,6 +95,6 @@
 - [x] Use foobar's playlist view inside Winamp's playlist (playlist menu switch "Use foobar's Playlist View", also Elements > Playlist View)
 - [x] Add support for cover art (Album Art Viewer via the Elements menu)
 - [x] Elements menu: any Default UI element in a Winamp generic window (gen.bmp frame, pledit.bmp fallback)
-- [x] Credits: Webamp (sprite layout, EQ presets data), miniz, foobar2000 SDK; show in README / About.
+- [x] Credits: miniz, foobar2000 SDK; show in README / About.
 - [x] Readme
 - [x] Support Easter egg main window header

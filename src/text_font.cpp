@@ -6,7 +6,7 @@ namespace {
 
 struct Glyph { int8_t row, col; };
 
-// Glyph positions in text.bmp, as used by Winamp 2.x (cross-checked against Webamp).
+// Glyph positions in text.bmp, as used by Winamp 2.x.
 Glyph lookup(wchar_t ch) {
     if (ch >= L'A' && ch <= L'Z') ch = static_cast<wchar_t>(ch - L'A' + L'a');
     if (ch >= L'a' && ch <= L'z') return { 0, static_cast<int8_t>(ch - L'a') };

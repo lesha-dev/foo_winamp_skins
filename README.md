@@ -28,7 +28,6 @@ MIT, see [LICENSE](LICENSE). Third-party code keeps its own license:
 |---|---|---|
 | foobar2000 SDK (incl. pfc) | BSD-style, see `3rdParty/foobar2000_sdk/sdk-license.txt` | linked statically |
 | miniz | MIT, see `3rdParty/miniz/LICENSE` | compiled in; its notice must ship with binaries |
-| Webamp | MIT, see `licenses/webamp-LICENSE.txt` | EQ presets data; its notice ships with binaries |
 
 Winamp and foobar2000 are trademarks of their respective owners.
 
@@ -38,7 +37,6 @@ Winamp skins remain the property of their authors and are not included here.
 
 ## Credits
 
-- [Webamp](https://github.com/captbaritone/webamp) by Jordan Eldredge: sprite layout cross-checks, EQ presets data.
 - [miniz](https://github.com/richgel999/miniz) by Rich Geldreich: .wsz archive reading.
 - [foobar2000 SDK](https://www.foobar2000.org/SDK) by Peter Pawlowski.
 - Winamp (Nullsoft): its classic skin format and behaviour served as the reference; no Winamp code or assets are included.

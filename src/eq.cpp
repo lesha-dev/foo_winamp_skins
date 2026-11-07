@@ -34,17 +34,6 @@ void load() {
     });
 }
 
-// Built-in preset band value (1..64, 1 = +12 dB at top... stored inverted) -> slider 0..100.
-int from_preset(int v) { return std::clamp(static_cast<int>(std::lround((v - 1) / 63.0 * 100.0)), 0, 100); }
-
-Values make(int preamp, std::initializer_list<int> bands) {
-    Values v;
-    v.preamp = from_preset(preamp);
-    int i = 0;
-    for (int b : bands) v.bands[i++] = from_preset(b);
-    return v;
-}
-
 // foobar2000's built-in Equalizer (foo_dsp_eq): 18 bands, preset data = one byte per band, 20 - dB (0..40).
 constexpr GUID builtin_guid = { 0x82aef845, 0xdcc3, 0x4da5, { 0x9d, 0x80, 0xe9, 0xa9, 0x72, 0xb2, 0x14, 0x0d } };
 constexpr int builtin_count = 18;
@@ -248,29 +237,6 @@ void end_edit() {
     g_editing = false;
     flush_push();
     g_live_edit.release();
-}
-
-const std::vector<Preset>& presets() {
-    static const std::vector<Preset> list = {
-        { "Classical", make(33, { 33, 33, 33, 33, 33, 33, 20, 20, 20, 16 }) },
-        { "Club", make(33, { 33, 33, 38, 42, 42, 42, 38, 33, 33, 33 }) },
-        { "Dance", make(33, { 48, 44, 36, 32, 32, 22, 20, 20, 32, 32 }) },
-        { "Full Bass", make(33, { 48, 48, 48, 42, 35, 25, 18, 15, 14, 14 }) },
-        { "Full Bass & Treble", make(33, { 44, 42, 33, 20, 24, 35, 46, 50, 52, 52 }) },
-        { "Full Treble", make(33, { 16, 16, 16, 25, 37, 50, 58, 58, 58, 60 }) },
-        { "Laptop speakers/headphones", make(33, { 40, 50, 41, 26, 28, 35, 40, 48, 53, 56 }) },
-        { "Large hall", make(33, { 49, 49, 42, 42, 33, 24, 24, 24, 33, 33 }) },
-        { "Live", make(33, { 24, 33, 39, 41, 42, 42, 39, 37, 37, 36 }) },
-        { "Party", make(33, { 44, 44, 33, 33, 33, 33, 33, 33, 44, 44 }) },
-        { "Pop", make(33, { 29, 40, 44, 45, 41, 30, 28, 28, 29, 29 }) },
-        { "Reggae", make(33, { 33, 33, 31, 22, 33, 43, 43, 33, 33, 33 }) },
-        { "Rock", make(33, { 45, 40, 23, 19, 26, 39, 47, 50, 50, 50 }) },
-        { "Ska", make(33, { 28, 24, 25, 31, 39, 42, 47, 48, 50, 48 }) },
-        { "Soft", make(33, { 40, 35, 30, 28, 30, 39, 46, 48, 50, 52 }) },
-        { "Soft Rock", make(33, { 39, 39, 36, 31, 25, 23, 26, 31, 37, 47 }) },
-        { "Techno", make(33, { 45, 42, 33, 23, 24, 33, 45, 48, 48, 47 }) },
-    };
-    return list;
 }
 
 bool load_feq(const char* path_utf8) {

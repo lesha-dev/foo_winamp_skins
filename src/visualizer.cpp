@@ -5,7 +5,7 @@
 #include <complex>
 #include <numbers>
 
-// Behaviour follows Winamp's classic visualizer (studied from its published source; no code taken):
+// Behaviour follows Winamp's classic visualizer:
 // - analyser: 512-sample Hann-windowed FFT of L+R, magnitudes * 0.5, folded into 75 values on a
 //   2^(x/12) bin warp with Hermite-interpolated partial bins, clamped to 255;
 // - bars: each 4-column group shows the integer mean of its 4 values (thin bands: one value per
