@@ -35,8 +35,7 @@
   - [x] Pass hotkeys to focused Default Panel (eg Alt+Enter on selected track doesn't work)
   - [x] Mouse wheel volume text: Winamp shows "Volume: N%" in the song title, also for ↑/↓.
   - [x] Double-click on the song title opens file info
-  - [ ] Shift+drag on the seekbar seeks live.
-  - [ ] Sliders keep the grab offset instead of centring on the cursor (volume, balance, seek, EQ). Shift disables the balance and EQ 0 dB snap.
+  - [x] Sliders keep the grab offset instead of centring on the cursor (volume, balance, seek, EQ). Shift disables the balance and EQ 0 dB snap.
   - [ ] EQ:
       - Clicking the +12/0/−12 labels sets all bands.
       - One drag can sweep across several sliders.

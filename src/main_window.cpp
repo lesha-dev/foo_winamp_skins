@@ -800,7 +800,29 @@ void MainWindow::on_lbutton_down(POINT p) {
     m_pressed = r->id;
     m_pressed_inside = true;
     SetCapture(m_wnd);
-    if (m_pressed == Control::volume || m_pressed == Control::balance || m_pressed == Control::posbar) update_slider(p);
+    if (m_pressed == Control::volume || m_pressed == Control::balance || m_pressed == Control::posbar) {
+        // Like Winamp: grabbing the thumb keeps the cursor's offset in it; clicking elsewhere centres it.
+        auto pc = playback_control::get();
+        int x = 0, w = 0;
+        if (m_pressed == Control::volume) {
+            x = L::pos_volume.x + static_cast<int>(player::db_to_slider(pc->get_volume()) * L::volume_travel);
+            w = L::volume_thumb.w;
+        } else if (m_pressed == Control::balance) {
+            x = L::pos_balance.x + 12 + static_cast<int>(balance::get() * 127) * 12 / 127;
+            w = L::balance_thumb.w;
+        } else if (!m_shade) {
+            metadb_handle_ptr track;
+            double pos = 0;
+            if (pc->get_now_playing(track) && track->get_length() > 0) pos = std::clamp(pc->playback_get_position() / track->get_length(), 0.0, 1.0);
+            x = L::pos_posbar.x + static_cast<int>(pos * 256) * (L::posbar_bg.w - L::posbar_thumb.w) / 256;
+            w = L::posbar_thumb.w;
+        } else {
+            x = INT_MIN; // shade posbar: the cursor is the thumb's centre
+            w = L::shade_posbar_thumb.w;
+        }
+        m_grab = p.x >= x && p.x < x + w ? p.x - x : w / 2;
+        update_slider(p);
+    }
     if (m_pressed == Control::marquee) m_marquee_drag_x = p.x;
     invalidate();
 }
@@ -853,7 +875,7 @@ void MainWindow::cancel_drag() {
 
 void MainWindow::update_slider(POINT p) {
     auto ratio = [&](int x0, int w, int thumb_w) {
-        return std::clamp(double(p.x - x0 - thumb_w / 2) / double(w - thumb_w), 0.0, 1.0);
+        return std::clamp(double(p.x - x0 - m_grab) / double(w - thumb_w), 0.0, 1.0);
     };
     if (m_status_timed) { KillTimer(m_wnd, status_timer_id); m_status_timed = false; }
     switch (m_pressed) {
@@ -865,7 +887,7 @@ void MainWindow::update_slider(POINT p) {
     }
     case Control::balance: {
         double b = ratio(L::pos_balance.x, L::balance_bg.w, L::balance_thumb.w) * 2.0 - 1.0;
-        if (std::abs(b) * 100 < static_cast<double>(config::balance_snap.get())) b = 0;
+        if (GetKeyState(VK_SHIFT) >= 0 && std::abs(b) * 100 < static_cast<double>(config::balance_snap.get())) b = 0; // Shift: no snap
         m_drag_value = b;
         balance::set(b);
         const int pct = static_cast<int>(std::abs(b) * 100 + 0.5);

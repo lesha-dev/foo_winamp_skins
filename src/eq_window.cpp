@@ -57,6 +57,12 @@ constexpr int shade_vol_travel = 94, shade_bal_travel = 39; // drawn thumb x 61.
 struct R { int x, y, w, h; bool in(POINT p) const { return p.x >= x && p.x < x + w && p.y >= y && p.y < y + h; } };
 
 int slider_x(int i) { return i < 0 ? pos_preamp.x : band_x0 + i * band_dx; }
+// Thumb top within the slider for a value: 100..50 -> 0..25, 49..0 -> 26..51 (0 dB sits at 25, as in Winamp).
+int thumb_offset(int v) {
+    constexpr int half = slider_travel / 2;
+    return v >= 50 ? static_cast<int>(std::lround((100 - v) * half / 50.0))
+                   : half + 1 + static_cast<int>(std::lround((49 - v) * half / 49.0));
+}
 
 // EQ graph curve as Winamp draws it: a cardinal spline (Kochanek-Bartels with tension 0.1, no
 // continuity/bias) through the 10 band heights, ends padded by repeating the first/last band, sampled
@@ -156,6 +162,13 @@ bool EqWindow::is_control(POINT p) const { return hit(p) != Part::none; }
 void EqWindow::on_mouse_down(POINT p, bool) {
     m_pressed = hit(p);
     m_inside = true;
+    if (m_pressed >= Part::preamp && m_pressed != Part::volume && m_pressed != Part::balance) {
+        // Like Winamp: grabbing the thumb keeps the cursor's offset in it; clicking elsewhere centres it.
+        const eq::Values vals = eq::get();
+        const int v = m_pressed == Part::preamp ? vals.preamp : vals.bands[static_cast<int>(m_pressed) - static_cast<int>(Part::band0)];
+        const int top = band_y + thumb_offset(v);
+        m_grab = p.y >= top && p.y < top + thumb.h ? p.y - top : thumb.h / 2;
+    }
     if (m_pressed >= Part::preamp) drag_to(p);
     invalidate();
 }
@@ -209,19 +222,21 @@ void EqWindow::drag_to(POINT p) {
     if (m_pressed == Part::balance) {
         if (!balance::enabled()) return;
         double b = std::clamp((p.x - pos_shade_bal.x) / 42.0, 0.0, 1.0) * 2 - 1;
-        if (std::abs(b) * 100 < static_cast<double>(config::balance_snap.get())) b = 0;
+        if (GetKeyState(VK_SHIFT) >= 0 && std::abs(b) * 100 < static_cast<double>(config::balance_snap.get())) b = 0; // Shift: no snap
         balance::set(b);
         if (b != 0) balance::ensure_dsp();
         const int pct = static_cast<int>(std::abs(b) * 100 + 0.5);
         status(pct == 0 ? pfc::string8("Balance: Center") : pfc::format("Balance: ", pct, "% ", b < 0 ? "Left" : "Right"));
         return;
     }
-    // Vertical EQ slider: thumb centre follows the cursor.
-    // 52 thumb positions; the two middle ones both mean 0 dB so the centre is reachable.
-    const int off = std::clamp(static_cast<int>(p.y) - band_y - thumb.h / 2, 0, slider_travel);
+    // Vertical EQ slider: the thumb follows the cursor at the grab offset.
+    // 52 thumb positions; the two middle ones both mean 0 dB so the centre is easy to hit. Shift drops
+    // that snap: the lower one becomes the next step below 0 dB.
+    const int off = std::clamp(static_cast<int>(p.y) - band_y - m_grab, 0, slider_travel);
     constexpr int half = slider_travel / 2; // 25
-    const int v = off <= half ? 100 - (off * 50 + half / 2) / half
-                              : 50 - ((off - half - 1) * 50 + half / 2) / half;
+    int v = off <= half ? 100 - (off * 50 + half / 2) / half
+                        : 50 - ((off - half - 1) * 50 + half / 2) / half;
+    if (off == half + 1 && GetKeyState(VK_SHIFT) < 0) v = 49;
     eq::begin_edit();
     eq::Values vals = eq::get();
     const auto db = [](int x) { return pfc::format(x >= 50 ? "+" : "-", pfc::format_float(std::abs(eq::to_db(x)), 0, 1), " dB"); };
@@ -292,10 +307,7 @@ void EqWindow::render_normal(Canvas& c) {
     auto slider = [&](int x, int v, bool pressed) {
         const int frame = static_cast<int>(std::lround(v / 100.0 * 27));
         c.blit(img, slider_frame_x + (frame % 14) * 15, slider_frame_y + (frame / 14) * 65, slider_w, slider_h, x, band_y);
-        // Inverse of drag_to: 100..50 -> 0..25, 49..0 -> 26..51 (0 dB sits at 25, as in Winamp).
-        constexpr int half = slider_travel / 2;
-        const int ty = band_y + (v >= 50 ? static_cast<int>(std::lround((100 - v) * half / 50.0))
-                                         : half + 1 + static_cast<int>(std::lround((49 - v) * half / 49.0)));
+        const int ty = band_y + thumb_offset(v);
         c.blit(img, pressed ? thumb_down : thumb, { x + 1, ty });
     };
     slider(pos_preamp.x, vals.preamp, m_pressed == Part::preamp);

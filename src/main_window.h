@@ -134,6 +134,7 @@ private:
     Control m_pressed = Control::none; // control under mouse capture
     bool m_pressed_inside = false;
     double m_drag_value = 0;           // slider value while dragging (0..1, balance -1..1)
+    int m_grab = 0;                    // cursor x within the dragged slider thumb
     pfc::string8 m_status;             // slider feedback shown instead of the title
     bool m_status_timed = false;       // m_status is the "Volume: N%" note, cleared by status_timer_id
     void on_volume_changed();

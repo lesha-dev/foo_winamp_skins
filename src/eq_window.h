@@ -48,6 +48,7 @@ private:
     bool m_shade = false;
     Part m_pressed = Part::none;
     bool m_inside = false;
+    int m_grab = 0; // cursor y within the dragged EQ slider thumb
 };
 
 } // namespace wsz
