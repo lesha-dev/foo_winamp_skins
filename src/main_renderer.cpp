@@ -52,16 +52,18 @@ void draw_time(Canvas& c, const Skin& skin, const MainState& st) {
     const Image& ex = skin.bitmap(SkinBitmap::nums_ex);
     const Image& digits = ex.empty() ? skin.bitmap(SkinBitmap::numbers) : ex;
 
-    const int minutes = std::min(st.time_seconds / 60, 99);
+    const int minutes = std::min(st.time_seconds / 60, 999);
     const int seconds = st.time_seconds % 60;
-    const int d[4] = { minutes / 10, minutes % 10, seconds / 10, seconds % 10 };
+    const int d[4] = { minutes / 10 % 10, minutes % 10, seconds / 10, seconds % 10 };
     for (int i = 0; i < 4; ++i) c.blit(digits, d[i] * L::digit_w, 0, L::digit_w, L::digit_h, L::pos_digits[i].x, L::pos_digits[i].y);
 
-    // The 9px blank cell (90,0) covers the minus slot; numbers.bmp has it too when 99px wide.
-    if (!ex.empty()) c.blit(ex, st.time_negative ? L::minus_nums_ex : L::no_minus_nums_ex, L::pos_minus);
-    else {
-        if (digits.width >= L::no_minus_nums_ex.x + L::no_minus_nums_ex.w) c.blit(digits, L::no_minus_nums_ex, L::pos_minus);
-        if (st.time_negative) c.blit(digits, L::minus_numbers, L::pos_minus_dash);
+    // The minus slot: the 9px blank cell (90,0) (numbers.bmp has it too when 99px wide), then the
+    // hundreds of minutes, then the minus on top, like Winamp (nums_ex's minus hides the hundreds).
+    if (!ex.empty() || digits.width >= L::no_minus_nums_ex.x + L::no_minus_nums_ex.w) c.blit(digits, L::no_minus_nums_ex, L::pos_minus);
+    if (minutes >= 100) c.blit(digits, minutes / 100 * L::digit_w, 0, L::digit_w, L::digit_h, L::pos_minus.x, L::pos_minus.y);
+    if (st.time_negative) {
+        if (!ex.empty()) c.blit(ex, L::minus_nums_ex, L::pos_minus);
+        else c.blit(digits, L::minus_numbers, L::pos_minus_dash);
     }
 }
 
@@ -117,15 +119,19 @@ void draw_title_font(HDC dc, int scale, HFONT font, const MainState& st) {
 
 namespace {
 
-// Leading blanks use Winamp's blank cell, not the space glyph.
+// Leading blanks use Winamp's blank cell, not the space glyph. A 3-digit field shows larger values like
+// Winamp's kbps: 1000..9999 as hundreds with 'H' (1411 -> "14H"), from 10000 as ten-thousands with 'C'.
 void draw_number(Canvas& c, const Image& font, L::Pos pos, int value, int width) {
     if (value < 0) return;
     char buf[16];
-    snprintf(buf, sizeof(buf), "%*d", width, std::min(value, width == 3 ? 999 : 99));
+    if (width == 3 && value >= 10000) snprintf(buf, sizeof(buf), "%2dC", std::min(value / 10000, 99));
+    else if (width == 3 && value >= 1000) snprintf(buf, sizeof(buf), "%02dH", value / 100);
+    else snprintf(buf, sizeof(buf), "%*d", width, std::min(value, width == 3 ? 999 : 99));
     for (int i = 0; buf[i]; ++i) {
         const int x = pos.x + i * font_char_w;
         if (buf[i] == ' ') c.blit(font, L::text_blank, { x, pos.y });
-        else c.blit(font, (buf[i] - '0') * font_char_w, font_char_h, font_char_w, font_char_h, x, pos.y);
+        else if (buf[i] >= '0' && buf[i] <= '9') c.blit(font, (buf[i] - '0') * font_char_w, font_char_h, font_char_w, font_char_h, x, pos.y);
+        else { const char ch[2] = { buf[i], 0 }; draw_text(c, font, x, pos.y, ch); }
     }
 }
 
@@ -137,10 +143,15 @@ void render_shade(Canvas& c, const Skin& skin, const MainState& st) {
     draw_titlebar_buttons(c, title, st);
 
     if (st.show_time) {
-        // 3px minus (or blank) and text.bmp digits; the colon belongs to the background.
-        c.blit(font, st.time_negative ? 75 : 142, st.time_negative ? 6 : 0, 3, font_char_h, L::pos_shade_minus.x, L::pos_shade_minus.y);
-        const int m = std::min(st.time_seconds / 60, 99), s = st.time_seconds % 60;
-        const int d[4] = { m / 10, m % 10, s / 10, s % 10 };
+        // 3px minus (or blank) and text.bmp digits; the colon belongs to the background. From 100 minutes
+        // the hundreds digit takes x=129 and the minus moves 4px left, like Winamp.
+        const int m = std::min(st.time_seconds / 60, 999), s = st.time_seconds % 60;
+        const int y = L::pos_shade_minus.y;
+        c.blit(font, 142, 0, 3, font_char_h, L::pos_shade_minus.x - 4, y);
+        if (m >= 100) c.blit(font, m / 100 * font_char_w, font_char_h, font_char_w, font_char_h, L::pos_shade_minus.x - 1, y);
+        else c.blit(font, 142, 0, 3, font_char_h, L::pos_shade_minus.x, y);
+        if (st.time_negative) c.blit(font, 75, 6, 3, font_char_h, L::pos_shade_minus.x - (m >= 100 ? 4 : 0), y);
+        const int d[4] = { m / 10 % 10, m % 10, s / 10, s % 10 };
         for (int i = 0; i < 4; ++i)
             c.blit(font, d[i] * font_char_w, font_char_h, font_char_w, font_char_h, L::shade_time_x[i], L::pos_shade_minus.y);
     }
