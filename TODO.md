@@ -36,7 +36,7 @@
   - [x] Mouse wheel volume text: Winamp shows "Volume: N%" in the song title, also for ↑/↓.
   - [x] Double-click on the song title opens file info
   - [x] Sliders keep the grab offset instead of centring on the cursor (volume, balance, seek, EQ). Shift disables the balance and EQ 0 dB snap.
-  - [ ] EQ:
+  - [x] EQ:
       - Clicking the +12/0/−12 labels sets all bands.
       - One drag can sweep across several sliders.
   - [ ] Shaded playlist: the wheel and ↑/↓ should change track; now they scroll the hidden list.

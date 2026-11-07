@@ -181,6 +181,12 @@ void EqWindow::on_mouse_down(POINT p, bool) {
 
 void EqWindow::on_mouse_move(POINT p) {
     if (m_pressed == Part::none) return;
+    // Like Winamp, a band drag sweeps: moving onto another band's slider continues the drag there
+    // (at the same grab offset). The preamp doesn't take part.
+    if (m_pressed >= Part::band0 && m_pressed < Part::volume) {
+        const Part over = hit(p);
+        if (over >= Part::band0 && over < Part::volume) m_pressed = over;
+    }
     if (m_pressed >= Part::preamp) drag_to(p);
     else m_inside = hit(p) == m_pressed;
     invalidate();
