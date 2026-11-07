@@ -48,7 +48,7 @@
       - An "Autoscroll songname" toggle.
   - [x] Random skin option
   - [x] Reload skin button
-  - [ ] Visualizer: clicking should cycle modes only while playing.
+  - [x] Visualizer: clicking should cycle modes only while playing.
   - [ ] Playlist: Bigger/smaller font.
   - [ ] Playlist: The "Current" colour should stay while stopped.
   - [ ] Windows should be pulled back on screen after a display change.

@@ -961,7 +961,9 @@ void MainWindow::activate_control(Control id) {
         show_vis_menu(pt);
         break;
     }
-    case Control::vis: set_vis_mode(static_cast<VisMode>((static_cast<int>(m_vis.mode()) + 1) % 3)); break;
+    case Control::vis: // like Winamp, clicking cycles the modes only while something plays
+        if (playback_control::get()->is_playing()) set_vis_mode(static_cast<VisMode>((static_cast<int>(m_vis.mode()) + 1) % 3));
+        break;
     case Control::prev: player::prev_button(); break;
     case Control::play: player::play(); break;
     case Control::pause: player::pause(); break;
