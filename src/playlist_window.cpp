@@ -501,8 +501,11 @@ void PlaylistWindow::on_mouse_down(POINT p, bool dbl) {
             pm->activeplaylist_set_selection_single(item, !pm->activeplaylist_is_item_selected(item));
             m_anchor = item;
         } else {
+            // A selected row keeps the selection for dragging it; a click without a drag reduces it on release.
             if (!pm->activeplaylist_is_item_selected(item))
                 pm->activeplaylist_set_selection(pfc::bit_array_true(), pfc::bit_array_one(item));
+            else
+                m_reduce_to = item;
             m_anchor = item;
             m_drag_row = row;
             m_drag_reorder = true;
@@ -575,6 +578,7 @@ void PlaylistWindow::on_mouse_move(POINT p) {
         const int count = static_cast<int>(playlist_manager::get()->activeplaylist_get_item_count());
         const int row = std::clamp(static_cast<int>(m_scroll) + static_cast<int>((p.y - r.y) / row_h) - (p.y < r.y ? 1 : 0), 0, std::max(0, count - 1));
         if (row != m_drag_row) {
+            m_reduce_to = SIZE_MAX;
             playlist_manager::get()->activeplaylist_move_selection(row - m_drag_row);
             m_drag_row = row;
             ensure_visible(static_cast<size_t>(row));
@@ -624,6 +628,12 @@ void PlaylistWindow::on_mouse_up(POINT p) {
     }
     const Part part = m_pressed;
     m_pressed = Part::none;
+    if (part == Part::list && m_reduce_to != SIZE_MAX) {
+        auto pm = playlist_manager::get();
+        if (m_reduce_to < pm->activeplaylist_get_item_count())
+            pm->activeplaylist_set_selection(pfc::bit_array_true(), pfc::bit_array_one(m_reduce_to));
+    }
+    m_reduce_to = SIZE_MAX;
     update_host_clip();
     const bool inside = hit(p) == part;
     const int hover = m_menu_hover;
@@ -660,6 +670,7 @@ void PlaylistWindow::on_mouse_up(POINT p) {
 
 void PlaylistWindow::on_mouse_leave_capture() {
     m_menu_open = false;
+    m_reduce_to = SIZE_MAX;
     m_pressed = Part::none;
     update_host_clip();
     m_menu_hover = -1;

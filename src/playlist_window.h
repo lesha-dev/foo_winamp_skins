@@ -122,6 +122,7 @@ private:
     SIZE m_drag_extra = {};
     int m_drag_row = -1;          // reorder drag: row under the cursor last time
     bool m_drag_reorder = false;
+    size_t m_reduce_to = SIZE_MAX; // plain click on a selected row: select only it on mouse-up unless dragged
     int m_thumb_grab = 0;         // scrollbar: cursor offset within the thumb
 
     bool m_time_show = false, m_time_negative = false;
