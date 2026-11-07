@@ -44,6 +44,8 @@ public:
     void apply_display_options(); // after the Options page changed
     void on_eq_changed();
     void set_status(const char* text);  // slider feedback in the title area; empty/null restores the title
+    // Mouse wheel on the main window or equalizer: volume.
+    static void wheel(int delta);
     // The clicked window's actions (Double size, Windowshade, Rename, Close), then the common menu.
     // panel: the clicked window; null = the main window.
     void show_context_menu(POINT pt_screen, SkinWindow* panel = nullptr);
@@ -133,6 +135,8 @@ private:
     bool m_pressed_inside = false;
     double m_drag_value = 0;           // slider value while dragging (0..1, balance -1..1)
     pfc::string8 m_status;             // slider feedback shown instead of the title
+    bool m_status_timed = false;       // m_status is the "Volume: N%" note, cleared by status_timer_id
+    void on_volume_changed();
     int m_marquee_px = 0;              // title scroll position (px)
     int m_marquee_hold = 0;            // timer ticks before auto-scroll resumes after a drag
     int m_marquee_drag_x = 0;          // last cursor x while dragging the title

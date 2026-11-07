@@ -7,6 +7,8 @@
 - [ ] Double click on the visualizer: Winamp opens MilkDrop; decide what fb2k should open (e.g. a vis component / Spectrum popup). Support winamp visualizations.
 - [ ] Support Winamp Modern skins (.wal: XML + MAKI scripts, freeform layouts) — essentially a separate engine.
 - [ ] Check compatibility with Columns UI
+- [ ] (On request) Tray icon and notifications: tray/notifications are per-UI (Default UI's settings are private to foo_ui_std), so this needs our own options (minimize/close behaviour, tray icon mode, notifications).
+- [ ] (On request) "Show now playing" does nothing (would show the tray notification).
 - [ ] UX polishing/check againts Winamp features
   - [ ] Drag & drop. Winamp:
      - Main window: the drop replaces the playlist and plays; Shift adds instead.
@@ -30,11 +32,8 @@
      - Shift+L or Insert (folder), Ctrl+L (URL), Shift+X (file), the numpad aliases
      - Ctrl+T (elapsed/remaining), Alt+3 (file info), J (jump to file), Ctrl+J (jump to time; needs a dialog, M)
      Use foobar's hotkeys instead. Add no new hotkeys for features, missing in foobar.
-  - [ ] Tray icon: Default UI provides it and we don't. Use default UI's logic and flags to show/hide tray icon.
-  - [ ] "Show now playing" does nothing. Use default UI logic.
-  - [ ] Playlist editing commands: add Alt+↑/↓
   - [x] Pass hotkeys to focused Default Panel (eg Alt+Enter on selected track doesn't work)
-  - [ ] Mouse wheel volume text: Winamp shows "Volume: N%" in the song title, also for ↑/↓. Middle button + wheel seeks.
+  - [x] Mouse wheel volume text: Winamp shows "Volume: N%" in the song title, also for ↑/↓.
   - [ ] Double-click on the song title opens file info
   - [ ] Shift+drag on the seekbar seeks live.
   - [ ] Sliders keep the grab offset instead of centring on the cursor (volume, balance, seek, EQ). Shift disables the balance and EQ 0 dB snap.

@@ -237,10 +237,7 @@ void EqWindow::drag_to(POINT p) {
     eq::set(vals);
 }
 
-void EqWindow::on_wheel(int delta) {
-    if (delta > 0) playback_control::get()->volume_up();
-    else playback_control::get()->volume_down();
-}
+void EqWindow::on_wheel(int delta) { MainWindow::wheel(delta); }
 
 void EqWindow::show_presets_menu() {
     // Same two actions as foobar2000's Equalizer: presets are .feq files.

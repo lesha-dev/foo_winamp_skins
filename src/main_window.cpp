@@ -24,6 +24,8 @@ constexpr int titlebar_height = 14;
 constexpr UINT_PTR marquee_timer_id = 1;
 constexpr UINT marquee_interval_ms = 220;
 constexpr UINT_PTR vis_timer_id = 2;
+constexpr UINT_PTR status_timer_id = 3;
+constexpr UINT status_ms = 1000; // how long a volume change shows "Volume: N%"
 constexpr UINT vis_interval_ms = 25;
 
 // Top-level fb2k main menu groups, shown as submenus of the context menu.
@@ -214,7 +216,7 @@ public:
     void on_playback_dynamic_info(const file_info& info) override { m_w.on_dynamic_info(info); }
     void on_playback_dynamic_info_track(const file_info&) override { m_w.on_track_changed(); }
     void on_playback_time(double) override { m_w.invalidate(); }
-    void on_volume_change(float) override { m_w.invalidate(); }
+    void on_volume_change(float) override { m_w.on_volume_changed(); }
 
     void on_playback_order_changed(t_size) override { m_w.invalidate(); }
     void on_item_focus_change(t_size, t_size) override { m_w.invalidate(); }
@@ -449,8 +451,7 @@ LRESULT MainWindow::wndproc(UINT msg, WPARAM wp, LPARAM lp) {
         }
         break;
     case WM_MOUSEWHEEL:
-        if (GET_WHEEL_DELTA_WPARAM(wp) > 0) playback_control::get()->volume_up();
-        else playback_control::get()->volume_down();
+        wheel(GET_WHEEL_DELTA_WPARAM(wp));
         return 0;
     case WM_KEYDOWN:
     case WM_SYSKEYDOWN:
@@ -480,6 +481,9 @@ LRESULT MainWindow::wndproc(UINT msg, WPARAM wp, LPARAM lp) {
             }
             invalidate();
             if (m_pl && m_pl->visible() && playback_control::get()->is_paused()) m_pl->invalidate();
+        } else if (wp == status_timer_id) {
+            KillTimer(m_wnd, status_timer_id);
+            if (m_status_timed) { m_status.reset(); m_status_timed = false; invalidate(); }
         } else if (wp == vis_timer_id) {
             on_vis_timer();
         }
@@ -541,7 +545,25 @@ void MainWindow::invalidate_all() {
 
 void MainWindow::set_status(const char* text) {
     m_status = text ? text : "";
+    if (m_status_timed) { KillTimer(m_wnd, status_timer_id); m_status_timed = false; }
     invalidate();
+}
+
+// Like Winamp, any volume change outside a slider drag shows "Volume: N%" in the song title for a moment.
+void MainWindow::on_volume_changed() {
+    if (m_wnd && m_pressed == Control::none && (m_status.is_empty() || m_status_timed)) {
+        const double v = player::db_to_slider(playback_control::get()->get_volume());
+        m_status = pfc::format("Volume: ", static_cast<int>(v * 100 + 0.5), "%");
+        m_status_timed = true;
+        SetTimer(m_wnd, status_timer_id, status_ms, nullptr);
+    }
+    invalidate();
+}
+
+void MainWindow::wheel(int delta) {
+    auto pc = playback_control::get();
+    if (delta > 0) pc->volume_up();
+    else pc->volume_down();
 }
 
 void MainWindow::on_eq_changed() {
@@ -832,6 +854,7 @@ void MainWindow::update_slider(POINT p) {
     auto ratio = [&](int x0, int w, int thumb_w) {
         return std::clamp(double(p.x - x0 - thumb_w / 2) / double(w - thumb_w), 0.0, 1.0);
     };
+    if (m_status_timed) { KillTimer(m_wnd, status_timer_id); m_status_timed = false; }
     switch (m_pressed) {
     case Control::volume: {
         m_drag_value = ratio(L::pos_volume.x, L::volume_travel + L::volume_thumb.w, L::volume_thumb.w);
