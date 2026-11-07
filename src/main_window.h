@@ -97,6 +97,7 @@ private:
 
     // playback events
     void on_track_changed();
+    void random_skin_on_play();
     void on_playback_stopped();
     void on_dynamic_info(const file_info& info);
 

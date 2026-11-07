@@ -46,7 +46,7 @@
   - [x] Time:
       - Elapsed/remaining items in the menu.
       - An "Autoscroll songname" toggle.
-  - [ ] Random skin option
+  - [x] Random skin option
   - [ ] Reload skin button
   - [ ] Visualizer: clicking should cycle modes only while playing.
   - [ ] Playlist: Bigger/smaller font.

@@ -23,6 +23,9 @@ bool browse(HWND owner, const std::wstring& start, std::wstring& out);
 std::vector<Entry> list();
 std::vector<Entry> list(const std::wstring& dir);
 
+// A random skin from the folder, other than `exclude` when there's a choice; empty if the folder has none.
+std::wstring random(const std::wstring& exclude);
+
 void open_in_explorer();
 void open_in_explorer(const std::wstring& dir);
 

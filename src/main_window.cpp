@@ -40,7 +40,7 @@ const MenuRoot menu_roots[] = {
 };
 constexpr UINT menu_id_stride = 0x1000;
 enum : UINT { id_lock_ui = 1, id_vis_spectrum, id_vis_osc, id_vis_off,
-    id_open_skins_folder, id_choose_skins_folder, id_toggle_eq, id_toggle_pl, id_autoscroll,
+    id_open_skins_folder, id_choose_skins_folder, id_toggle_eq, id_toggle_pl, id_autoscroll, id_random_skin,
     id_panel_double = 0x80, id_panel_shade, id_panel_rename, id_panel_close, id_panel_view,
     id_skin_first = 0x100, id_skin_last = 0x7FF,
     id_playlist_first = 0x800, id_playlist_last = 0xBFF,
@@ -207,8 +207,16 @@ public:
           playlist_callback_single_impl_base(flag_on_playback_order_changed | flag_on_item_focus_change | flag_on_playlist_switch),
           m_w(w) {}
 
-    void on_playback_starting(play_control::t_track_command, bool) override { m_w.update_vis_timer(); m_w.invalidate(); }
-    void on_playback_new_track(metadb_handle_ptr) override { m_w.on_track_changed(); }
+    void on_playback_starting(play_control::t_track_command cmd, bool) override {
+        m_resume = cmd == play_control::track_command_resume; // playback restored at startup
+        m_w.update_vis_timer();
+        m_w.invalidate();
+    }
+    void on_playback_new_track(metadb_handle_ptr) override {
+        if (!m_resume) m_w.random_skin_on_play();
+        m_resume = false;
+        m_w.on_track_changed();
+    }
     void on_playback_stop(play_control::t_stop_reason) override { m_w.on_playback_stopped(); }
     void on_playback_seek(double) override { m_w.invalidate(); }
     void on_playback_pause(bool) override { m_w.update_vis_timer(); m_w.invalidate(); }
@@ -224,6 +232,7 @@ public:
 
 private:
     MainWindow& m_w;
+    bool m_resume = false;
 };
 
 MainWindow::MainWindow() = default;
@@ -304,7 +313,11 @@ HWND MainWindow::create(HookProc hook) {
     m_tooltip.attach(m_wnd);
     m_taskbar_buttons.attach(m_wnd);
 
-    const pfc::string8 path = config::skin_path.get();
+    pfc::string8 path = config::skin_path.get();
+    if (config::random_skin.get() && !config::random_skin_on_play.get()) {
+        const std::wstring r = skins_folder::random(pfc::stringcvt::string_wide_from_utf8(path).get_ptr());
+        if (!r.empty()) path = pfc::stringcvt::string_utf8_from_wide(r.c_str()).get_ptr();
+    }
     if (!path.is_empty()) load_skin(path, false);
     apply_geometry();
 
@@ -1038,6 +1051,7 @@ void MainWindow::show_context_menu(POINT pt, SkinWindow* panel) {
     }
     if (skins.empty()) AppendMenuW(skins_menu, MF_STRING | MF_GRAYED, 0, L"(skins folder is empty)");
     AppendMenuW(skins_menu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(skins_menu, MF_STRING | (skins.empty() ? MF_GRAYED : 0), id_random_skin, L"&Random skin");
     AppendMenuW(skins_menu, MF_STRING, id_choose_skins_folder, L"&Choose skins folder...");
     AppendMenuW(skins_menu, MF_STRING, id_open_skins_folder, L"&Open skins folder in Explorer");
     AppendMenuW(menu, MF_POPUP | MF_STRING, reinterpret_cast<UINT_PTR>(skins_menu), L"&Skins");
@@ -1092,6 +1106,11 @@ void MainWindow::show_context_menu(POINT pt, SkinWindow* panel) {
     case id_vis_osc: set_vis_mode(VisMode::oscilloscope); break;
     case id_vis_off: set_vis_mode(VisMode::off); break;
     case id_open_skins_folder: skins_folder::open_in_explorer(); break;
+    case id_random_skin: {
+        const std::wstring r = skins_folder::random(pfc::stringcvt::string_wide_from_utf8(config::skin_path.get()).get_ptr());
+        if (!r.empty()) load_skin(pfc::stringcvt::string_utf8_from_wide(r.c_str()), true);
+        break;
+    }
     case id_choose_skins_folder: {
         std::wstring dir;
         if (skins_folder::browse(m_wnd, skins_folder::path(), dir)) skins_folder::set_path(dir);
@@ -1311,6 +1330,13 @@ void MainWindow::on_vis_timer() {
 
 // ---------------------------------------------------------------------------------------------
 // playback events
+
+// Random skin "on play": a new skin for each new track, but not for playback resumed at startup.
+void MainWindow::random_skin_on_play() {
+    if (!config::random_skin.get() || !config::random_skin_on_play.get()) return;
+    const std::wstring r = skins_folder::random(pfc::stringcvt::string_wide_from_utf8(config::skin_path.get()).get_ptr());
+    if (!r.empty()) load_skin(pfc::stringcvt::string_utf8_from_wide(r.c_str()), false);
+}
 
 void MainWindow::on_track_changed() {
     metadb_handle_ptr track;

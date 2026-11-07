@@ -94,6 +94,8 @@ public:
     fb2k::hwnd_t get_wnd() override { return m_wnd; }
 
     void apply() override {
+        config::random_skin = random_checked();
+        config::random_skin_on_play = random_on_play();
         if (folder_changed()) skins_folder::set_path(m_folder);
         const std::wstring current = wide(config::skin_path.get());
         if (_wcsicmp(m_pending.c_str(), current.c_str()) != 0) {
@@ -155,6 +157,9 @@ private:
         m_pending = wide(config::skin_path.get());
         m_folder = skins_folder::path();
         uSetDlgItemText(m_wnd, IDC_FOLDER, utf8(m_folder));
+        CheckDlgButton(m_wnd, IDC_RANDOM_SKIN, config::random_skin.get() ? BST_CHECKED : BST_UNCHECKED);
+        CheckRadioButton(m_wnd, IDC_RANDOM_STARTUP, IDC_RANDOM_PLAY, config::random_skin_on_play.get() ? IDC_RANDOM_PLAY : IDC_RANDOM_STARTUP);
+        update_random_enabled();
         init_folder_buttons();
         refresh_list();
         load_preview();
@@ -185,6 +190,13 @@ private:
             break;
         case IDC_REFRESH:
             if (code == BN_CLICKED) refresh_list();
+            break;
+        case IDC_RANDOM_SKIN:
+            if (code == BN_CLICKED) { update_random_enabled(); changed(); }
+            break;
+        case IDC_RANDOM_STARTUP:
+        case IDC_RANDOM_PLAY:
+            if (code == BN_CLICKED) changed();
             break;
         }
     }
@@ -320,7 +332,14 @@ private:
 
     bool has_changed() const {
         if (!m_wnd) return false;
-        return folder_changed() || _wcsicmp(m_pending.c_str(), wide(config::skin_path.get()).c_str()) != 0;
+        return folder_changed() || random_checked() != config::random_skin.get() || random_on_play() != config::random_skin_on_play.get()
+            || _wcsicmp(m_pending.c_str(), wide(config::skin_path.get()).c_str()) != 0;
+    }
+
+    bool random_checked() const { return IsDlgButtonChecked(m_wnd, IDC_RANDOM_SKIN) == BST_CHECKED; }
+    bool random_on_play() const { return IsDlgButtonChecked(m_wnd, IDC_RANDOM_PLAY) == BST_CHECKED; }
+    void update_random_enabled() {
+        for (int id : { IDC_RANDOM_STARTUP, IDC_RANDOM_PLAY }) EnableWindow(GetDlgItem(m_wnd, id), random_checked());
     }
 
     bool folder_changed() const { return _wcsicmp(m_folder.c_str(), skins_folder::path().c_str()) != 0; }

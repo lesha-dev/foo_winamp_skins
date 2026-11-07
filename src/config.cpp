@@ -7,6 +7,8 @@ cfg_int window_x(guids::cfg_window_x, CW_USEDEFAULT);
 cfg_int window_y(guids::cfg_window_y, CW_USEDEFAULT);
 cfg_string skin_path(guids::cfg_skin_path, "");
 cfg_string skins_folder(guids::cfg_skins_folder, "");
+cfg_bool random_skin(guids::cfg_random_skin, false);
+cfg_bool random_skin_on_play(guids::cfg_random_skin_on_play, false);
 cfg_bool time_remaining(guids::cfg_time_remaining, false);
 cfg_bool autoscroll(guids::cfg_autoscroll, true);
 cfg_bool double_size(guids::cfg_double_size, false);

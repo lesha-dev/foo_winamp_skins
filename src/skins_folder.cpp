@@ -7,6 +7,9 @@
 #include <shellapi.h>
 #include <shlwapi.h>
 
+#include <algorithm>
+#include <random>
+
 namespace wsz::skins_folder {
 namespace {
 
@@ -95,6 +98,15 @@ void open_in_explorer() { open_in_explorer(path()); }
 
 void open_in_explorer(const std::wstring& dir) {
     ShellExecuteW(nullptr, L"open", dir.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+}
+
+std::wstring random(const std::wstring& exclude) {
+    std::vector<Entry> skins = list();
+    if (skins.size() > 1)
+        skins.erase(std::remove_if(skins.begin(), skins.end(), [&](const Entry& e) { return _wcsicmp(e.path.c_str(), exclude.c_str()) == 0; }), skins.end());
+    if (skins.empty()) return {};
+    static std::mt19937 rng{ std::random_device{}() };
+    return skins[std::uniform_int_distribution<size_t>(0, skins.size() - 1)(rng)].path;
 }
 
 } // namespace wsz::skins_folder
