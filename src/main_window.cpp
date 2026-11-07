@@ -424,6 +424,7 @@ LRESULT MainWindow::wndproc(UINT msg, WPARAM wp, LPARAM lp) {
             else docking::begin_move(m_wnd, true);
             return 0;
         }
+        if (msg == WM_LBUTTONDBLCLK && hit(p)->id == Control::marquee) { player::show_file_info(); return 0; }
         on_lbutton_down(p);
         return 0;
     }
@@ -1164,11 +1165,18 @@ bool MainWindow::show_control_menu(Control id, POINT pt) {
     case Control::repeat: show_order_menu(false); return true;
     case Control::eject: case Control::eq: case Control::pl: return true; // none, like Winamp
     case Control::marquee: {
-        // foobar2000's menu for the playing track.
+        // foobar2000's menu for the playing track; while stopped, for the focused playlist entry
+        // (the track double-click and the clutterbar's I show), else the main context menu.
         contextmenu_manager::ptr cm;
         contextmenu_manager::g_create(cm);
         const unsigned flags = standard_config_objects::query_show_keyboard_shortcuts_in_menus() ? contextmenu_manager::flag_show_shortcuts : 0;
-        if (!cm->init_context_now_playing(flags)) return true;
+        if (!cm->init_context_now_playing(flags)) {
+            metadb_handle_ptr focus;
+            if (!playlist_manager::get()->activeplaylist_get_focus_item_handle(focus)) return false;
+            metadb_handle_list items;
+            items.add_item(focus);
+            cm->init_context_ex(items, flags, contextmenu_item::caller_undefined);
+        }
         HMENU menu = CreatePopupMenu();
         cm->win32_build_menu(menu, 1, 0x7FFF);
         SetForegroundWindow(m_wnd);

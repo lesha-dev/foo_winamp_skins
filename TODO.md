@@ -34,7 +34,7 @@
      Use foobar's hotkeys instead. Add no new hotkeys for features, missing in foobar.
   - [x] Pass hotkeys to focused Default Panel (eg Alt+Enter on selected track doesn't work)
   - [x] Mouse wheel volume text: Winamp shows "Volume: N%" in the song title, also for ↑/↓.
-  - [ ] Double-click on the song title opens file info
+  - [x] Double-click on the song title opens file info
   - [ ] Shift+drag on the seekbar seeks live.
   - [ ] Sliders keep the grab offset instead of centring on the cursor (volume, balance, seek, EQ). Shift disables the balance and EQ 0 dB snap.
   - [ ] EQ:
