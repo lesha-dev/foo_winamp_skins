@@ -36,7 +36,8 @@ protected:
     const char* region_name() const override { return m_shade ? nullptr : "equalizer"; }
 
 private:
-    enum class Part { none, close, shade, on, autob, presets, preamp, band0, volume = band0 + eq::band_count, balance };
+    // label_*: the +12/0/-12 dB labels, which set all bands. Parts from preamp on are sliders.
+    enum class Part { none, close, shade, on, autob, presets, label_max, label_zero, label_min, preamp, band0, volume = band0 + eq::band_count, balance };
     Part hit(POINT p) const;
     const wchar_t* tooltip_at(POINT p) const override;
     SkinCursor cursor_at(POINT p) const override;

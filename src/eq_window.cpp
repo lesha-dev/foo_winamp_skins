@@ -131,6 +131,9 @@ const wchar_t* EqWindow::tooltip_at(POINT p) const {
     case Part::on: return L"EQ on/off";
     case Part::autob: return L"EQ auto-load by track (doesn't work)";
     case Part::presets: return L"Open presets";
+    case Part::label_max: return L"Set all bands to +12 dB";
+    case Part::label_zero: return L"Set all bands to 0 dB";
+    case Part::label_min: return L"Set all bands to -12 dB";
     case Part::preamp: return L"Preamp";
     case Part::volume: return L"Volume";
     case Part::balance: return L"Balance";
@@ -151,6 +154,9 @@ EqWindow::Part EqWindow::hit(POINT p) const {
     if (R{ pos_on.x, pos_on.y, on_off.w, on_off.h }.in(p)) return Part::on;
     if (R{ pos_auto.x, pos_auto.y, auto_off.w, auto_off.h }.in(p)) return Part::autob;
     if (R{ pos_presets.x, pos_presets.y, presets_btn.w, presets_btn.h }.in(p)) return Part::presets;
+    if (R{ 42, 33, 26, 10 }.in(p)) return Part::label_max;
+    if (R{ 42, 65, 26, 10 }.in(p)) return Part::label_zero;
+    if (R{ 42, 92, 26, 10 }.in(p)) return Part::label_min;
     if (R{ pos_preamp.x, band_y, slider_w, slider_h }.in(p)) return Part::preamp;
     for (int i = 0; i < eq::band_count; ++i)
         if (R{ slider_x(i), band_y, slider_w, slider_h }.in(p)) return static_cast<Part>(static_cast<int>(Part::band0) + i);
@@ -194,6 +200,12 @@ void EqWindow::on_mouse_up(POINT p) {
     case Part::on: eq::set_enabled(!eq::enabled()); break;
     case Part::autob: config::eq_auto = !config::eq_auto.get(); break;
     case Part::presets: show_presets_menu(); break;
+    case Part::label_max: case Part::label_zero: case Part::label_min: {
+        eq::Values vals = eq::get();
+        vals.bands.fill(part == Part::label_max ? 100 : part == Part::label_zero ? 50 : 0);
+        eq::set(vals);
+        break;
+    }
     default: break;
     }
     invalidate();
