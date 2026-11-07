@@ -20,24 +20,24 @@ constexpr S title_active  { 0, 134, 275, 14 };
 constexpr S title_inactive{ 0, 149, 275, 14 };
 constexpr S thumb         { 0, 164, 11, 11 };
 constexpr S thumb_down    { 0, 176, 11, 11 };
-constexpr S on_off        { 10, 119, 26, 12 };
-constexpr S on_off_down   { 128, 119, 26, 12 };
-constexpr S on_on         { 69, 119, 26, 12 };
-constexpr S on_on_down    { 187, 119, 26, 12 };
-constexpr S auto_off      { 36, 119, 32, 12 };
-constexpr S auto_off_down { 154, 119, 32, 12 };
-constexpr S auto_on       { 95, 119, 32, 12 };
-constexpr S auto_on_down  { 213, 119, 32, 12 };
+constexpr S on_off        { 10, 119, 25, 12 };
+constexpr S on_off_down   { 128, 119, 25, 12 };
+constexpr S on_on         { 69, 119, 25, 12 };
+constexpr S on_on_down    { 187, 119, 25, 12 };
+constexpr S auto_off      { 35, 119, 33, 12 };
+constexpr S auto_off_down { 153, 119, 33, 12 };
+constexpr S auto_on       { 94, 119, 33, 12 };
+constexpr S auto_on_down  { 212, 119, 33, 12 };
 constexpr S graph_bg      { 0, 294, 113, 19 };
 constexpr S graph_colors  { 115, 294, 1, 19 };
 constexpr S preamp_line   { 0, 314, 113, 1 };
 constexpr S presets_btn   { 224, 164, 44, 12 };
 constexpr S presets_down  { 224, 176, 44, 12 };
-constexpr S close_down    { 0, 116, 9, 9 };
+constexpr S close_down    { 0, 125, 9, 9 };
 constexpr int slider_frame_x = 13, slider_frame_y = 164, slider_w = 14, slider_h = 63;
 constexpr int slider_travel = 51; // thumb top offset range within the 63px slider
 
-constexpr P pos_on { 14, 18 }, pos_auto { 40, 18 }, pos_presets { 217, 18 }, pos_graph { 86, 17 };
+constexpr P pos_on { 14, 18 }, pos_auto { 39, 18 }, pos_presets { 217, 18 }, pos_graph { 86, 17 };
 constexpr P pos_preamp { 21, 38 };
 constexpr int band_x0 = 78, band_dx = 18, band_y = 38;
 constexpr P pos_shade_btn { 254, 3 }, pos_close { 264, 3 };
@@ -47,12 +47,12 @@ constexpr S shade_active   { 0, 0, 275, 14 };
 constexpr S shade_inactive { 0, 15, 275, 14 };
 constexpr S shade_vol_thumb[3] = { { 1, 30, 3, 7 }, { 4, 30, 3, 7 }, { 7, 30, 3, 7 } };
 constexpr S shade_bal_thumb[3] = { { 11, 30, 3, 7 }, { 14, 30, 3, 7 }, { 17, 30, 3, 7 } };
-constexpr S shade_unshade_down { 1, 38, 9, 9 };
-constexpr S shade_btn_down     { 1, 47, 9, 9 }; // normal mode shade button, pressed
-constexpr S shade_close        { 11, 38, 9, 9 };
+constexpr S shade_btn_down     { 1, 38, 9, 9 };   // normal mode shade button, pressed
+constexpr S shade_unshade_down { 1, 47, 9, 9 };
 constexpr S shade_close_down   { 11, 47, 9, 9 };
 constexpr P pos_shade_vol { 61, 4 }, pos_shade_bal { 164, 4 };
 constexpr int shade_vol_w = 97, shade_bal_w = 43;
+constexpr int shade_vol_travel = 94, shade_bal_travel = 39; // drawn thumb x 61..155 and 164..203; drag spans 96 / 42 px
 
 struct R { int x, y, w, h; bool in(POINT p) const { return p.x >= x && p.x < x + w && p.y >= y && p.y < y + h; } };
 
@@ -201,14 +201,14 @@ void status(const char* text) {
 
 void EqWindow::drag_to(POINT p) {
     if (m_pressed == Part::volume) {
-        const double t = std::clamp((p.x - pos_shade_vol.x - 1) / double(shade_vol_w - 3), 0.0, 1.0);
+        const double t = std::clamp((p.x - pos_shade_vol.x) / 96.0, 0.0, 1.0);
         playback_control::get()->set_volume(static_cast<float>(player::slider_to_db(t)));
         status(pfc::format("Volume: ", static_cast<int>(t * 100 + 0.5), "%"));
         return;
     }
     if (m_pressed == Part::balance) {
         if (!balance::enabled()) return;
-        double b = std::clamp((p.x - pos_shade_bal.x - 1) / double(shade_bal_w - 3), 0.0, 1.0) * 2 - 1;
+        double b = std::clamp((p.x - pos_shade_bal.x) / 42.0, 0.0, 1.0) * 2 - 1;
         if (std::abs(b) * 100 < static_cast<double>(config::balance_snap.get())) b = 0;
         balance::set(b);
         if (b != 0) balance::ensure_dsp();
@@ -279,6 +279,7 @@ void EqWindow::render_normal(Canvas& c) {
     c.blit(img, bg, { 0, 0 });
     c.blit(img, title_lit() ? title_active : title_inactive, { 0, 0 });
     const bool down = m_inside;
+    // Unpressed title buttons are part of the title row.
     if (m_pressed == Part::close && down) c.blit(img, close_down, pos_close);
     if (m_pressed == Part::shade && down) c.blit(ex, shade_btn_down, pos_shade_btn);
 
@@ -332,14 +333,15 @@ void EqWindow::render_shade(Canvas& c) {
     c.blit(ex, title_lit() ? shade_active : shade_inactive, { 0, 0 });
     const bool down = m_inside;
     if (m_pressed == Part::shade && down) c.blit(ex, shade_unshade_down, pos_shade_btn);
-    c.blit(ex, m_pressed == Part::close && down ? shade_close_down : shade_close, pos_close);
+    if (m_pressed == Part::close && down) c.blit(ex, shade_close_down, pos_close);
 
-    auto thumb3 = [&](const S (&sprites)[3], double t, P pos, int w) {
-        const S& s = t < 1.0 / 3 ? sprites[0] : t < 2.0 / 3 ? sprites[1] : sprites[2];
-        c.blit(ex, s, { pos.x + static_cast<int>(std::lround(t * (w - 3))), pos.y });
+    // Thumb sprite by thirds of 0..255, offset truncated, like Winamp.
+    auto thumb3 = [&](const S (&sprites)[3], double t, P pos, int travel) {
+        const int v = static_cast<int>(std::clamp(t, 0.0, 1.0) * 255);
+        c.blit(ex, sprites[std::min(v * 3 / 256, 2)], { pos.x + travel * v / 255, pos.y });
     };
-    thumb3(shade_vol_thumb, player::db_to_slider(playback_control::get()->get_volume()), pos_shade_vol, shade_vol_w);
-    thumb3(shade_bal_thumb, (balance::get() + 1) / 2, pos_shade_bal, shade_bal_w);
+    thumb3(shade_vol_thumb, player::db_to_slider(playback_control::get()->get_volume()), pos_shade_vol, shade_vol_travel);
+    thumb3(shade_bal_thumb, (balance::get() + 1) / 2, pos_shade_bal, shade_bal_travel);
 }
 
 } // namespace wsz

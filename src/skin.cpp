@@ -308,6 +308,8 @@ void Skin::load_from(FileMap& files) {
         color("normalbg", m_pl_colors.normal_bg);
         color("selectedbg", m_pl_colors.selected_bg);
         if (auto k = t.find("font"); k != t.end() && !k->second.empty()) m_pl_colors.font = k->second;
+        const IniSection& misc = ini["misc"];
+        if (auto k = misc.find("usegennums"); k != misc.end()) m_pl_colors.gen_nums = std::atoi(k->second.c_str()) != 0;
     }
 
     // Readme: prefer a file called readme*, otherwise the first other text file.

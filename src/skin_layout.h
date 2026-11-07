@@ -34,8 +34,8 @@ constexpr Pos pos_clutter   { 10, 22 };
 constexpr Sprite ind_playing     {  0, 0, 9, 9 };
 constexpr Sprite ind_paused      {  9, 0, 9, 9 };
 constexpr Sprite ind_stopped     { 18, 0, 9, 9 };
-constexpr Sprite ind_not_working { 36, 0, 3, 9 };
-constexpr Sprite ind_working     { 39, 0, 3, 9 };
+constexpr Sprite ind_working     { 36, 0, 3, 9 };
+constexpr Sprite ind_not_working { 39, 0, 3, 9 };
 constexpr Sprite ind_filler      { 27, 0, 2, 9 };  // drawn at pos_work_ind when not playing (matches Winamp)
 constexpr Pos pos_play_state  { 26, 28 };
 constexpr Pos pos_work_ind    { 24, 28 };
@@ -43,8 +43,8 @@ constexpr Pos pos_work_ind    { 24, 28 };
 // --- monoster.bmp ---
 constexpr Sprite stereo     {  0, 12, 29, 12 };
 constexpr Sprite stereo_on  {  0,  0, 29, 12 };
-constexpr Sprite mono       { 29, 12, 27, 12 };
-constexpr Sprite mono_on    { 29,  0, 27, 12 };
+constexpr Sprite mono       { 29, 12, 28, 12 }; // its last column is covered by stereo
+constexpr Sprite mono_on    { 29,  0, 28, 12 };
 constexpr Pos pos_mono   { 212, 41 };
 constexpr Pos pos_stereo { 239, 41 };
 
@@ -61,6 +61,8 @@ constexpr Sprite balance_thumb_down {  0, 422, 14, 11 };
 constexpr Pos pos_volume  { 107, 57 };
 constexpr Pos pos_balance { 177, 57 };
 constexpr int slider_thumb_dy = 1;
+constexpr int volume_travel = 51;  // thumb x offset 0..51 (not the full 68 - 14)
+constexpr int balance_travel = 24;
 
 // --- shufrep.bmp ---
 constexpr Sprite eq_btn               {  0, 61, 23, 12 };
@@ -129,7 +131,8 @@ constexpr Sprite shade_posbar_thumb      { 20, 36, 3, 7 };
 constexpr Sprite shade_posbar_thumb_left { 17, 36, 3, 7 };
 constexpr Sprite shade_posbar_thumb_right{ 23, 36, 3, 7 };
 constexpr Pos pos_shade_posbar { 226, 4 };
-constexpr Pos pos_shade_time   { 127, 4 };
+constexpr Pos pos_shade_minus  { 130, 4 };  // 3x6 text.bmp minus (75,6); blanks from (142,0)
+constexpr int shade_time_x[4] = { 134, 139, 147, 152 }; // mm ss, the colon is part of the background
 
 // --- time display: numbers.bmp / nums_ex.bmp, 9x13 digits ---
 constexpr int digit_w = 9;
@@ -137,16 +140,17 @@ constexpr int digit_h = 13;
 constexpr Sprite minus_numbers   { 20, 6, 5, 1 };   // numbers.bmp dash
 constexpr Sprite minus_nums_ex   { 99, 0, 9, 13 };
 constexpr Sprite no_minus_nums_ex{ 90, 0, 9, 13 };
-constexpr Pos pos_minus        { 38, 26 };
+constexpr Pos pos_minus        { 36, 26 };  // nums_ex minus / blank
 constexpr Pos pos_minus_dash   { 38, 32 };
 constexpr Pos pos_digits[4] = { { 48, 26 }, { 60, 26 }, { 78, 26 }, { 90, 26 } };
 
 // --- text areas (text.bmp font) ---
 constexpr Pos pos_title_text { 111, 27 };
 constexpr int title_text_w = 154;
-constexpr int marquee_max_chars = 31;
+constexpr int marquee_max_chars = 30;  // scrolls once wider than 146 px
 constexpr Pos pos_kbps { 111, 43 };
 constexpr Pos pos_khz  { 156, 43 };
+constexpr Sprite text_blank { 100, 12, 5, 6 }; // text.bmp cell used for blank kbps/kHz digits
 
 // --- not drawn yet ---
 constexpr Pos pos_visualizer { 24, 43 };   // 76x16

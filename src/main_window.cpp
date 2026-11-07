@@ -861,7 +861,7 @@ void MainWindow::update_slider(POINT p) {
     };
     switch (m_pressed) {
     case Control::volume: {
-        m_drag_value = ratio(L::pos_volume.x, L::volume_bg.w, L::volume_thumb.w);
+        m_drag_value = ratio(L::pos_volume.x, L::volume_travel + L::volume_thumb.w, L::volume_thumb.w);
         playback_control::get()->set_volume(static_cast<float>(player::slider_to_db(m_drag_value)));
         m_status = pfc::format("Volume: ", static_cast<int>(m_drag_value * 100 + 0.5), "%");
         break;

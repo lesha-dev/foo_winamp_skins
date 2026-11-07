@@ -26,8 +26,9 @@ void stretch(Canvas& c, const Image& img, S s, int dx, int dy, int dw, int dh) {
 // at x=0. A column counts as a separator when most of its 7 pixels are that colour: some skins have a stray
 // glyph pixel in a separator (Secret of Evermore, between X and Y on the active row).
 struct Letter { int x = 0, w = 0; };
-std::array<Letter, 26> scan_letters(const Image& img, int y) {
-    std::array<Letter, 26> out{};
+template <size_t N>
+std::array<Letter, N> scan_glyphs(const Image& img, int y) {
+    std::array<Letter, N> out{};
     if (y >= img.height) return out;
     const uint32_t bg = img.pixels[size_t(y) * img.width];
     const int y_end = std::min(y + 7, img.height);
@@ -60,13 +61,24 @@ constexpr int unknown_char_w = 5;
 
 constexpr int min_title_w = 44; // narrowest title bar laid out for its width (side strips 20 + 24 px)
 
-void render_gen_title(Canvas& c, const Image& g, int w, const char* title, bool active, bool close_pressed) {
+// Digits, '-' and ':' come from the 12 glyphs on rows 72/80, only when pledit.txt asks for them
+// ([Misc] UseGenNums=1): most skins have junk there.
+void render_gen_title(Canvas& c, const Image& g, int w, const char* title, bool active, bool close_pressed, bool nums) {
     const int sy = active ? 0 : 21;
-    const int text_y = active ? 88 : 96;
-    const auto letters = scan_letters(g, text_y);
+    const int text_y = active ? 88 : 96, num_y = active ? 72 : 80;
+    const auto letters = scan_glyphs<26>(g, text_y);
+    const auto digits = nums ? scan_glyphs<12>(g, num_y) : std::array<Letter, 12>{};
+    // Glyph for an upper-cased char: {source x, y, width}; width 0 = unknown (blank 5 px).
+    auto glyph = [&](char ch) -> std::array<int, 3> {
+        if (ch >= 'A' && ch <= 'Z' && letters[ch - 'A'].w) return { letters[ch - 'A'].x, text_y, letters[ch - 'A'].w };
+        const int d = ch >= '0' && ch <= '9' ? ch - '0' : ch == '-' ? 10 : ch == ':' ? 11 : -1;
+        if (d >= 0 && digits[d].w) return { digits[d].x, num_y, digits[d].w };
+        return { 0, 0, 0 };
+    };
     auto width_of = [&](char ch) {
         if (ch >= 'a' && ch <= 'z') ch = static_cast<char>(ch - 'a' + 'A');
-        return ch >= 'A' && ch <= 'Z' && letters[ch - 'A'].w ? letters[ch - 'A'].w : unknown_char_w;
+        const int gw = glyph(ch)[2];
+        return gw ? gw : unknown_char_w;
     };
     int text_exact = 0;
     for (const char* p = title; *p; ++p) text_exact += width_of(*p);
@@ -77,7 +89,7 @@ void render_gen_title(Canvas& c, const Image& g, int w, const char* title, bool 
             if (ch >= 'a' && ch <= 'z') ch = static_cast<char>(ch - 'a' + 'A');
             const int cw = width_of(ch);
             if (cw > room) break;
-            if (ch >= 'A' && ch <= 'Z' && letters[ch - 'A'].w) c.blit(g, letters[ch - 'A'].x, text_y, cw, 7, tx, 4);
+            if (const auto gl = glyph(ch); gl[2]) c.blit(g, gl[0], gl[1], cw, 7, tx, 4);
             tx += cw;
             room -= cw;
         }
@@ -148,8 +160,8 @@ void render_gen_title(Canvas& c, const Image& g, int w, const char* title, bool 
     if (close_pressed) c.blit(g, 148, 42, 9, 9, w - 11, 3);
 }
 
-void render_gen(Canvas& c, const Image& g, int w, int h, const char* title, bool active, bool close_pressed) {
-    render_gen_title(c, g, w, title, active, close_pressed);
+void render_gen(Canvas& c, const Image& g, int w, int h, const char* title, bool active, bool close_pressed, bool nums) {
+    render_gen_title(c, g, w, title, active, close_pressed, nums);
 
     // Sides: 29 px tiles, the last one stretched, then the 24 px lower pieces.
     int y = 20, x = 0;
@@ -209,7 +221,7 @@ namespace {
 
 void render_full(Canvas& c, const Skin& skin, int w, int h, const char* title, bool active, bool close_pressed) {
     c.clear(0);
-    if (has_gen(skin)) render_gen(c, skin.bitmap(SkinBitmap::gen), w, h, title, active, close_pressed);
+    if (has_gen(skin)) render_gen(c, skin.bitmap(SkinBitmap::gen), w, h, title, active, close_pressed, skin.playlist_colors().gen_nums);
     else render_pledit(c, skin.bitmap(SkinBitmap::pledit), w, h, active, close_pressed);
 }
 
@@ -236,7 +248,7 @@ void GenFrame::render(Canvas& c, const Skin& skin, int w, int h, const char* tit
     }
     // The title bar is laid out for the real width while it fits: the filler shrinks, the title stays.
     if (has_gen(skin)) {
-        if (w >= min_title_w) render_gen_title(c, skin.bitmap(SkinBitmap::gen), w, title, active, close_pressed);
+        if (w >= min_title_w) render_gen_title(c, skin.bitmap(SkinBitmap::gen), w, title, active, close_pressed, skin.playlist_colors().gen_nums);
     } else if (w >= 50) {
         render_pledit_title(c, skin.bitmap(SkinBitmap::pledit), w, active, close_pressed);
     }

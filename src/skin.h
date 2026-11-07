@@ -28,6 +28,7 @@ struct PlaylistColors {
     COLORREF normal_bg = RGB(0, 0, 0);
     COLORREF selected_bg = RGB(0, 0, 198);
     std::string font = "Arial";
+    bool gen_nums = false; // [Misc] UseGenNums: gen.bmp has digits, '-' and ':' for window titles
 };
 
 // Skinned mouse cursors, in Winamp's order (one .cur/.ani file each).

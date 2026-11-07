@@ -52,7 +52,7 @@ inline constexpr ControlRect shade_controls[] = {
     { Control::minimize,  244, 3,  9,  9 },
     { Control::shade,     254, 3,  9,  9 },
     { Control::close,     264, 3,  9,  9 },
-    { Control::time,      127, 4, 25,  6 },
+    { Control::time,      129, 3, 28,  6 },
     { Control::vis,       79,  5, 38,  5 },
     { Control::prev,      169, 2,  7, 10 },
     { Control::play,      176, 2, 10, 10 },

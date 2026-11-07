@@ -38,7 +38,7 @@ constexpr S shade_tile      { 72, 57, 25, 14 };
 constexpr S shade_right     { 99, 57, 50, 14 };
 constexpr S shade_right_sel { 99, 42, 50, 14 };
 
-constexpr int top_h = 20, bottom_h = 38, left_w = 12, right_w = 20, row_h = 13, list_pad = 3;
+constexpr int top_h = 20, bottom_h = 38, left_w = 12, right_w = 20, row_h = 13, list_top = 2; // rows start at y=22 and end at h-38
 
 // Sprite menus: items top to bottom.
 struct MenuItem { S normal, hover; };
@@ -119,7 +119,7 @@ int PlaylistWindow::height() const { return m_shade ? shade_height : min_height 
 SIZE PlaylistWindow::skin_size() const { return { width(), height() }; }
 
 PlaylistWindow::Rc PlaylistWindow::list_rect() const {
-    return { left_w, top_h + list_pad, width() - left_w - right_w, height() - top_h - bottom_h - 2 * list_pad };
+    return { left_w, top_h + list_top, width() - left_w - right_w, height() - top_h - bottom_h - list_top };
 }
 
 int PlaylistWindow::visible_rows() const { return std::max(1, list_rect().h / row_h); }
@@ -387,12 +387,12 @@ SkinCursor PlaylistWindow::cursor_at(POINT p) const {
     const SIZE sz = skin_size();
     const int w = sz.cx, h = sz.cy;
     if (m_shade) {
-        if (in_rect(p, w - 21, 3, w - 13, 12)) return SkinCursor::plws_winbut;
+        if (in_rect(p, w - 20, 3, w - 12, 12)) return SkinCursor::plws_winbut;
         if (in_rect(p, w - 11, 3, w - 3, 12)) return SkinCursor::plws_close;
         if (in_rect(p, w - 29, 3, w - 20, 12)) return SkinCursor::plws_size;
         return SkinCursor::plws_normal;
     }
-    if (in_rect(p, w - 21, 3, w - 13, 12)) return SkinCursor::pl_winbut;
+    if (in_rect(p, w - 20, 3, w - 12, 12)) return SkinCursor::pl_winbut;
     if (in_rect(p, w - 11, 3, w - 3, 12)) return SkinCursor::pl_close;
     if (in_rect(p, 0, 0, w - 1, 13)) return SkinCursor::pl_titlebar;
     if (in_rect(p, w - 15, 20, w - 7, h - 38)) return SkinCursor::pl_vscroll;
@@ -427,7 +427,7 @@ const wchar_t* PlaylistWindow::tooltip_at(POINT p) const {
 PlaylistWindow::Part PlaylistWindow::hit(POINT p) const {
     const int w = width(), h = height();
     if (Rc{ w - 11, 3, 9, 9 }.in(p)) return Part::close;
-    if (Rc{ w - 21, 3, 9, 9 }.in(p)) return Part::shade;
+    if (Rc{ w - 20, 3, 9, 9 }.in(p)) return Part::shade;
     if (m_shade) {
         if (Rc{ w - 29, 3, 9, 9 }.in(p)) return Part::resize;
         return Part::none;
@@ -874,15 +874,25 @@ void PlaylistWindow::render_normal(Canvas& c) {
     c.blit(img, a ? top_left_sel : top_left, { 0, 0 });
     c.blit(img, a ? top_title_sel : top_title, { (w - 100) / 2, 0 });
     c.blit(img, a ? top_right_sel : top_right, { w - 25, 0 });
+    // Title buttons always come from the active row when not pressed.
+    // Unpressed title buttons are part of the title row.
     if (m_pressed == Part::close && m_inside) c.blit(img, close_down, { w - 11, 3 });
-    if (m_pressed == Part::shade && m_inside) c.blit(img, collapse_down, { w - 21, 3 });
+    if (m_pressed == Part::shade && m_inside) c.blit(img, collapse_down, { w - 20, 3 });
 
     // Sides.
     c.tile(img, left_tile, 0, top_h, left_w, h - top_h - bottom_h);
     c.tile(img, right_tile, w - right_w, top_h, right_w, h - top_h - bottom_h);
 
-    // Bottom.
-    c.tile(img, bottom_tile, 125, h - bottom_h, w - 275, bottom_h);
+    // Bottom: tiles, the last one stretched. Winamp's playlist visualizer piece is left out on purpose.
+    {
+        const int n = (w - 275) / 25;
+        int x = 125;
+        for (int i = 0; i < n; ++i, x += 25) c.blit(img, bottom_tile, { x, h - bottom_h });
+        if (const int rest = (w - 275) % 25; rest > 0) {
+            for (int dx = 0; dx < rest; ++dx) // StretchBlt of the 25 px tile onto `rest` columns
+                c.blit(img, bottom_tile.x + dx * bottom_tile.w / rest, bottom_tile.y, 1, bottom_h, x + dx, h - bottom_h);
+        }
+    }
     c.blit(img, bottom_left, { 0, h - bottom_h });
     c.blit(img, bottom_right, { w - 150, h - bottom_h });
 
@@ -896,7 +906,7 @@ void PlaylistWindow::render_normal(Canvas& c) {
     if (m_lengths_dirty) recompute_lengths();
     const int bx = w - 150, by = h - bottom_h;
     const pfc::string8 running = pfc::format(time_str(m_sel_len, true), "/", time_str(m_total_len, true));
-    c.set_clip(bx + 7, by + 10, 60, font_char_h);
+    c.set_clip(bx + 7, by + 10, 18 * font_char_w, font_char_h);
     draw_text(c, font, bx + 7, by + 10, running);
     c.reset_clip();
 
@@ -905,12 +915,13 @@ void PlaylistWindow::render_normal(Canvas& c) {
         const int x = w - 86, y = h - 15;
         const int m = std::min(m_time_seconds / 60, 999), s = m_time_seconds % 60;
         auto digit = [&](int d, int dx) { c.blit(font, 5 * d, 6, 5, 6, x + dx, y); };
-        if (m_time_negative) c.blit(font, 75, 6, 3, 6, x + (m >= 100 ? 0 : 4), y);
+        if (m < 100) c.blit(font, 142, 0, 4, 6, x, y);
+        c.blit(font, m_time_negative ? 75 : 142, m_time_negative ? 6 : 0, 3, 6, x + (m >= 100 ? 0 : 4), y);
         if (m >= 100) digit(m / 100, 4);
         digit(m / 10 % 10, 9);
         digit(m % 10, 14);
-        digit(s / 10, 23);
-        digit(s % 10, 28);
+        digit(s / 10, 22);
+        digit(s % 10, 27);
     }
 
     render_menu(c);
@@ -919,7 +930,7 @@ void PlaylistWindow::render_normal(Canvas& c) {
 void PlaylistWindow::render_list(Canvas& c) {
     const PlaylistColors& col = m_skin->playlist_colors();
     const Rc r = list_rect();
-    c.fill_rect(r.x, r.y - list_pad, r.w, r.h + 2 * list_pad, to_bgrx(col.normal_bg));
+    c.fill_rect(r.x, r.y - list_top, r.w, r.h + list_top, to_bgrx(col.normal_bg));
 
     auto pm = playlist_manager::get();
     const size_t count = pm->activeplaylist_get_item_count();
@@ -988,7 +999,7 @@ void PlaylistWindow::render_shade(Canvas& c) {
     c.blit(img, shade_left, { 0, 0 });
     c.blit(img, title_lit() ? shade_right_sel : shade_right, { w - 50, 0 });
     if (m_pressed == Part::close && m_inside) c.blit(img, close_down, { w - 11, 3 });
-    if (m_pressed == Part::shade && m_inside) c.blit(img, expand_down, { w - 21, 3 });
+    if (m_pressed == Part::shade && m_inside) c.blit(img, expand_down, { w - 20, 3 });
 
     // Current (or focused) track and its time.
     auto pc = playback_control::get();
@@ -1033,9 +1044,9 @@ void PlaylistWindow::render_shade(Canvas& c) {
         GdiFlush();
         return;
     }
-    const int time_x = w - 30 - 5 * font_char_w;
-    c.set_clip(5, 4, time_x - 8, font_char_h);
-    draw_text(c, font, 5, 4, title);
+    const int time_x = w - 29 - 5 * font_char_w; // time right-aligned to w-29
+    c.set_clip(4, 4, time_x - 7, font_char_h);
+    draw_text(c, font, 4, 4, title);
     c.reset_clip();
     if (len > 0) {
         const pfc::string8 t = time_str(len, false);

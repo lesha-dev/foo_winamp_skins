@@ -7,20 +7,20 @@ namespace L = layout;
 
 namespace {
 
-int frame_for(double t) { // t in 0..1
-    return std::clamp(static_cast<int>(t * (L::slider_frames - 1) + 0.5), 0, L::slider_frames - 1);
+int frame_for(double t) { // t in 0..1; Winamp truncates
+    return std::clamp(static_cast<int>(t * (L::slider_frames - 1) + 1e-9), 0, L::slider_frames - 1);
 }
 
 L::Sprite down(L::Sprite s, int dy) { return { s.x, s.y + dy, s.w, s.h }; }
 
 void draw_slider(Canvas& c, const Image& img, L::Sprite bg, L::Sprite thumb, L::Sprite thumb_down, bool pressed,
-                 L::Pos pos, double frame_t, double thumb_t) {
+                 L::Pos pos, double frame_t, double thumb_t, int travel) {
     const int f = frame_for(frame_t);
     c.blit(img, bg.x, f * L::slider_frame_step, bg.w, L::slider_frame_h, pos.x, pos.y);
     // Skins without a thumb row just show the background. A partial row (e.g. 430px tall) is drawn
     // clipped, like Winamp does.
     if (img.height > thumb.y) {
-        const int x = pos.x + static_cast<int>(std::clamp(thumb_t, 0.0, 1.0) * (bg.w - thumb.w) + 0.5);
+        const int x = pos.x + static_cast<int>(std::clamp(thumb_t, 0.0, 1.0) * travel + 1e-9);
         c.blit(img, pressed ? thumb_down : thumb, { x, pos.y + L::slider_thumb_dy });
     }
 }
@@ -57,8 +57,12 @@ void draw_time(Canvas& c, const Skin& skin, const MainState& st) {
     const int d[4] = { minutes / 10, minutes % 10, seconds / 10, seconds % 10 };
     for (int i = 0; i < 4; ++i) c.blit(digits, d[i] * L::digit_w, 0, L::digit_w, L::digit_h, L::pos_digits[i].x, L::pos_digits[i].y);
 
+    // The 9px blank cell (90,0) covers the minus slot; numbers.bmp has it too when 99px wide.
     if (!ex.empty()) c.blit(ex, st.time_negative ? L::minus_nums_ex : L::no_minus_nums_ex, L::pos_minus);
-    else if (st.time_negative) c.blit(digits, L::minus_numbers, L::pos_minus_dash);
+    else {
+        if (digits.width >= L::no_minus_nums_ex.x + L::no_minus_nums_ex.w) c.blit(digits, L::no_minus_nums_ex, L::pos_minus);
+        if (st.time_negative) c.blit(digits, L::minus_numbers, L::pos_minus_dash);
+    }
 }
 
 void draw_marquee(Canvas& c, const Image& font, const MainState& st) {
@@ -113,11 +117,16 @@ void draw_title_font(HDC dc, int scale, HFONT font, const MainState& st) {
 
 namespace {
 
+// Leading blanks use Winamp's blank cell, not the space glyph.
 void draw_number(Canvas& c, const Image& font, L::Pos pos, int value, int width) {
     if (value < 0) return;
     char buf[16];
     snprintf(buf, sizeof(buf), "%*d", width, std::min(value, width == 3 ? 999 : 99));
-    draw_text(c, font, pos.x, pos.y, buf);
+    for (int i = 0; buf[i]; ++i) {
+        const int x = pos.x + i * font_char_w;
+        if (buf[i] == ' ') c.blit(font, L::text_blank, { x, pos.y });
+        else c.blit(font, (buf[i] - '0') * font_char_w, font_char_h, font_char_w, font_char_h, x, pos.y);
+    }
 }
 
 void render_shade(Canvas& c, const Skin& skin, const MainState& st) {
@@ -128,17 +137,21 @@ void render_shade(Canvas& c, const Skin& skin, const MainState& st) {
     draw_titlebar_buttons(c, title, st);
 
     if (st.show_time) {
-        char buf[8];
-        snprintf(buf, sizeof(buf), "%c%02d:%02d", st.time_negative ? '-' : ' ', std::min(st.time_seconds / 60, 99), st.time_seconds % 60);
-        draw_text(c, font, L::pos_shade_time.x - font_char_w, L::pos_shade_time.y, buf);
+        // 3px minus (or blank) and text.bmp digits; the colon belongs to the background.
+        c.blit(font, st.time_negative ? 75 : 142, st.time_negative ? 6 : 0, 3, font_char_h, L::pos_shade_minus.x, L::pos_shade_minus.y);
+        const int m = std::min(st.time_seconds / 60, 99), s = st.time_seconds % 60;
+        const int d[4] = { m / 10, m % 10, s / 10, s % 10 };
+        for (int i = 0; i < 4; ++i)
+            c.blit(font, d[i] * font_char_w, font_char_h, font_char_w, font_char_h, L::shade_time_x[i], L::pos_shade_minus.y);
     }
 
     if (st.play != PlayState::stopped && st.seekable) {
         c.blit(title, L::shade_posbar_bg, L::pos_shade_posbar);
-        const double p = std::clamp(st.position, 0.0, 1.0);
-        const L::Sprite thumb = p < 0.25 ? L::shade_posbar_thumb_left : p > 0.75 ? L::shade_posbar_thumb_right : L::shade_posbar_thumb;
-        const int x = L::pos_shade_posbar.x + static_cast<int>(p * (L::shade_posbar_bg.w - thumb.w) + 0.5);
-        c.blit(title, thumb, { x, L::pos_shade_posbar.y });
+        // Thumb offset 1..13 from position 0..256 (*12/256 + 1); left/middle/right sprite below 6 / 9 / above.
+        const int pos256 = static_cast<int>(std::clamp(st.position, 0.0, 1.0) * 256);
+        const int op = std::clamp(pos256 * 12 / 256 + 1, 1, 13);
+        const L::Sprite thumb = op < 6 ? L::shade_posbar_thumb_left : op < 9 ? L::shade_posbar_thumb : L::shade_posbar_thumb_right;
+        c.blit(title, thumb, { L::pos_shade_posbar.x + op, L::pos_shade_posbar.y });
     }
 
     if (st.vis) st.vis->render(c, skin, L::pos_shade_visualizer, true);
@@ -184,7 +197,7 @@ void render_main(Canvas& c, const Skin& skin, const MainState& st) {
     switch (st.play) {
     case PlayState::playing:
         c.blit(playpaus, L::ind_playing, L::pos_play_state);
-        c.blit(playpaus, L::ind_not_working, L::pos_work_ind);
+        c.blit(playpaus, L::ind_working, L::pos_work_ind);
         break;
     case PlayState::paused:
         c.blit(playpaus, L::ind_filler, L::pos_work_ind);
@@ -212,9 +225,10 @@ void render_main(Canvas& c, const Skin& skin, const MainState& st) {
     c.blit(monoster, playing && st.channels >= 2 ? L::stereo_on : L::stereo, L::pos_stereo);
 
     draw_slider(c, skin.bitmap(SkinBitmap::volume), L::volume_bg, L::volume_thumb, L::volume_thumb_down,
-        is(Control::volume), L::pos_volume, st.volume, st.volume);
+        is(Control::volume), L::pos_volume, st.volume, st.volume, L::volume_travel);
     draw_slider(c, skin.bitmap(SkinBitmap::balance), L::balance_bg, L::balance_thumb, L::balance_thumb_down,
-        is(Control::balance), L::pos_balance, std::abs(st.balance), (st.balance + 1.0) / 2.0);
+        is(Control::balance), L::pos_balance, std::abs(st.balance),
+        (12 + static_cast<int>(st.balance * 127) * 12 / 127) / double(L::balance_travel), L::balance_travel); // centre 12, truncated toward it
 
     if (st.eq_on) c.blit(shufrep, is(Control::eq) ? L::eq_btn_on_down : L::eq_btn_on, L::pos_eq_btn);
     else c.blit(shufrep, is(Control::eq) ? L::eq_btn_down : L::eq_btn, L::pos_eq_btn);
@@ -224,7 +238,7 @@ void render_main(Canvas& c, const Skin& skin, const MainState& st) {
     if (playing) {
         c.blit(posbar, L::posbar_bg, L::pos_posbar);
         if (st.seekable) {
-            const int x = L::pos_posbar.x + static_cast<int>(std::clamp(st.position, 0.0, 1.0) * (L::posbar_bg.w - L::posbar_thumb.w) + 0.5);
+            const int x = L::pos_posbar.x + static_cast<int>(std::clamp(st.position, 0.0, 1.0) * 256) * (L::posbar_bg.w - L::posbar_thumb.w) / 256;
             c.blit(posbar, is(Control::posbar) ? L::posbar_thumb_down : L::posbar_thumb, { x, L::pos_posbar.y });
         }
     }
