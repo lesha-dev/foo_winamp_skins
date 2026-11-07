@@ -7,6 +7,8 @@
 
 #include <foobar2000/SDK/coreDarkMode.h>
 
+#include <commctrl.h>
+
 // Display > Winamp Skins > Options: general behaviour and display options.
 namespace wsz {
 namespace {
@@ -44,6 +46,10 @@ public:
         config::skin_cursors = checked(IDC_SKIN_CURSORS);
         config::title_easter_egg = checked(IDC_TITLE_EGG);
         config::playlist_view_skin_font = checked(IDC_PLVIEW_FONT);
+        config::pl_font_size = font_size_value();
+        config::pl_skin_font = !checked(IDC_PL_SKIN_FONT); // the box is "Override skin font"
+        config::pl_font_smooth = checked(IDC_PL_FONT_SMOOTH);
+        if (const pfc::string8 f = font_value(); !f.is_empty()) config::pl_font = f;
         config::title_bitmap_font = checked(IDC_TITLE_BITMAP);
         config::title_font_alt = checked(IDC_TITLE_ALT);
         config::format_main = text(IDC_FORMAT_MAIN);
@@ -70,6 +76,10 @@ public:
         CheckDlgButton(m_wnd, IDC_SKIN_CURSORS, BST_CHECKED);
         CheckDlgButton(m_wnd, IDC_TITLE_EGG, BST_UNCHECKED);
         CheckDlgButton(m_wnd, IDC_PLVIEW_FONT, BST_CHECKED);
+        SetDlgItemInt(m_wnd, IDC_PL_FONT_SIZE, config::pl_font_size_default, FALSE);
+        CheckDlgButton(m_wnd, IDC_PL_SKIN_FONT, BST_UNCHECKED);
+        CheckDlgButton(m_wnd, IDC_PL_FONT_SMOOTH, BST_UNCHECKED);
+        select_font("Arial");
         CheckDlgButton(m_wnd, IDC_TITLE_BITMAP, BST_CHECKED);
         CheckDlgButton(m_wnd, IDC_TITLE_ALT, BST_UNCHECKED);
         uSetDlgItemText(m_wnd, IDC_FORMAT_MAIN, config::default_format_main);
@@ -93,8 +103,8 @@ private:
             self->on_init();
             return TRUE;
         case WM_COMMAND:
-            if (LOWORD(wp) == IDC_TITLE_BITMAP || LOWORD(wp) == IDC_BALANCE_DSP) self->update_enabled();
-            if (HIWORD(wp) == BN_CLICKED || (HIWORD(wp) == EN_CHANGE && self->m_initialized))
+            if (LOWORD(wp) == IDC_TITLE_BITMAP || LOWORD(wp) == IDC_BALANCE_DSP || LOWORD(wp) == IDC_PL_SKIN_FONT) self->update_enabled();
+            if (HIWORD(wp) == BN_CLICKED || HIWORD(wp) == CBN_SELCHANGE || (HIWORD(wp) == EN_CHANGE && self->m_initialized))
                 self->changed();
             return TRUE;
         case WM_DESTROY:
@@ -122,6 +132,12 @@ private:
         CheckDlgButton(m_wnd, IDC_SKIN_CURSORS, config::skin_cursors.get() ? BST_CHECKED : BST_UNCHECKED);
         CheckDlgButton(m_wnd, IDC_TITLE_EGG, config::title_easter_egg.get() ? BST_CHECKED : BST_UNCHECKED);
         CheckDlgButton(m_wnd, IDC_PLVIEW_FONT, config::playlist_view_skin_font.get() ? BST_CHECKED : BST_UNCHECKED);
+        SendDlgItemMessageW(m_wnd, IDC_PL_FONT_SPIN, UDM_SETRANGE32, config::pl_font_size_min, config::pl_font_size_max);
+        SetDlgItemInt(m_wnd, IDC_PL_FONT_SIZE, static_cast<UINT>(config::pl_font_size.get()), FALSE);
+        CheckDlgButton(m_wnd, IDC_PL_SKIN_FONT, config::pl_skin_font.get() ? BST_UNCHECKED : BST_CHECKED);
+        CheckDlgButton(m_wnd, IDC_PL_FONT_SMOOTH, config::pl_font_smooth.get() ? BST_CHECKED : BST_UNCHECKED);
+        fill_fonts();
+        select_font(config::pl_font.get());
         CheckDlgButton(m_wnd, IDC_TITLE_BITMAP, config::title_bitmap_font.get() ? BST_CHECKED : BST_UNCHECKED);
         CheckDlgButton(m_wnd, IDC_TITLE_ALT, config::title_font_alt.get() ? BST_CHECKED : BST_UNCHECKED);
         uSetDlgItemText(m_wnd, IDC_FORMAT_MAIN, config::format_main.get());
@@ -137,6 +153,8 @@ private:
         // The snap only matters while the balance slider works, i.e. with the balance DSP.
         const bool dsp = checked(IDC_BALANCE_DSP);
         for (int id : { IDC_BALANCE_SNAP_LABEL, IDC_BALANCE_SNAP, IDC_BALANCE_SNAP_PCT }) EnableWindow(GetDlgItem(m_wnd, id), dsp);
+        // A font of one's own only when it overrides the skin's.
+        for (int id : { IDC_PL_FONT_LABEL, IDC_PL_FONT }) EnableWindow(GetDlgItem(m_wnd, id), checked(IDC_PL_SKIN_FONT));
     }
 
     bool checked(int id) const { return IsDlgButtonChecked(m_wnd, id) == BST_CHECKED; }
@@ -146,6 +164,44 @@ private:
         BOOL ok = FALSE;
         const UINT v = GetDlgItemInt(m_wnd, IDC_BALANCE_SNAP, &ok, FALSE);
         return ok ? static_cast<int>(std::min(v, 99u)) : default_snap;
+    }
+
+    int font_size_value() const {
+        BOOL ok = FALSE;
+        const UINT v = GetDlgItemInt(m_wnd, IDC_PL_FONT_SIZE, &ok, FALSE);
+        return ok ? std::clamp(static_cast<int>(v), config::pl_font_size_min, config::pl_font_size_max) : config::pl_font_size_default;
+    }
+
+    pfc::string8 font_value() const {
+        HWND combo = GetDlgItem(m_wnd, IDC_PL_FONT);
+        const int sel = static_cast<int>(SendMessageW(combo, CB_GETCURSEL, 0, 0));
+        if (sel < 0) return {};
+        std::wstring buf(static_cast<size_t>(SendMessageW(combo, CB_GETLBTEXTLEN, sel, 0)) + 1, L'\0');
+        SendMessageW(combo, CB_GETLBTEXT, sel, reinterpret_cast<LPARAM>(buf.data()));
+        return pfc::stringcvt::string_utf8_from_wide(buf.c_str()).get_ptr();
+    }
+
+    // Installed font families (no vertical '@' variants), like Winamp's font list.
+    void fill_fonts() {
+        HWND combo = GetDlgItem(m_wnd, IDC_PL_FONT);
+        HDC dc = GetDC(nullptr);
+        LOGFONTW lf = {};
+        lf.lfCharSet = DEFAULT_CHARSET;
+        EnumFontFamiliesExW(dc, &lf, [](const LOGFONTW* f, const TEXTMETRICW*, DWORD, LPARAM p) -> int {
+            HWND c = reinterpret_cast<HWND>(p);
+            if (f->lfFaceName[0] != L'@' && SendMessageW(c, CB_FINDSTRINGEXACT, static_cast<WPARAM>(-1), reinterpret_cast<LPARAM>(f->lfFaceName)) == CB_ERR)
+                SendMessageW(c, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(f->lfFaceName));
+            return 1;
+        }, reinterpret_cast<LPARAM>(combo), 0);
+        ReleaseDC(nullptr, dc);
+    }
+
+    void select_font(const char* face) {
+        HWND combo = GetDlgItem(m_wnd, IDC_PL_FONT);
+        const std::wstring w = pfc::stringcvt::string_wide_from_utf8(face).get_ptr();
+        LRESULT i = SendMessageW(combo, CB_FINDSTRINGEXACT, static_cast<WPARAM>(-1), reinterpret_cast<LPARAM>(w.c_str()));
+        if (i == CB_ERR) i = SendMessageW(combo, CB_FINDSTRINGEXACT, static_cast<WPARAM>(-1), reinterpret_cast<LPARAM>(L"Arial"));
+        SendMessageW(combo, CB_SETCURSEL, i == CB_ERR ? 0 : i, 0);
     }
 
     int dock_value() const {
@@ -169,6 +225,10 @@ private:
             || checked(IDC_SKIN_CURSORS) != config::skin_cursors.get()
             || checked(IDC_TITLE_EGG) != config::title_easter_egg.get()
             || checked(IDC_PLVIEW_FONT) != config::playlist_view_skin_font.get()
+            || font_size_value() != static_cast<int>(config::pl_font_size.get())
+            || checked(IDC_PL_SKIN_FONT) == config::pl_skin_font.get()
+            || checked(IDC_PL_FONT_SMOOTH) != config::pl_font_smooth.get()
+            || (!font_value().is_empty() && strcmp(font_value(), config::pl_font.get()) != 0)
             || checked(IDC_TITLE_BITMAP) != config::title_bitmap_font.get()
             || checked(IDC_TITLE_ALT) != config::title_font_alt.get()
             || text(IDC_FORMAT_MAIN) != config::format_main.get()

@@ -36,6 +36,7 @@ public:
     void release_element();
     void update_title_formats(); // Options > Title formatting changed
     void apply_list_font();      // hosted mode: skin's font for the element, per Options
+    void update_font();          // Options: playlist font / size changed
 
 protected:
     SIZE skin_size() const override;
@@ -83,7 +84,6 @@ private:
     void playlist_changed();
     void recompute_lengths();
     void apply_size(int w_extra, int h_extra); // px beyond the minimum size
-    void update_font();
 
     void render_normal(Canvas& c);
     void render_shade(Canvas& c);
@@ -106,7 +106,9 @@ private:
     std::unique_ptr<Callbacks> m_callbacks;
     titleformat_object::ptr m_title_script; // rows
     titleformat_object::ptr m_shade_script; // windowshade title
-    HFONT m_font = nullptr;
+    HFONT m_font = nullptr;       // list rows, at Options' font size
+    HFONT m_shade_font = nullptr; // windowshade title: same face, Winamp's fixed size
+    int m_row_h = 13;             // font size + 3
 
     bool m_shade = false;
     int m_w_extra = 0, m_h_extra = 4 * step_h; // px beyond the minimum size

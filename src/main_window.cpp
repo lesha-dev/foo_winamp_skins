@@ -545,7 +545,7 @@ void MainWindow::update_title_formats() {
 
 void MainWindow::apply_display_options() {
     update_title_formats();
-    if (m_pl) m_pl->apply_resize_mode();
+    if (m_pl) { m_pl->apply_resize_mode(); m_pl->update_font(); }
     for (auto& w : m_elements) w->apply_resize_mode();
     invalidate_all();
 }

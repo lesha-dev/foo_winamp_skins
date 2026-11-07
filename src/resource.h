@@ -56,3 +56,9 @@
 #define IDC_RANDOM_SKIN     1119
 #define IDC_RANDOM_STARTUP  1120
 #define IDC_RANDOM_PLAY     1121
+#define IDC_PL_FONT_SIZE    1122
+#define IDC_PL_FONT_SPIN    1123
+#define IDC_PL_SKIN_FONT    1124
+#define IDC_PL_FONT_LABEL   1125
+#define IDC_PL_FONT         1126
+#define IDC_PL_FONT_SMOOTH  1127

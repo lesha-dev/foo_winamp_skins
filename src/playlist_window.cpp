@@ -38,7 +38,7 @@ constexpr S shade_tile      { 72, 57, 25, 14 };
 constexpr S shade_right     { 99, 57, 50, 14 };
 constexpr S shade_right_sel { 99, 42, 50, 14 };
 
-constexpr int top_h = 20, bottom_h = 38, left_w = 12, right_w = 20, row_h = 13, list_top = 2; // rows start at y=22 and end at h-38
+constexpr int top_h = 20, bottom_h = 38, left_w = 12, right_w = 20, list_top = 2; // rows start at y=22 and end at h-38
 
 // Sprite menus: items top to bottom.
 struct MenuItem { S normal, hover; };
@@ -54,8 +54,9 @@ const MenuDef& menu_def(int idx) {
     return defs[idx];
 }
 
+// Whole seconds, truncated like Winamp's track lengths.
 pfc::string8 time_str(double seconds, bool hours) {
-    const long s = std::max(0L, static_cast<long>(seconds + 0.5));
+    const long s = std::max(0L, static_cast<long>(seconds));
     if (hours && s >= 3600) return pfc::format(s / 3600, ":", pfc::format_int((s / 60) % 60, 2), ":", pfc::format_int(s % 60, 2));
     return pfc::format(s / 60, ":", pfc::format_int(s % 60, 2));
 }
@@ -112,6 +113,7 @@ PlaylistWindow::~PlaylistWindow() {
     m_callbacks.reset();
     destroy();
     if (m_font) DeleteObject(m_font);
+    if (m_shade_font) DeleteObject(m_shade_font);
 }
 
 int PlaylistWindow::width() const { return min_width + m_w_extra; }
@@ -122,12 +124,12 @@ PlaylistWindow::Rc PlaylistWindow::list_rect() const {
     return { left_w, top_h + list_top, width() - left_w - right_w, height() - top_h - bottom_h - list_top };
 }
 
-int PlaylistWindow::visible_rows() const { return std::max(1, list_rect().h / row_h); }
+int PlaylistWindow::visible_rows() const { return std::max(1, list_rect().h / m_row_h); }
 
 int PlaylistWindow::row_at(POINT p) const {
     const Rc r = list_rect();
     if (p.y < r.y) return -1;
-    const size_t row = m_scroll + static_cast<size_t>((p.y - r.y) / row_h);
+    const size_t row = m_scroll + static_cast<size_t>((p.y - r.y) / m_row_h);
     const size_t count = playlist_manager::get()->activeplaylist_get_item_count();
     return row < count ? static_cast<int>(row) : -1;
 }
@@ -311,16 +313,25 @@ bool PlaylistWindow::list_scroll(SCROLLINFO& si) const {
 void PlaylistWindow::update_font() {
     HFONT old = m_font; // deleted after the hosted element has switched to the new one
     m_font = nullptr;
-    const std::wstring face = wide(m_skin ? m_skin->playlist_colors().font.c_str() : "Arial");
+    // Like Winamp: the skin's pledit.txt font unless Options names another; the size is the user's.
+    const std::wstring face = wide(config::pl_skin_font.get() ? (m_skin ? m_skin->playlist_colors().font.c_str() : "Arial")
+                                                              : config::pl_font.get().get_ptr());
+    const int size = std::clamp(static_cast<int>(config::pl_font_size.get()), config::pl_font_size_min, config::pl_font_size_max);
+    m_row_h = size + 3;
     LOGFONTW lf = {};
-    lf.lfHeight = -10;
+    lf.lfHeight = -size;
     lf.lfWeight = FW_NORMAL;
     lf.lfCharSet = DEFAULT_CHARSET;
-    lf.lfQuality = NONANTIALIASED_QUALITY;
+    lf.lfQuality = config::pl_font_smooth.get() ? DEFAULT_QUALITY : NONANTIALIASED_QUALITY; // DEFAULT: system smoothing (ClearType)
     wcsncpy_s(lf.lfFaceName, face.c_str(), _TRUNCATE);
     m_font = CreateFontIndirectW(&lf);
+    if (m_shade_font) DeleteObject(m_shade_font);
+    lf.lfHeight = -config::pl_font_size_default;
+    m_shade_font = CreateFontIndirectW(&lf);
     apply_list_font();
     if (old) DeleteObject(old);
+    clamp_scroll();
+    invalidate();
 }
 
 void PlaylistWindow::apply_list_font() {
@@ -373,7 +384,7 @@ void PlaylistWindow::recompute_lengths() {
     pfc::bit_array_bittable sel(n);
     pm->activeplaylist_get_selection_mask(sel);
     for (size_t i = 0; i < n; ++i) {
-        const double len = std::max(0.0, pm->activeplaylist_get_item_handle(i)->get_length());
+        const double len = std::floor(std::max(0.0, pm->activeplaylist_get_item_handle(i)->get_length())); // sum of shown lengths
         m_total_len += len;
         if (sel.get(i)) m_sel_len += len;
     }
@@ -576,7 +587,7 @@ void PlaylistWindow::on_mouse_move(POINT p) {
         if (!m_drag_reorder) return;
         const Rc r = list_rect();
         const int count = static_cast<int>(playlist_manager::get()->activeplaylist_get_item_count());
-        const int row = std::clamp(static_cast<int>(m_scroll) + static_cast<int>((p.y - r.y) / row_h) - (p.y < r.y ? 1 : 0), 0, std::max(0, count - 1));
+        const int row = std::clamp(static_cast<int>(m_scroll) + static_cast<int>((p.y - r.y) / m_row_h) - (p.y < r.y ? 1 : 0), 0, std::max(0, count - 1));
         if (row != m_drag_row) {
             m_reduce_to = SIZE_MAX;
             playlist_manager::get()->activeplaylist_move_selection(row - m_drag_row);
@@ -960,17 +971,17 @@ void PlaylistWindow::render_list(Canvas& c) {
     const size_t rows = static_cast<size_t>(visible_rows());
 
     HDC dc = c.dc();
-    c.set_clip(r.x, r.y, r.w, static_cast<int>(rows) * row_h);
+    c.set_clip(r.x, r.y, r.w, static_cast<int>(rows) * m_row_h);
     HGDIOBJ old_font = SelectObject(dc, m_font);
     SetBkMode(dc, TRANSPARENT);
     const bool has_focus = GetFocus() == m_wnd;
     for (size_t i = 0; i < rows && m_scroll + i < count; ++i) {
         const size_t item = m_scroll + i;
-        const int y = r.y + static_cast<int>(i) * row_h;
+        const int y = r.y + static_cast<int>(i) * m_row_h;
         const bool selected = pm->activeplaylist_is_item_selected(item);
         if (selected) {
             GdiFlush();
-            c.fill_rect(r.x, y, r.w, row_h, to_bgrx(col.selected_bg));
+            c.fill_rect(r.x, y, r.w, m_row_h, to_bgrx(col.selected_bg));
         }
         pfc::string8 title;
         pm->activeplaylist_item_format_title(item, nullptr, title, m_title_script, nullptr, playback_control::display_level_titles);
@@ -979,16 +990,16 @@ void PlaylistWindow::render_list(Canvas& c) {
         const std::wstring right = len > 0 ? wide(time_str(len, true)) : std::wstring();
 
         SetTextColor(dc, playing_here && item == playing_idx ? col.current : col.normal);
-        RECT tr = { r.x + 1, y, r.x + r.w - 3, y + row_h };
+        RECT tr = { r.x, y, r.x + r.w - 3, y + m_row_h };
         SIZE rs = {};
         if (!right.empty()) {
             GetTextExtentPoint32W(dc, right.c_str(), static_cast<int>(right.size()), &rs);
             DrawTextW(dc, right.c_str(), static_cast<int>(right.size()), &tr, DT_RIGHT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
         }
-        RECT lr = { tr.left, y, tr.right - (rs.cx ? rs.cx + 4 : 0), y + row_h };
-        DrawTextW(dc, left.c_str(), static_cast<int>(left.size()), &lr, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
+        RECT lr = { tr.left, y, tr.right - (rs.cx ? rs.cx + 4 : 0), y + m_row_h };
+        DrawTextW(dc, left.c_str(), static_cast<int>(left.size()), &lr, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX | DT_END_ELLIPSIS);
         if (item == focus && has_focus) {
-            RECT fr = { r.x, y, r.x + r.w, y + row_h };
+            RECT fr = { r.x, y, r.x + r.w, y + m_row_h };
             SetTextColor(dc, col.normal);
             DrawFocusRect(dc, &fr);
         }
@@ -1044,7 +1055,7 @@ void PlaylistWindow::render_shade(Canvas& c) {
         HDC dc = c.dc();
         const int saved = SaveDC(dc);
         IntersectClipRect(dc, 4, 2, right, 12);
-        SelectObject(dc, m_font);
+        SelectObject(dc, m_shade_font);
         SetBkMode(dc, TRANSPARENT);
         SetTextColor(dc, col.normal);
         int text_right = right;
