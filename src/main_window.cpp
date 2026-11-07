@@ -127,7 +127,6 @@ void save_element_states(const std::vector<ElementState>& states) {
     config::element_windows.set(buf.data(), buf.size());
 }
 
-GUID album_art_guid() { return find_element("Album Art Viewer"); } // toggled by Alt+A
 
 // Winamp's tooltip texts; "(doesn't work)" marks what isn't implemented here.
 const wchar_t* tooltip_text(Control id) {
@@ -159,13 +158,6 @@ const wchar_t* tooltip_text(Control id) {
     case Control::about: return L"Winamp Skins Preferences";
     default: return nullptr;
     }
-}
-
-// Menu text with its shortcut, honouring foobar2000's "Show keyboard shortcuts in menus".
-std::wstring shortcut_label(const wchar_t* text, const wchar_t* keys) {
-    std::wstring s = text;
-    if (standard_config_objects::query_show_keyboard_shortcuts_in_menus()) { s += L'\t'; s += keys; }
-    return s;
 }
 
 std::wstring menu_label(const std::wstring& s) {
@@ -461,11 +453,7 @@ LRESULT MainWindow::wndproc(UINT msg, WPARAM wp, LPARAM lp) {
         else playback_control::get()->volume_down();
         return 0;
     case WM_KEYDOWN:
-        if (on_key(wp)) return 0;
-        if (keyboard_shortcut_manager::get()->on_keydown_auto(wp)) return 0;
-        break;
     case WM_SYSKEYDOWN:
-        if (handle_key(wp, true)) return 0;
         if (keyboard_shortcut_manager::get()->on_keydown_auto(wp)) return 0;
         break;
     case WM_CONTEXTMENU: {
@@ -614,17 +602,6 @@ void MainWindow::save_element_windows() {
     std::vector<ElementState> states;
     for (auto& w : m_elements) states.push_back(w->element_state());
     save_element_states(states);
-}
-
-bool MainWindow::handle_key(WPARAM vk, bool alt) {
-    if (alt) {
-        if (!config::winamp_hotkeys.get()) return false;
-        if (vk == 'G') { toggle_eq(); return true; }
-        if (vk == 'E') { toggle_playlist(); return true; }
-        if (vk == 'A') { toggle_element(album_art_guid()); return true; }
-        return false;
-    }
-    return on_key(vk);
 }
 
 void MainWindow::on_paint() {
@@ -930,34 +907,6 @@ void MainWindow::activate_control(Control id) {
     invalidate();
 }
 
-bool MainWindow::on_key(WPARAM vk) {
-    if (!config::winamp_hotkeys.get()) return false;
-    const bool ctrl = GetKeyState(VK_CONTROL) < 0;
-    auto pc = playback_control::get();
-    if (ctrl) {
-        switch (vk) {
-        case 'D': toggle_double_size(); return true;
-        case 'A': set_always_on_top(!m_always_on_top); return true;
-        case 'W': set_shade(!m_shade); return true;
-        case 'V': player::toggle_stop_after_current(); return true;
-        }
-        return false;
-    }
-    switch (vk) {
-    case 'Z': player::previous(); return true;
-    case 'X': player::play(); return true;
-    case 'C': player::pause(); return true;
-    case 'V': player::stop(); return true;
-    case 'B': player::next(); return true;
-    case 'L': player::open_files(); return true;
-    case VK_UP: pc->volume_up(); return true;
-    case VK_DOWN: pc->volume_down(); return true;
-    case VK_LEFT: pc->playback_seek_delta(-5); return true;
-    case VK_RIGHT: pc->playback_seek_delta(5); return true;
-    }
-    return false;
-}
-
 void MainWindow::show_context_menu(POINT pt, SkinWindow* panel) {
     const HWND owner = panel ? panel->hwnd() : m_wnd;
     const bool shortcuts = standard_config_objects::query_show_keyboard_shortcuts_in_menus();
@@ -968,8 +917,8 @@ void MainWindow::show_context_menu(POINT pt, SkinWindow* panel) {
         auto flags = [](bool can, bool on) { return MF_STRING | (can ? 0u : UINT(MF_GRAYED)) | (on ? UINT(MF_CHECKED) : 0u); };
         const bool dbl_can = true, dbl_on = panel ? panel->is_double_size() : m_scale == 2;
         const bool shade_can = panel ? panel->can_shade() : true, shade_on = panel ? panel->is_shaded() : m_shade;
-        AppendMenuW(menu, flags(dbl_can, dbl_on), id_panel_double, shortcut_label(L"&Double size", L"Ctrl+D").c_str());
-        AppendMenuW(menu, flags(shade_can, shade_on), id_panel_shade, panel ? L"&Windowshade" : shortcut_label(L"&Windowshade", L"Ctrl+W").c_str());
+        AppendMenuW(menu, flags(dbl_can, dbl_on), id_panel_double, L"&Double size");
+        AppendMenuW(menu, flags(shade_can, shade_on), id_panel_shade, L"&Windowshade");
         AppendMenuW(menu, flags(panel && panel->can_rename(), false), id_panel_rename, L"&Rename...");
         AppendMenuW(menu, MF_STRING, id_panel_close, L"&Close");
         if (!panel) AppendMenuW(menu, MF_STRING | (config::autoscroll.get() ? MF_CHECKED : 0), id_autoscroll, L"Autoscroll song &title");
@@ -977,13 +926,13 @@ void MainWindow::show_context_menu(POINT pt, SkinWindow* panel) {
             AppendMenuW(menu, flags(true, panel->is_view_switched()), id_panel_view, L"Use foobar's Playlist &View");
         AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
     }
-    AppendMenuW(menu, MF_STRING | (m_eq && m_eq->visible() ? MF_CHECKED : 0), id_toggle_eq, shortcut_label(L"E&qualizer", L"Alt+G").c_str());
-    AppendMenuW(menu, MF_STRING | (m_pl && m_pl->visible() ? MF_CHECKED : 0), id_toggle_pl, shortcut_label(L"Pla&ylist", L"Alt+E").c_str());
+    AppendMenuW(menu, MF_STRING | (m_eq && m_eq->visible() ? MF_CHECKED : 0), id_toggle_eq, L"E&qualizer");
+    AppendMenuW(menu, MF_STRING | (m_pl && m_pl->visible() ? MF_CHECKED : 0), id_toggle_pl, L"Pla&ylist");
     // Elements submenu: foobar2000's UI elements by group, like Default UI's "Replace UI Element" list.
     const std::vector<ElementInfo> elements = list_elements();
     HMENU elements_menu = CreatePopupMenu();
     {
-        const GUID art = album_art_guid(), playlist_view = playlist_view_guid();
+        const GUID playlist_view = playlist_view_guid();
         // One flat list: each group starts with a separator and its name as an unclickable header.
         bool first_group = true;
         pfc::string8 group;
@@ -1000,7 +949,6 @@ void MainWindow::show_context_menu(POINT pt, SkinWindow* panel) {
             for (auto& w : m_elements) if (w->element_guid() == e.guid && w->window().visible()) open = true;
             if (e.guid == playlist_view && m_pl) open = m_pl->is_view_switched();
             std::wstring label = menu_label(pfc::stringcvt::string_wide_from_utf8(e.name).get_ptr());
-            if (e.guid == art && shortcuts) label += L"\tAlt+A";
             AppendMenuW(elements_menu, MF_STRING | (open ? MF_CHECKED : 0), id_element_first + i, label.c_str());
         }
         if (elements.empty()) AppendMenuW(elements_menu, MF_STRING | MF_GRAYED, 0, L"(no UI elements)");

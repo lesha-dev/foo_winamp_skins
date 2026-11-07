@@ -11,7 +11,6 @@
 #define IDC_FOLDER          1004
 #define IDC_OPEN_FOLDER     1005
 #define IDC_REFRESH         1006
-#define IDC_WINAMP_HOTKEYS  1009
 #define IDC_BALANCE_DSP     1010
 #define IDC_BALANCE_SNAP    1011
 #define IDC_DIM_TITLEBARS   1012

@@ -30,7 +30,6 @@ public:
     fb2k::hwnd_t get_wnd() override { return m_wnd; }
 
     void apply() override {
-        config::winamp_hotkeys = checked(IDC_WINAMP_HOTKEYS);
         balance::set_enabled(checked(IDC_BALANCE_DSP));
         config::balance_snap = snap_value();
         config::dim_titlebars = checked(IDC_DIM_TITLEBARS);
@@ -58,7 +57,6 @@ public:
     }
 
     void reset() override {
-        CheckDlgButton(m_wnd, IDC_WINAMP_HOTKEYS, BST_CHECKED);
         CheckDlgButton(m_wnd, IDC_BALANCE_DSP, BST_CHECKED);
         SetDlgItemInt(m_wnd, IDC_BALANCE_SNAP, default_snap, FALSE);
         CheckDlgButton(m_wnd, IDC_DIM_TITLEBARS, BST_CHECKED);
@@ -109,7 +107,6 @@ private:
 
     void on_init() {
         m_dark.AddDialogWithControls(m_wnd);
-        CheckDlgButton(m_wnd, IDC_WINAMP_HOTKEYS, config::winamp_hotkeys.get() ? BST_CHECKED : BST_UNCHECKED);
         CheckDlgButton(m_wnd, IDC_BALANCE_DSP, balance::enabled() ? BST_CHECKED : BST_UNCHECKED);
         SetDlgItemInt(m_wnd, IDC_BALANCE_SNAP, static_cast<UINT>(config::balance_snap.get()), FALSE);
         SendDlgItemMessageW(m_wnd, IDC_BALANCE_SNAP, EM_SETLIMITTEXT, 2, 0);
@@ -159,8 +156,7 @@ private:
 
     bool has_changed() const {
         if (!m_wnd) return false;
-        return checked(IDC_WINAMP_HOTKEYS) != config::winamp_hotkeys.get()
-            || checked(IDC_BALANCE_DSP) != balance::enabled()
+        return checked(IDC_BALANCE_DSP) != balance::enabled()
             || snap_value() != static_cast<int>(config::balance_snap.get())
             || checked(IDC_DIM_TITLEBARS) != config::dim_titlebars.get()
             || checked(IDC_SNAP) != config::snap.get()

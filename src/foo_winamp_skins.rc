@@ -33,25 +33,24 @@ IDD_PREFS_OPTIONS DIALOGEX 0, 0, 332, 279
 STYLE DS_SETFONT | DS_FIXEDSYS | DS_CONTROL | WS_CHILD
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
-    GROUPBOX        "General", IDC_STATIC, 7, 7, 319, 40
-    AUTOCHECKBOX    "Winamp hotkeys (Z X C V B L, arrows, Ctrl+D/A/W)", IDC_WINAMP_HOTKEYS, 14, 19, 300, 10
-    AUTOCHECKBOX    "Enable balance DSP", IDC_BALANCE_DSP, 14, 32, 84, 10
-    LTEXT           "center snap:", IDC_BALANCE_SNAP_LABEL, 100, 33, 44, 8
-    EDITTEXT        IDC_BALANCE_SNAP, 146, 31, 22, 12, ES_NUMBER
-    LTEXT           "%", IDC_BALANCE_SNAP_PCT, 171, 33, 10, 8
-    GROUPBOX        "Display", IDC_STATIC, 7, 52, 319, 159
-    AUTOCHECKBOX    "Dim window titlebars when not in focus", IDC_DIM_TITLEBARS, 14, 64, 300, 10
-    AUTOCHECKBOX    "Dock skinned windows at", IDC_SNAP, 14, 77, 94, 10
-    EDITTEXT        IDC_SNAP_PX, 109, 76, 22, 12, ES_NUMBER
-    LTEXT           "pixels (hold Shift while dragging to invert)", IDC_STATIC, 135, 78, 180, 8
-    AUTOCHECKBOX    "Enable smooth resizing of the playlist window", IDC_SMOOTH_RESIZE, 14, 91, 300, 10
-    LTEXT           "Apply double size:", IDC_STATIC, 14, 105, 62, 8
-    AUTORADIOBUTTON "to all windows", IDC_DSIZE_ALL, 78, 104, 66, 10, WS_GROUP | WS_TABSTOP
-    AUTORADIOBUTTON "individually", IDC_DSIZE_EACH, 150, 104, 60, 10
-    AUTOCHECKBOX    "Always show Clutterbar in main window", IDC_CLUTTERBAR, 14, 117, 300, 10, WS_GROUP | WS_TABSTOP
-    AUTOCHECKBOX    "Oldschool playlist button behavior (hold, pick on release)", IDC_OLDSCHOOL_PL, 14, 130, 300, 10
-    AUTOCHECKBOX    "Display tooltips in Winamp's windows", IDC_TOOLTIPS, 14, 143, 140, 10
-    AUTOCHECKBOX    "Use skinned mouse cursors", IDC_SKIN_CURSORS, 160, 143, 154, 10
+    GROUPBOX        "General", IDC_STATIC, 7, 7, 319, 27
+    AUTOCHECKBOX    "Enable balance DSP", IDC_BALANCE_DSP, 14, 19, 84, 10
+    LTEXT           "center snap:", IDC_BALANCE_SNAP_LABEL, 100, 20, 44, 8
+    EDITTEXT        IDC_BALANCE_SNAP, 146, 18, 22, 12, ES_NUMBER
+    LTEXT           "%", IDC_BALANCE_SNAP_PCT, 171, 20, 10, 8
+    GROUPBOX        "Display", IDC_STATIC, 7, 39, 319, 172
+    AUTOCHECKBOX    "Dim window titlebars when not in focus", IDC_DIM_TITLEBARS, 14, 51, 300, 10
+    AUTOCHECKBOX    "Dock skinned windows at", IDC_SNAP, 14, 64, 94, 10
+    EDITTEXT        IDC_SNAP_PX, 109, 63, 22, 12, ES_NUMBER
+    LTEXT           "pixels (hold Shift while dragging to invert)", IDC_STATIC, 135, 65, 180, 8
+    AUTOCHECKBOX    "Enable smooth resizing of the playlist window", IDC_SMOOTH_RESIZE, 14, 78, 300, 10
+    LTEXT           "Apply double size:", IDC_STATIC, 14, 92, 62, 8
+    AUTORADIOBUTTON "to all windows", IDC_DSIZE_ALL, 78, 91, 66, 10, WS_GROUP | WS_TABSTOP
+    AUTORADIOBUTTON "individually", IDC_DSIZE_EACH, 150, 91, 60, 10
+    AUTOCHECKBOX    "Always show Clutterbar in main window", IDC_CLUTTERBAR, 14, 104, 300, 10, WS_GROUP | WS_TABSTOP
+    AUTOCHECKBOX    "Oldschool playlist button behavior (hold, pick on release)", IDC_OLDSCHOOL_PL, 14, 117, 300, 10
+    AUTOCHECKBOX    "Display tooltips in Winamp's windows", IDC_TOOLTIPS, 14, 130, 300, 10
+    AUTOCHECKBOX    "Use skinned mouse cursors", IDC_SKIN_CURSORS, 14, 143, 300, 10
     AUTOCHECKBOX    "Show Easter egg header in Main window", IDC_TITLE_EGG, 14, 156, 300, 10
     AUTOCHECKBOX    "Use bitmap font for main window title display (no international support)", IDC_TITLE_BITMAP, 14, 169, 300, 10
     AUTOCHECKBOX    "Use alternative font style when 'Double size' is enabled", IDC_TITLE_ALT, 24, 182, 290, 10

@@ -210,11 +210,7 @@ LRESULT SkinWindow::wndproc(UINT msg, WPARAM wp, LPARAM lp) {
         on_wheel(GET_WHEEL_DELTA_WPARAM(wp));
         return 0;
     case WM_KEYDOWN:
-        if (wp == 'D' && GetKeyState(VK_CONTROL) < 0 && config::winamp_hotkeys.get()) {
-            if (MainWindow* w = MainWindow::instance()) { w->toggle_double_size(this); return 0; }
-        }
         if (on_key(wp)) return 0;
-        if (MainWindow* w = MainWindow::instance(); w && w->handle_key(wp)) return 0;
         [[fallthrough]];
     case WM_SYSKEYDOWN:
         if (keyboard_shortcut_manager::get()->on_keydown_auto(wp)) return 0;

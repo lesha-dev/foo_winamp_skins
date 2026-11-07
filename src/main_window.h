@@ -47,15 +47,13 @@ public:
     // The clicked window's actions (Double size, Windowshade, Rename, Close), then the common menu.
     // panel: the clicked window; null = the main window.
     void show_context_menu(POINT pt_screen, SkinWindow* panel = nullptr);
-    // Double size from a menu, the clutterbar or Ctrl+D on `source` (null = main window): per Options, every
+    // Double size from a menu or the clutterbar on `source` (null = main window): per Options, every
     // window takes the source's new state, or only the source changes.
     void toggle_double_size(SkinWindow* source = nullptr);
     // Every window takes the main window's double size (switching Options to "all windows").
     void sync_double_size();
     void set_vis_mode(VisMode mode);
     void set_vis_options(const VisOptions& o); // also stored in config
-    // Winamp hotkeys, also used by the EQ and playlist windows. Returns true if handled.
-    bool handle_key(WPARAM vk, bool alt = false);
     void toggle_eq();
     void toggle_playlist();
     void toggle_element(const GUID& guid); // shows/hides the element's window, creating it on first use
@@ -85,7 +83,6 @@ private:
     void cancel_drag();
     void update_slider(POINT skin_pt);
     void activate_control(Control id);
-    bool on_key(WPARAM vk);
     void show_vis_menu(POINT pt_screen);
     // Right-click menu of a control. False: the control has none of its own (main context menu instead).
     bool show_control_menu(Control id, POINT pt_screen);

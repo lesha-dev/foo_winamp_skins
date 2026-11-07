@@ -12,7 +12,6 @@ cfg_bool autoscroll(guids::cfg_autoscroll, true);
 cfg_bool double_size(guids::cfg_double_size, false);
 cfg_bool shade(guids::cfg_shade, false);
 cfg_float balance(guids::cfg_balance, 0.0);
-cfg_bool winamp_hotkeys(guids::cfg_winamp_hotkeys, true);
 cfg_bool balance_dsp(guids::cfg_balance_dsp, true);
 cfg_int balance_snap(guids::cfg_balance_snap, 25);
 cfg_bool dim_titlebars(guids::cfg_dim_titlebars, true);

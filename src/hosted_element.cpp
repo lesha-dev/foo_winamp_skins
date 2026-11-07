@@ -3,6 +3,7 @@
 #include "config.h"
 
 #include <algorithm>
+#include <memory>
 
 namespace wsz {
 
@@ -29,6 +30,22 @@ LRESULT CALLBACK cursor_hook(int code, WPARAM wp, LPARAM lp) {
     return CallNextHookEx(g_cursor_hook, code, wp, lp);
 }
 
+// Keys pressed inside a hosted element run foobar2000's keyboard shortcuts, like in Default UI (typing in
+// edit boxes excluded by the SDK helper). Keys on our own windows are handled in their window procedures.
+class KeyFilter : public message_filter_impl_base {
+public:
+    bool pretranslate_message(MSG* m) override {
+        if (m->message != WM_KEYDOWN && m->message != WM_SYSKEYDOWN) return false;
+        for (HostedElement* e : g_live) {
+            const HWND root = e->hwnd();
+            if (root && (root == m->hwnd || IsChild(root, m->hwnd)))
+                return keyboard_shortcut_manager_v2::get()->pretranslate_message(m, GetAncestor(m->hwnd, GA_ROOT));
+        }
+        return false;
+    }
+};
+std::unique_ptr<KeyFilter> g_key_filter;
+
 } // namespace
 
 GUID find_element(const char* wanted) {
@@ -43,6 +60,7 @@ GUID find_element(const char* wanted) {
 HostedElement::HostedElement(const GUID& guid, std::vector<uint8_t> config) : m_guid(guid), m_config(std::move(config)) {
     if (!ui_element::g_get_name(m_name, m_guid)) m_name = "Element";
     if (g_live.empty() && !g_cursor_hook) g_cursor_hook = SetWindowsHookExW(WH_CALLWNDPROCRET, cursor_hook, nullptr, GetCurrentThreadId());
+    if (!g_key_filter) g_key_filter = std::make_unique<KeyFilter>();
     g_live.push_back(this);
 }
 
@@ -51,6 +69,7 @@ HostedElement::~HostedElement() {
     ui_element_instance_callback_release();
     g_live.erase(std::remove(g_live.begin(), g_live.end(), this), g_live.end());
     if (g_live.empty() && g_cursor_hook) { UnhookWindowsHookEx(g_cursor_hook); g_cursor_hook = nullptr; }
+    if (g_live.empty()) g_key_filter.reset();
 }
 
 void HostedElement::set_default_cursor() const {

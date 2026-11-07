@@ -25,7 +25,7 @@
   - [x] Shift/Ctrl+click on transport buttons (main and playlist mini buttons):
      - Prev/Next: Shift seeks ±5 s, Ctrl goes to the first/last track.
      - Stop: Shift fades out.
-  - [ ] Missing keys. Winamp uses this:
+  - [x] Missing keys. Winamp uses this:
      - Shift+Z/B (seek ±5 s), Ctrl+Z/B (first/last track), Shift+V (fade stop), R/S (repeat/shuffle)
      - Shift+L or Insert (folder), Ctrl+L (URL), Shift+X (file), the numpad aliases
      - Ctrl+T (elapsed/remaining), Alt+3 (file info), J (jump to file), Ctrl+J (jump to time; needs a dialog, M)
@@ -33,7 +33,7 @@
   - [ ] Tray icon: Default UI provides it and we don't. Use default UI's logic and flags to show/hide tray icon.
   - [ ] "Show now playing" does nothing. Use default UI logic.
   - [ ] Playlist editing commands: add Alt+↑/↓
-  - [ ] Pass hotkeys to focused Default Panel (eg Alt+Enter on selected track doesn't work)
+  - [x] Pass hotkeys to focused Default Panel (eg Alt+Enter on selected track doesn't work)
   - [ ] Mouse wheel volume text: Winamp shows "Volume: N%" in the song title, also for ↑/↓. Middle button + wheel seeks.
   - [ ] Double-click on the song title opens file info
   - [ ] Shift+drag on the seekbar seeks live.
@@ -70,7 +70,7 @@
 - [x] 8. Window: region.txt shape, double size, always on top, windowshade, minimize/close, edge snapping
 - [x] ~~Embed a default skin~~ — decided: ship no skin (Winamp base skin isn't redistributable); the no-skin placeholder stays.
 - [x] Skins folder `<profile>\winamp-skins`, listed in the context menu (Skins submenu).
-- [x] Preferences page (Display > Winamp Skins): skin list with preview, folder actions; Options subpage (hotkeys / balance DSP / centre snap, dim titlebars).
+- [x] Preferences page (Display > Winamp Skins): skin list with preview, folder actions; Options subpage (balance DSP / centre snap, dim titlebars).
 - [x] Balance via own DSP ("Winamp Skins balance"), auto-inserted last in the chain on first off-centre use. Lags by the output buffer length.
 - [x] Equalizer window (drives fb2k's built-in Equalizer: 10 Winamp bands + preamp mapped onto its 18 bands, synced both ways; .feq preset load/save) and playlist editor (active fb2k playlist).
 - [x] Playlist switching: Playlists submenu in the context menu (sets fb2k's active playlist).

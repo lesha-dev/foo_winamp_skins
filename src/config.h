@@ -12,7 +12,6 @@ extern cfg_bool autoscroll;           // main window song title scrolls by itsel
 extern cfg_bool double_size;
 extern cfg_bool shade;
 extern cfg_float balance;            // use wsz::balance, which caches it for the audio thread
-extern cfg_bool winamp_hotkeys;       // Z X C V B L, arrows, Ctrl+D/A/W in the main window
 extern cfg_bool balance_dsp;          // use wsz::balance::set_enabled()
 extern cfg_bool dim_titlebars;        // inactive windows show the dimmed titlebar
 extern cfg_bool clutterbar;           // always show the clutterbar (else only while pressed)
