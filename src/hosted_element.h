@@ -40,6 +40,8 @@ public:
     HWND hwnd() const { return m_elem.is_valid() ? m_elem->get_wnd() : nullptr; }
     void set_rect(const RECT& r);
     void set_skin(const Skin* skin);
+    // Shows the skin's cursor for the element's client area (instead of the system arrow).
+    void set_default_cursor() const;
     // Font for list/playlist text instead of foobar2000's (null = foobar2000's); the caller keeps it alive.
     void set_list_font(HFONT font);
     // The element's configuration (refreshed from the live element).

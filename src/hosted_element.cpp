@@ -1,7 +1,35 @@
 #include "stdafx.h"
 #include "hosted_element.h"
+#include "config.h"
+
+#include <algorithm>
 
 namespace wsz {
+
+namespace {
+
+// Elements alive on the UI thread. While any exists, a thread hook replaces the system arrow that a
+// hosted element's windows set in WM_SETCURSOR with the skin's playlist cursor; other cursors (I-beam,
+// hand, splitters...) are left alone.
+std::vector<HostedElement*> g_live;
+HHOOK g_cursor_hook = nullptr;
+
+LRESULT CALLBACK cursor_hook(int code, WPARAM wp, LPARAM lp) {
+    if (code == HC_ACTION) {
+        const auto* m = reinterpret_cast<const CWPRETSTRUCT*>(lp);
+        // Only the original target's return: by then its parents have had their say too.
+        if (m->message == WM_SETCURSOR && reinterpret_cast<HWND>(m->wParam) == m->hwnd
+            && config::skin_cursors.get() && GetCursor() == LoadCursorW(nullptr, IDC_ARROW)) {
+            for (HostedElement* e : g_live) {
+                const HWND root = e->hwnd();
+                if (root && (root == m->hwnd || IsChild(root, m->hwnd))) { e->set_default_cursor(); break; }
+            }
+        }
+    }
+    return CallNextHookEx(g_cursor_hook, code, wp, lp);
+}
+
+} // namespace
 
 GUID find_element(const char* wanted) {
     for (auto e : ui_element::enumerate()) {
@@ -14,11 +42,19 @@ GUID find_element(const char* wanted) {
 
 HostedElement::HostedElement(const GUID& guid, std::vector<uint8_t> config) : m_guid(guid), m_config(std::move(config)) {
     if (!ui_element::g_get_name(m_name, m_guid)) m_name = "Element";
+    if (g_live.empty() && !g_cursor_hook) g_cursor_hook = SetWindowsHookExW(WH_CALLWNDPROCRET, cursor_hook, nullptr, GetCurrentThreadId());
+    g_live.push_back(this);
 }
 
 HostedElement::~HostedElement() {
     release();
     ui_element_instance_callback_release();
+    g_live.erase(std::remove(g_live.begin(), g_live.end(), this), g_live.end());
+    if (g_live.empty() && g_cursor_hook) { UnhookWindowsHookEx(g_cursor_hook); g_cursor_hook = nullptr; }
+}
+
+void HostedElement::set_default_cursor() const {
+    if (m_skin) set_skin_cursor(m_skin, SkinCursor::pl_normal);
 }
 
 bool HostedElement::create(HWND parent) {
