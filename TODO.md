@@ -6,7 +6,6 @@
 - [ ] Find a way to make Default UI Playlist View's rows as short as Winamp's (13 px)
 - [ ] Double click on the visualizer: Winamp opens MilkDrop; decide what fb2k should open (e.g. a vis component / Spectrum popup). Support winamp visualizations.
 - [ ] Support Winamp Modern skins (.wal: XML + MAKI scripts, freeform layouts) — essentially a separate engine.
-- [ ] After installing, the license is accepted twice
 - [ ] UX polishing/check againts Winamp features
   - [ ] Drag & drop. Winamp:
      - Main window: the drop replaces the playlist and plays; Shift adds instead.
@@ -98,3 +97,4 @@
 - [x] Credits: miniz, foobar2000 SDK; show in README / About.
 - [x] Readme
 - [x] Support Easter egg main window header
+- [x] After installing, the license is accepted twice

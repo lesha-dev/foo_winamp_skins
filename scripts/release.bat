@@ -1,6 +1,7 @@
 @echo off
 rem Prepare out\foo_winamp_skins-<ver>.fb2k-component: x86 DLL at the root, x64 DLL in x64\;
-rem README.md, LICENSE and the third-party license notice (miniz) in both folders.
+rem README.md, LICENSE and the miniz notice at the root only: foobar2000 installs root files
+rem for x64 too, and asks to accept every license.txt in the package.
 rem Rebuilds Release x86 and x64 with MSBuild first (found via vswhere), then packs
 rem out\Win32\Release and out\x64\Release.
 setlocal
@@ -55,11 +56,9 @@ if exist "%STAGE%" rmdir /s /q "%STAGE%"
 mkdir "%PKG%\x64"
 copy /y "%DLL86%" "%PKG%\" >nul || exit /b 1
 copy /y "%DLL64%" "%PKG%\x64\" >nul || exit /b 1
-for %%P in ("%PKG%" "%PKG%\x64") do (
-    copy /y "%ROOT%\README.md" "%%~P\" >nul || exit /b 1
-    copy /y "%ROOT%\LICENSE" "%%~P\LICENSE.txt" >nul || exit /b 1
-    copy /y "%ROOT%\3rdParty\miniz\LICENSE" "%%~P\LICENSE-miniz.txt" >nul || exit /b 1
-)
+copy /y "%ROOT%\README.md" "%PKG%\" >nul || exit /b 1
+copy /y "%ROOT%\LICENSE" "%PKG%\LICENSE.txt" >nul || exit /b 1
+copy /y "%ROOT%\3rdParty\miniz\LICENSE" "%PKG%\LICENSE-miniz.txt" >nul || exit /b 1
 rem Windows tar (bsdtar) writes zip entries with "/" separators; Compress-Archive in
 rem PowerShell 5.1 uses "\", so foobar2000 would not see the x64 folder. Files go at the archive root.
 set "COMPONENT=%OUT%\foo_winamp_skins-%VER%.fb2k-component"
