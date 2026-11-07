@@ -74,6 +74,20 @@ void toggle_stop_after_current() {
 }
 void previous() { standard_commands::main_previous(); }
 void next() { standard_commands::main_next(); }
+void prev_button() {
+    if (GetKeyState(VK_CONTROL) < 0) first_track(false);
+    else if (GetKeyState(VK_SHIFT) < 0) standard_commands::run_main(standard_commands::guid_seek_back_5s);
+    else previous();
+}
+void next_button() {
+    if (GetKeyState(VK_CONTROL) < 0) first_track(true);
+    else if (GetKeyState(VK_SHIFT) < 0) standard_commands::run_main(standard_commands::guid_seek_ahead_5s);
+    else next();
+}
+void stop_button() {
+    if (GetKeyState(VK_CONTROL) < 0) toggle_stop_after_current();
+    else stop();
+}
 void first_track(bool last) {
     auto pm = playlist_manager::get();
     size_t pl = pm->get_playing_playlist();

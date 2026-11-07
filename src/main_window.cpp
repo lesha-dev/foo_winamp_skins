@@ -913,14 +913,11 @@ void MainWindow::activate_control(Control id) {
         break;
     }
     case Control::vis: set_vis_mode(static_cast<VisMode>((static_cast<int>(m_vis.mode()) + 1) % 3)); break;
-    case Control::prev: player::previous(); break;
+    case Control::prev: player::prev_button(); break;
     case Control::play: player::play(); break;
     case Control::pause: player::pause(); break;
-    case Control::stop:
-        if (GetKeyState(VK_CONTROL) < 0) player::toggle_stop_after_current();
-        else player::stop();
-        break;
-    case Control::next: player::next(); break;
+    case Control::stop: player::stop_button(); break;
+    case Control::next: player::next_button(); break;
     case Control::eject: player::open_files(); break;
     case Control::shuffle: show_order_menu(true); break;
     case Control::repeat: show_order_menu(false); break;

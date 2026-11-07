@@ -632,11 +632,11 @@ void PlaylistWindow::on_mouse_up(POINT p) {
     switch (part) {
     case Part::close: if (inside) show(false); break;
     case Part::shade: if (inside) set_shade(!m_shade); break;
-    case Part::prev: if (inside) player::previous(); break;
+    case Part::prev: if (inside) player::prev_button(); break;
     case Part::play: if (inside) player::play(); break;
     case Part::pause: if (inside) player::pause(); break;
-    case Part::stop: if (inside) player::stop(); break;
-    case Part::next: if (inside) player::next(); break;
+    case Part::stop: if (inside) player::stop_button(); break;
+    case Part::next: if (inside) player::next_button(); break;
     case Part::eject: if (inside) player::open_files(); break;
     case Part::mini_time: if (inside) config::time_remaining = !config::time_remaining.get(); break;
     case Part::scroll_up:

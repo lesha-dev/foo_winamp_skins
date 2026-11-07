@@ -24,6 +24,11 @@ void toggle_stop_after_current();
 void previous();
 void next();
 void first_track(bool last); // Winamp's Start/End of list: playing playlist's first/last entry
+// Transport button clicks with Winamp's modifiers: Prev/Next Shift = seek -/+5 s, Ctrl = first/last
+// track; Stop Ctrl = stop after current.
+void prev_button();
+void next_button();
+void stop_button();
 void open_files();
 void show_file_info();
 

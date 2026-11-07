@@ -22,7 +22,7 @@
       - Seekbar (only while playing something seekable): Jump to time, ±5 s
       - Shuffle/Repeat: use the same as LM
       - EQ / PL buttons: none
-  - [ ] Shift/Ctrl+click on transport buttons (main and playlist mini buttons):
+  - [x] Shift/Ctrl+click on transport buttons (main and playlist mini buttons):
      - Prev/Next: Shift seeks ±5 s, Ctrl goes to the first/last track.
      - Stop: Shift fades out.
   - [ ] Missing keys. Winamp uses this:
