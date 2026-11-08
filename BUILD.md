@@ -5,6 +5,7 @@
 - `src/` — component sources
 - `3rdParty/` — all dependencies (not in git; copy manually):
   - `foobar2000_sdk/` — foobar2000 SDK 2026-10-01 (unmodified)
+  - `columns_ui-sdk/` — Columns UI SDK 8.1.0 (unmodified; only `ui_extension.cpp` is compiled)
   - `miniz/` — miniz 11.0.2 amalgamated `miniz.c` / `miniz.h` + `LICENSE` (compiled into the component)
 - `msbuild/`, `Directory.Build.props` — forces toolset v145 (v143 under VS 2022) on all projects, SDK included
 - `unix/` — Linux cross-build (CMake + clang-cl + xwin) for compile checks, plus its package/deploy scripts
@@ -15,6 +16,7 @@
 | Dependency / tool | Version | Source |
 |---|---|---|
 | foobar2000 SDK | 2026-10-01 (`FOOBAR2000_SDK_VERSION 20261001`) | https://www.foobar2000.org/SDK |
+| Columns UI SDK | 8.1.0 (tag `v8.1.0`) | https://github.com/reupen/columns_ui-sdk |
 | miniz | 11.0.2 (amalgamated release) | https://github.com/richgel999/miniz/releases |
 | foobar2000 (test target) | 2.26.2, portable x64 + x86 | https://www.foobar2000.org/download |
 | Visual Studio | 2026 (18.x), toolset v145 | |

@@ -69,8 +69,9 @@ extern cfg_int pl_x, pl_y;
 extern cfg_int pl_w, pl_h;            // legacy: size steps beyond the 275x116 minimum (25 / 29 px each)
 extern cfg_int pl_width, pl_height;   // px beyond the 275x116 minimum; -1 = take the legacy steps
 extern cfg_bool pl_shade;             // VisMode
-extern cfg_bool pl_use_view;          // list area shows Default UI's Playlist View
+extern cfg_bool pl_use_view;          // list area shows a playlist view element
 extern cfg_blob pl_view_config;       // its configuration
+extern cfg_guid pl_view_guid;         // a Columns UI playlist view; null: Default UI's Playlist View
 
 extern cfg_blob element_windows;      // UI element windows: placement + element configuration (see MainWindow)
 }

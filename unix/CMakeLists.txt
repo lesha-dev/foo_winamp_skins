@@ -59,8 +59,9 @@ endif()
 vcxproj_sources(COMPONENT_SRCS ${REPO}/foo_winamp_skins.vcxproj)
 add_library(foo_winamp_skins SHARED ${COMPONENT_SRCS} ${REPO}/src/foo_winamp_skins.rc)
 target_include_directories(foo_winamp_skins PRIVATE ${REPO}/src ${REPO}/3rdParty/miniz)
+target_include_directories(foo_winamp_skins SYSTEM PRIVATE ${REPO}/3rdParty)
 target_compile_definitions(foo_winamp_skins PRIVATE MINIZ_NO_STDIO MINIZ_NO_ARCHIVE_WRITING_APIS MINIZ_NO_ZLIB_COMPATIBLE_NAMES)
-set_source_files_properties(${REPO}/3rdParty/miniz/miniz.c PROPERTIES COMPILE_OPTIONS "-Wno-everything")
+set_source_files_properties(${REPO}/3rdParty/miniz/miniz.c ${REPO}/3rdParty/columns_ui-sdk/ui_extension.cpp PROPERTIES COMPILE_OPTIONS "-Wno-everything")
 target_compile_options(foo_winamp_skins PRIVATE -W4 -Wno-unused-parameter
   -Wno-microsoft-include -Wno-pragma-pack -Wno-unknown-pragmas -Wno-nonportable-include-path -Wno-unused-command-line-argument)
 target_link_libraries(foo_winamp_skins PRIVATE

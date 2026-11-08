@@ -1,5 +1,6 @@
 #pragma once
 
+#include "cui_panels.h"
 #include "gen_frame.h"
 #include "skin.h"
 
@@ -23,7 +24,8 @@ struct ElementState {
 };
 
 // One of foobar2000's UI elements living inside a skinned window. Colours come from the skin's playlist
-// (background from genex.bmp when present), fonts from foobar2000.
+// (background from genex.bmp when present), fonts from foobar2000. The GUID may also name a Columns UI
+// panel, which keeps Columns UI's colours and fonts.
 class HostedElement : private ui_element_instance_callback_receiver {
 public:
     HostedElement(const GUID& guid, std::vector<uint8_t> config);
@@ -37,7 +39,8 @@ public:
 
     // Instantiates the element as a child of `parent` (once). Returns false if it isn't available.
     bool create(HWND parent);
-    HWND hwnd() const { return m_elem.is_valid() ? m_elem->get_wnd() : nullptr; }
+    HWND hwnd() const { return m_elem.is_valid() ? m_elem->get_wnd() : m_panel ? m_panel->hwnd() : nullptr; }
+    bool is_cui() const { return m_panel != nullptr; }
     void set_rect(const RECT& r);
     void set_skin(const Skin* skin);
     // Shows the skin's cursor for the element's client area (instead of the system arrow).
@@ -64,7 +67,11 @@ private:
     const Skin* m_skin = nullptr;
     HFONT m_list_font = nullptr;
     ui_element_instance::ptr m_elem;
+    std::unique_ptr<cui::Panel> m_panel; // set when the GUID is a Columns UI panel
 };
+
+// Display name of a Default UI element or Columns UI panel.
+bool element_name(const GUID& guid, pfc::string8& out);
 
 // Default UI elements found by name (no private GUIDs assumed); guid_null if missing.
 GUID find_element(const char* name);

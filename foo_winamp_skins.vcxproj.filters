@@ -9,6 +9,7 @@
   <ItemGroup>
     <ClCompile Include="src\balance_dsp.cpp"><Filter>Source Files</Filter></ClCompile>
     <ClCompile Include="src\canvas.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClCompile Include="src\cui_panels.cpp"><Filter>Source Files</Filter></ClCompile>
     <ClCompile Include="src\docking.cpp"><Filter>Source Files</Filter></ClCompile>
     <ClCompile Include="src\drop_target.cpp"><Filter>Source Files</Filter></ClCompile>
     <ClCompile Include="src\eq.cpp"><Filter>Source Files</Filter></ClCompile>
@@ -34,11 +35,13 @@
     <ClCompile Include="src\hosted_element.cpp"><Filter>Source Files</Filter></ClCompile>
     <ClCompile Include="src\gen_frame.cpp"><Filter>Source Files</Filter></ClCompile>
     <ClCompile Include="src\visualizer.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClCompile Include="3rdParty\columns_ui-sdk\ui_extension.cpp"><Filter>3rdParty</Filter></ClCompile>
     <ClCompile Include="3rdParty\miniz\miniz.c"><Filter>3rdParty</Filter></ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\balance_dsp.h"><Filter>Header Files</Filter></ClInclude>
     <ClInclude Include="src\canvas.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="src\cui_panels.h"><Filter>Header Files</Filter></ClInclude>
     <ClInclude Include="src\docking.h"><Filter>Header Files</Filter></ClInclude>
     <ClInclude Include="src\drop_target.h"><Filter>Header Files</Filter></ClInclude>
     <ClInclude Include="src\eq.h"><Filter>Header Files</Filter></ClInclude>

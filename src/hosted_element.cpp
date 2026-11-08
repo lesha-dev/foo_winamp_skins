@@ -57,8 +57,18 @@ GUID find_element(const char* wanted) {
     return pfc::guid_null;
 }
 
+bool element_name(const GUID& guid, pfc::string8& out) {
+    if (ui_element::g_get_name(out, guid)) return true;
+    cui::PanelInfo info;
+    if (!cui::find_panel(guid, &info)) return false;
+    out = info.name;
+    return true;
+}
+
 HostedElement::HostedElement(const GUID& guid, std::vector<uint8_t> config) : m_guid(guid), m_config(std::move(config)) {
-    if (!ui_element::g_get_name(m_name, m_guid)) m_name = "Element";
+    ui_element::ptr elem;
+    if (!ui_element::g_find(elem, m_guid) && cui::find_panel(m_guid)) m_panel = std::make_unique<cui::Panel>(m_guid);
+    if (!element_name(m_guid, m_name)) m_name = "Element";
     if (g_live.empty() && !g_cursor_hook) g_cursor_hook = SetWindowsHookExW(WH_CALLWNDPROCRET, cursor_hook, nullptr, GetCurrentThreadId());
     if (!g_key_filter) g_key_filter = std::make_unique<KeyFilter>();
     g_live.push_back(this);
@@ -77,6 +87,7 @@ void HostedElement::set_default_cursor() const {
 }
 
 bool HostedElement::create(HWND parent) {
+    if (m_panel) return m_panel->create(parent, m_config);
     if (m_elem.is_valid()) return true;
     ui_element::ptr elem;
     if (!ui_element::g_find(elem, m_guid)) {
@@ -107,6 +118,7 @@ void HostedElement::set_skin(const Skin* skin) {
 }
 
 const std::vector<uint8_t>& HostedElement::config() {
+    if (m_panel) m_panel->config(m_config);
     if (m_elem.is_valid()) {
         if (auto cfg = m_elem->get_configuration(); cfg.is_valid()) {
             const auto* p = static_cast<const uint8_t*>(cfg->get_data());
@@ -117,6 +129,10 @@ const std::vector<uint8_t>& HostedElement::config() {
 }
 
 void HostedElement::release() {
+    if (m_panel && m_panel->hwnd()) {
+        config();
+        m_panel->release();
+    }
     if (m_elem.is_empty()) return;
     config();
     HWND child = m_elem->get_wnd();

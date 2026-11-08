@@ -81,6 +81,7 @@ cfg_int pl_height(guids::cfg_pl_height, -1);
 cfg_bool pl_shade(guids::cfg_pl_shade, false);
 cfg_bool pl_use_view(guids::cfg_pl_use_view, false);
 cfg_blob pl_view_config(guids::cfg_pl_view_config);
+cfg_guid pl_view_guid(guids::cfg_pl_view_guid, pfc::guid_null);
 
 cfg_blob element_windows(guids::cfg_element_windows);
 }

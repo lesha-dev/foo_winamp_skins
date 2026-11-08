@@ -49,7 +49,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <PreprocessorDefinitions>WIN32;_WINDOWS;_USRDLL;MINIZ_NO_STDIO;MINIZ_NO_ARCHIVE_WRITING_APIS;MINIZ_NO_ZLIB_COMPATIBLE_NAMES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(MSBuildProjectDirectory)\src;$(MSBuildProjectDirectory)\3rdParty\foobar2000_sdk;$(MSBuildProjectDirectory)\3rdParty\foobar2000_sdk\foobar2000;$(MSBuildProjectDirectory)\3rdParty\miniz;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(MSBuildProjectDirectory)\src;$(MSBuildProjectDirectory)\3rdParty;$(MSBuildProjectDirectory)\3rdParty\foobar2000_sdk;$(MSBuildProjectDirectory)\3rdParty\foobar2000_sdk\foobar2000;$(MSBuildProjectDirectory)\3rdParty\miniz;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <TreatAngleIncludeAsExternal>true</TreatAngleIncludeAsExternal>
       <ExternalWarningLevel>TurnOffAllWarnings</ExternalWarningLevel>
       <DisableAnalyzeExternal>true</DisableAnalyzeExternal>
@@ -90,6 +90,7 @@ exit /b 0</Command>
   <ItemGroup>
     <ClInclude Include="src\balance_dsp.h" />
     <ClInclude Include="src\canvas.h" />
+    <ClInclude Include="src\cui_panels.h" />
     <ClInclude Include="src\docking.h" />
     <ClInclude Include="src\drop_target.h" />
     <ClInclude Include="src\eq.h" />
@@ -122,6 +123,7 @@ exit /b 0</Command>
   <ItemGroup>
     <ClCompile Include="src\balance_dsp.cpp" />
     <ClCompile Include="src\canvas.cpp" />
+    <ClCompile Include="src\cui_panels.cpp" />
     <ClCompile Include="src\docking.cpp" />
     <ClCompile Include="src\drop_target.cpp" />
     <ClCompile Include="src\eq.cpp" />
@@ -147,6 +149,10 @@ exit /b 0</Command>
     <ClCompile Include="src\hosted_element.cpp" />
     <ClCompile Include="src\gen_frame.cpp" />
     <ClCompile Include="src\visualizer.cpp" />
+    <ClCompile Include="3rdParty\columns_ui-sdk\ui_extension.cpp">
+      <WarningLevel>TurnOffAllWarnings</WarningLevel>
+      <SDLCheck>false</SDLCheck>
+    </ClCompile>
     <ClCompile Include="3rdParty\miniz\miniz.c">
       <WarningLevel>TurnOffAllWarnings</WarningLevel>
       <SDLCheck>false</SDLCheck>

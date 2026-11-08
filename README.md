@@ -28,6 +28,7 @@ MIT, see [LICENSE](LICENSE). Third-party code keeps its own license:
 |---|---|---|
 | foobar2000 SDK (incl. pfc) | BSD-style, see `3rdParty/foobar2000_sdk/sdk-license.txt` | linked statically |
 | miniz | MIT, see `3rdParty/miniz/LICENSE` | compiled in; its notice must ship with binaries |
+| Columns UI SDK | 0BSD-style, see `3rdParty/columns_ui-sdk/LICENCE` | compiled in |
 
 Winamp and foobar2000 are trademarks of their respective owners.
 
@@ -39,6 +40,7 @@ Winamp skins remain the property of their authors and are not included here.
 
 - [miniz](https://github.com/richgel999/miniz) by Rich Geldreich: .wsz archive reading.
 - [foobar2000 SDK](https://www.foobar2000.org/SDK) by Peter Pawlowski.
+- [Columns UI SDK](https://github.com/reupen/columns_ui-sdk) by Reupen Shah: hosting Columns UI panels.
 - Winamp (Nullsoft): its classic skin format and behaviour served as the reference; no Winamp code or assets are included.
 
 Project page: https://github.com/lesha-dev/foo_winamp_skins

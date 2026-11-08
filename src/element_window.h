@@ -63,7 +63,12 @@ struct ElementInfo {
     GUID guid;
     pfc::string8 name;
     pfc::string8 group;
+    bool cui = false;      // a Columns UI panel
+    bool playlist = false; // a playlist view: shown in the playlist editor
 };
 std::vector<ElementInfo> list_elements();
+// Columns UI panels offered in their own menu (none without Columns UI). Panels named like one of
+// `elements` (a component registering both kinds) are left out; playlist views are always offered.
+std::vector<ElementInfo> list_cui_panels(const std::vector<ElementInfo>& elements);
 
 } // namespace wsz

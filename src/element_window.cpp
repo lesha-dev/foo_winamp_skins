@@ -28,6 +28,19 @@ std::vector<ElementInfo> list_elements() {
         if (int g = pfc::stricmp_ascii(a.group, b.group)) return g < 0;
         return pfc::stricmp_ascii(a.name, b.name) < 0;
     });
+    const GUID playlist_view = playlist_view_guid();
+    for (auto& e : out) e.playlist = e.guid == playlist_view;
+    return out;
+}
+
+std::vector<ElementInfo> list_cui_panels(const std::vector<ElementInfo>& elements) {
+    std::vector<ElementInfo> out;
+    for (auto& p : cui::list_panels()) {
+        const bool duplicate = std::any_of(elements.begin(), elements.end(),
+            [&](const ElementInfo& e) { return !e.cui && pfc::stricmp_ascii(e.name, p.name) == 0; });
+        if (duplicate && !p.playlist) continue;
+        out.push_back({ p.guid, p.name, p.category, true, p.playlist });
+    }
     return out;
 }
 

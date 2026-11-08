@@ -9,6 +9,7 @@ DECLARE_COMPONENT_VERSION(COMPONENT_NAME, COMPONENT_VERSION,
     "Credits:\n"
     "- miniz by Rich Geldreich (MIT): .wsz archive reading\n"
     "- foobar2000 SDK by Peter Pawlowski\n"
+    "- Columns UI SDK by Reupen Shah: hosting Columns UI panels\n"
     "Winamp is a trademark of its owners; its classic skin format and behaviour served as the reference. "
     "Skins are the property of their authors.\n\n"
     "Built " __DATE__ " " __TIME__ ".");

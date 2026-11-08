@@ -28,10 +28,13 @@ public:
     void set_time(bool show, bool negative, int seconds);
     void apply_resize_mode(); // smooth resize turned off: snap the size to 25x29 steps
 
-    bool can_switch_view() const override { return true; }
-    bool is_view_switched() const override { return m_host != nullptr; }
-    void toggle_view() override { set_use_view(!m_host); }
+    bool is_view_switched() const { return m_host != nullptr; }
     void set_use_view(bool on);
+    // The playlist view shown when switched: Default UI's Playlist View or a Columns UI playlist view.
+    static GUID view_guid();
+    // Switches to that view (another one is replaced; its settings are dropped).
+    void use_view(const GUID& guid);
+    const GUID& hosted_guid() const;
 
     // Saves the Playlist View's settings and destroys it (before the window goes away).
     void release_element();

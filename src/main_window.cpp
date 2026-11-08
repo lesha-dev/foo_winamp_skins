@@ -41,7 +41,7 @@ const MenuRoot menu_roots[] = {
 constexpr UINT menu_id_stride = 0x1000;
 enum : UINT { id_lock_ui = 1, id_vis_spectrum, id_vis_osc, id_vis_off,
     id_open_skins_folder, id_choose_skins_folder, id_toggle_eq, id_toggle_pl, id_autoscroll, id_random_skin, id_reload_skin,
-    id_panel_double = 0x80, id_panel_shade, id_panel_rename, id_panel_close, id_panel_view,
+    id_panel_double = 0x80, id_panel_shade, id_panel_rename, id_panel_close,
     id_skin_first = 0x100, id_skin_last = 0x7FF,
     id_playlist_first = 0x800, id_playlist_last = 0xBFF,
     id_element_first = 0xC00, id_element_last = 0xFFF }; // must stay below menu_id_stride
@@ -606,7 +606,7 @@ ElementPanel* MainWindow::create_element_window(ElementState s) {
     }
     std::unique_ptr<ElementPanel> w = std::make_unique<ElementWindow>(s);
     pfc::string8 name;
-    ui_element::g_get_name(name, s.guid);
+    element_name(s.guid, name);
     SkinWindow& wnd = w->window();
     wnd.create(m_wnd, pfc::stringcvt::string_wide_from_utf8(name), s.x, s.y);
     wnd.set_skin(m_skin.get());
@@ -617,10 +617,12 @@ ElementPanel* MainWindow::create_element_window(ElementState s) {
 
 void MainWindow::toggle_element(const GUID& guid) {
     if (guid == pfc::guid_null) return;
-    // Playlist View lives in the playlist editor: its switch, showing the editor when turned on.
-    if (guid == playlist_view_guid()) {
+    // Playlist views live in the playlist editor: its switch, showing the editor when turned on.
+    cui::PanelInfo cui_info;
+    if (guid == playlist_view_guid() || (cui::find_panel(guid, &cui_info) && cui_info.playlist)) {
         if (!m_pl) return;
-        m_pl->toggle_view();
+        if (m_pl->hosted_guid() == guid) m_pl->set_use_view(false);
+        else m_pl->use_view(guid);
         if (m_pl->is_view_switched()) m_pl->show(true);
         invalidate();
         return;
@@ -998,38 +1000,43 @@ void MainWindow::show_context_menu(POINT pt, SkinWindow* panel) {
         AppendMenuW(menu, flags(panel && panel->can_rename(), false), id_panel_rename, L"&Rename...");
         AppendMenuW(menu, MF_STRING, id_panel_close, L"&Close");
         if (!panel) AppendMenuW(menu, MF_STRING | (config::autoscroll.get() ? MF_CHECKED : 0), id_autoscroll, L"Autoscroll song &title");
-        if (panel && panel->can_switch_view())
-            AppendMenuW(menu, flags(true, panel->is_view_switched()), id_panel_view, L"Use foobar's Playlist &View");
         AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
     }
     AppendMenuW(menu, MF_STRING | (m_eq && m_eq->visible() ? MF_CHECKED : 0), id_toggle_eq, L"E&qualizer");
     AppendMenuW(menu, MF_STRING | (m_pl && m_pl->visible() ? MF_CHECKED : 0), id_toggle_pl, L"Pla&ylist");
-    // Elements submenu: foobar2000's UI elements by group, like Default UI's "Replace UI Element" list.
-    const std::vector<ElementInfo> elements = list_elements();
-    HMENU elements_menu = CreatePopupMenu();
-    {
-        const GUID playlist_view = playlist_view_guid();
+    // Elements submenus: foobar2000's UI elements by group, like Default UI's "Replace UI Element" list,
+    // then Columns UI's panels by category (when there are any). One id range covers both lists.
+    std::vector<ElementInfo> elements = list_elements();
+    const size_t dui_count = elements.size();
+    for (auto& p : list_cui_panels(elements)) elements.push_back(std::move(p));
+    auto fill_elements = [&](HMENU sub, size_t from, size_t to) {
         // One flat list: each group starts with a separator and its name as an unclickable header.
         bool first_group = true;
         pfc::string8 group;
-        for (size_t i = 0; i < elements.size() && i <= id_element_last - id_element_first; ++i) {
+        for (size_t i = from; i < to && i <= id_element_last - id_element_first; ++i) {
             const ElementInfo& e = elements[i];
             if (first_group || e.group != group) {
-                if (!first_group) AppendMenuW(elements_menu, MF_SEPARATOR, 0, nullptr);
+                if (!first_group) AppendMenuW(sub, MF_SEPARATOR, 0, nullptr);
                 first_group = false;
                 group = e.group;
-                AppendMenuW(elements_menu, MF_STRING | MF_GRAYED, 0,
-                    menu_label(pfc::stringcvt::string_wide_from_utf8(group).get_ptr()).c_str());
+                AppendMenuW(sub, MF_STRING | MF_GRAYED, 0, menu_label(pfc::stringcvt::string_wide_from_utf8(group).get_ptr()).c_str());
             }
             bool open = false;
             for (auto& w : m_elements) if (w->element_guid() == e.guid && w->window().visible()) open = true;
-            if (e.guid == playlist_view && m_pl) open = m_pl->is_view_switched();
+            if (e.playlist && m_pl) open = m_pl->hosted_guid() == e.guid;
             std::wstring label = menu_label(pfc::stringcvt::string_wide_from_utf8(e.name).get_ptr());
-            AppendMenuW(elements_menu, MF_STRING | (open ? MF_CHECKED : 0), id_element_first + i, label.c_str());
+            AppendMenuW(sub, MF_STRING | (open ? MF_CHECKED : 0), id_element_first + i, label.c_str());
         }
-        if (elements.empty()) AppendMenuW(elements_menu, MF_STRING | MF_GRAYED, 0, L"(no UI elements)");
-    }
+    };
+    HMENU elements_menu = CreatePopupMenu();
+    fill_elements(elements_menu, 0, dui_count);
+    if (!dui_count) AppendMenuW(elements_menu, MF_STRING | MF_GRAYED, 0, L"(no UI elements)");
     AppendMenuW(menu, MF_POPUP | MF_STRING, reinterpret_cast<UINT_PTR>(elements_menu), L"Default UI Ele&ments");
+    if (elements.size() > dui_count) {
+        HMENU cui_menu = CreatePopupMenu();
+        fill_elements(cui_menu, dui_count, elements.size());
+        AppendMenuW(menu, MF_POPUP | MF_STRING, reinterpret_cast<UINT_PTR>(cui_menu), L"Columns &UI Panels");
+    }
     AppendMenuW(menu, MF_STRING | (config::lock_ui.get() ? MF_CHECKED : 0), id_lock_ui, L"Loc&k UI");
     // Skins submenu: contents of the skins folder.
     const auto skins = skins_folder::list();
@@ -1099,7 +1106,6 @@ void MainWindow::show_context_menu(POINT pt, SkinWindow* panel) {
     case id_panel_shade: if (panel) panel->toggle_shade(); else set_shade(!m_shade); break;
     case id_panel_rename: if (panel) panel->rename(); break;
     case id_panel_close: if (panel) panel->show(false); else PostMessageW(m_wnd, WM_CLOSE, 0, 0); break;
-    case id_panel_view: if (panel) panel->toggle_view(); break;
     case id_lock_ui: config::lock_ui = !config::lock_ui.get(); break;
     case id_autoscroll:
         config::autoscroll = !config::autoscroll.get();

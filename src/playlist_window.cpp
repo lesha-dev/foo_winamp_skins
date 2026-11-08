@@ -205,14 +205,36 @@ void PlaylistWindow::release_element() {
     m_host->release();
 }
 
-// Main playlist: switches the list area between our list and Default UI's Playlist View.
+GUID PlaylistWindow::view_guid() {
+    const GUID cui_view = config::pl_view_guid.get();
+    if (cui_view != pfc::guid_null && cui::find_panel(cui_view)) return cui_view;
+    return playlist_view_guid();
+}
+
+const GUID& PlaylistWindow::hosted_guid() const {
+    static const GUID none = pfc::guid_null;
+    return m_host ? m_host->guid() : none;
+}
+
+void PlaylistWindow::use_view(const GUID& guid) {
+    if (m_host && m_host->guid() == guid) return;
+    const bool cui_view = guid != playlist_view_guid();
+    if (view_guid() != guid || m_host) {
+        set_use_view(false);
+        config::pl_view_config.set(nullptr, 0);
+    }
+    config::pl_view_guid = cui_view ? guid : pfc::guid_null;
+    set_use_view(true);
+}
+
+// Main playlist: switches the list area between our list and a playlist view element.
 void PlaylistWindow::set_use_view(bool on) {
     if (on == (m_host != nullptr)) return;
     config::pl_use_view = on;
     if (on) {
-        const GUID guid = playlist_view_guid();
+        const GUID guid = view_guid();
         if (guid == pfc::guid_null) {
-            FB2K_console_formatter() << "foo_winamp_skins: Default UI's Playlist View element not found";
+            FB2K_console_formatter() << "foo_winamp_skins: no playlist view element found";
             config::pl_use_view = false;
             return;
         }

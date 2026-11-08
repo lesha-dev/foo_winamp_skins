@@ -30,10 +30,6 @@ public:
     virtual void toggle_shade() {}
     virtual bool can_rename() const { return false; }
     virtual void rename() {}
-    // Playlist editor only: list area shows foobar2000's Playlist View (menu item shown when supported).
-    virtual bool can_switch_view() const { return false; }
-    virtual bool is_view_switched() const { return false; }
-    virtual void toggle_view() {}
     void show(bool on);
     void invalidate();
 
