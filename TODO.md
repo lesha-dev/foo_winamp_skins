@@ -2,10 +2,7 @@
 
 ## Backlog
 - [ ] EQ: AUTO button is a toggle only (no per-track presets, keyed by file path, applied on track start). Preset load/save is via .feq files.
-- [ ] Find a way to hide Default UI Playlist View's column header
-- [ ] Find a way to make Default UI Playlist View's rows as short as Winamp's (13 px)
 - [ ] Support Winamp Modern skins (.wal: XML + MAKI scripts, freeform layouts) — essentially a separate engine.
-- [ ] Check compatibility with Columns UI
 - [ ] (On request) Tray icon and notifications: tray/notifications are per-UI (Default UI's settings are private to foo_ui_std), so this needs our own options (minimize/close behaviour, tray icon mode, notifications).
 - [ ] (On request) "Show now playing" does nothing (would show the tray notification).
 
@@ -91,3 +88,4 @@
   - [x] Reload skin button
   - [x] Visualizer: clicking should cycle modes only while playing.
   - [x] Playlist: Bigger/smaller font.
+- [x] Check compatibility with Columns UI
