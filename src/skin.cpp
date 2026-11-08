@@ -245,6 +245,36 @@ void set_skin_cursor(const Skin* skin, SkinCursor c) {
     SetCursor(h ? h : LoadCursorW(nullptr, IDC_ARROW));
 }
 
+namespace {
+// While one of our popup menus runs its loop: every message it handles (mouse moves included) puts the
+// skin's cursor back after Windows set the arrow for the menu.
+HHOOK g_menu_hook = nullptr;
+const Skin* g_menu_skin = nullptr;
+SkinCursor g_menu_cursor = SkinCursor::normal;
+
+LRESULT CALLBACK menu_cursor_hook(int code, WPARAM wp, LPARAM lp) {
+    if (code == MSGF_MENU) set_skin_cursor(g_menu_skin, g_menu_cursor);
+    return CallNextHookEx(g_menu_hook, code, wp, lp);
+}
+} // namespace
+
+UINT track_menu(const Skin* skin, SkinCursor c, HMENU menu, UINT flags, POINT pt, HWND owner) {
+    if (!skin || !config::skin_cursors.get()) return TrackPopupMenu(menu, flags, pt.x, pt.y, 0, owner, nullptr);
+    const HHOOK prev_hook = g_menu_hook;
+    const Skin* prev_skin = g_menu_skin;
+    const SkinCursor prev_cursor = g_menu_cursor;
+    g_menu_skin = skin;
+    g_menu_cursor = c;
+    g_menu_hook = SetWindowsHookExW(WH_MSGFILTER, menu_cursor_hook, nullptr, GetCurrentThreadId());
+    set_skin_cursor(skin, c);
+    const UINT cmd = TrackPopupMenu(menu, flags, pt.x, pt.y, 0, owner, nullptr);
+    if (g_menu_hook) UnhookWindowsHookEx(g_menu_hook);
+    g_menu_hook = prev_hook;
+    g_menu_skin = prev_skin;
+    g_menu_cursor = prev_cursor;
+    return cmd;
+}
+
 Skin::~Skin() {
     for (HCURSOR c : m_cursors) if (c) DestroyCursor(c);
 }

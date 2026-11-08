@@ -1097,7 +1097,7 @@ void MainWindow::show_context_menu(POINT pt, SkinWindow* panel) {
     }
 
     SetForegroundWindow(owner);
-    const UINT cmd = TrackPopupMenu(menu, TPM_RETURNCMD | TPM_RIGHTBUTTON | TPM_NONOTIFY, pt.x, pt.y, 0, owner, nullptr);
+    const UINT cmd = track_menu(m_skin.get(), SkinCursor::normal, menu, TPM_RETURNCMD | TPM_RIGHTBUTTON | TPM_NONOTIFY, pt, owner);
     DestroyMenu(menu);
 
     switch (cmd) {
@@ -1180,7 +1180,7 @@ void MainWindow::show_order_menu(bool shuffle) {
     POINT pt = { pos.x * m_scale, (pos.y + h) * m_scale };
     ClientToScreen(m_wnd, &pt);
     SetForegroundWindow(m_wnd);
-    const UINT cmd = TrackPopupMenu(menu, TPM_RETURNCMD | TPM_LEFTBUTTON | TPM_NONOTIFY, pt.x, pt.y, 0, m_wnd, nullptr);
+    const UINT cmd = track_menu(m_skin.get(), SkinCursor::normal, menu, TPM_RETURNCMD | TPM_LEFTBUTTON | TPM_NONOTIFY, pt, m_wnd);
     DestroyMenu(menu);
     if (cmd == 1) {
         if (any) player::set_order("Default"); // only clears this button's kind of order
@@ -1194,7 +1194,7 @@ void MainWindow::show_vis_menu(POINT pt) {
     HMENU menu = CreatePopupMenu();
     append_vis_items(menu);
     SetForegroundWindow(m_wnd);
-    const UINT cmd = TrackPopupMenu(menu, TPM_RETURNCMD | TPM_RIGHTBUTTON | TPM_NONOTIFY, pt.x, pt.y, 0, m_wnd, nullptr);
+    const UINT cmd = track_menu(m_skin.get(), SkinCursor::normal, menu, TPM_RETURNCMD | TPM_RIGHTBUTTON | TPM_NONOTIFY, pt, m_wnd);
     DestroyMenu(menu);
     switch (cmd) {
     case id_vis_spectrum: set_vis_mode(VisMode::spectrum); break;
@@ -1250,7 +1250,7 @@ bool MainWindow::show_control_menu(Control id, POINT pt) {
         HMENU menu = CreatePopupMenu();
         cm->win32_build_menu(menu, 1, 0x7FFF);
         SetForegroundWindow(m_wnd);
-        const UINT cmd = TrackPopupMenu(menu, TPM_RETURNCMD | TPM_RIGHTBUTTON | TPM_NONOTIFY, pt.x, pt.y, 0, m_wnd, nullptr);
+        const UINT cmd = track_menu(m_skin.get(), SkinCursor::normal, menu, TPM_RETURNCMD | TPM_RIGHTBUTTON | TPM_NONOTIFY, pt, m_wnd);
         DestroyMenu(menu);
         if (cmd) cm->execute_by_id(cmd - 1);
         return true;
@@ -1261,7 +1261,7 @@ bool MainWindow::show_control_menu(Control id, POINT pt) {
         AppendMenuW(menu, MF_STRING, id_remaining, L"Time &remaining");
         CheckMenuRadioItem(menu, id_elapsed, id_remaining, config::time_remaining.get() ? id_remaining : id_elapsed, MF_BYCOMMAND);
         SetForegroundWindow(m_wnd);
-        const UINT cmd = TrackPopupMenu(menu, TPM_RETURNCMD | TPM_RIGHTBUTTON | TPM_NONOTIFY, pt.x, pt.y, 0, m_wnd, nullptr);
+        const UINT cmd = track_menu(m_skin.get(), SkinCursor::normal, menu, TPM_RETURNCMD | TPM_RIGHTBUTTON | TPM_NONOTIFY, pt, m_wnd);
         DestroyMenu(menu);
         if (cmd) {
             config::time_remaining = cmd == id_remaining;
@@ -1287,7 +1287,7 @@ bool MainWindow::show_control_menu(Control id, POINT pt) {
     if (start) AppendMenuW(menu, MF_STRING, id_start_of_list, L"&Start of list");
     if (end) AppendMenuW(menu, MF_STRING, id_end_of_list, L"&End of list");
     SetForegroundWindow(m_wnd);
-    const UINT cmd = TrackPopupMenu(menu, TPM_RETURNCMD | TPM_RIGHTBUTTON | TPM_NONOTIFY, pt.x, pt.y, 0, m_wnd, nullptr);
+    const UINT cmd = track_menu(m_skin.get(), SkinCursor::normal, menu, TPM_RETURNCMD | TPM_RIGHTBUTTON | TPM_NONOTIFY, pt, m_wnd);
     DestroyMenu(menu);
     if (cmd == id_start_of_list) player::first_track(false);
     else if (cmd == id_end_of_list) player::first_track(true);

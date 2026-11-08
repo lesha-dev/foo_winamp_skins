@@ -280,7 +280,7 @@ void EqWindow::show_presets_menu() {
     AppendMenuW(menu, MF_STRING, id_save, L"&Save preset...");
     POINT pt = { (pos_presets.x) * m_scale, (pos_presets.y + presets_btn.h) * m_scale };
     ClientToScreen(m_wnd, &pt);
-    const UINT cmd = TrackPopupMenu(menu, TPM_RETURNCMD | TPM_RIGHTBUTTON | TPM_NONOTIFY, pt.x, pt.y, 0, m_wnd, nullptr);
+    const UINT cmd = track_menu(m_skin, SkinCursor::eq_normal, menu, TPM_RETURNCMD | TPM_RIGHTBUTTON | TPM_NONOTIFY, pt, m_wnd);
     DestroyMenu(menu);
     static const char feq_filter[] = "foobar2000 EQ presets (*.feq)|*.feq|All files|*.*";
     pfc::string8 path;

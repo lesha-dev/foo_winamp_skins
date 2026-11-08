@@ -52,6 +52,8 @@ inline bool in_rect(POINT p, int l, int t, int r, int b) { return p.x >= l && p.
 class Skin;
 // Sets the skin's cursor (or the arrow when the skin has none or skinned cursors are off).
 void set_skin_cursor(const Skin* skin, SkinCursor c);
+// TrackPopupMenu (TPM_RETURNCMD) that keeps the skin's cursor `c` over the menu instead of the arrow.
+UINT track_menu(const Skin* skin, SkinCursor c, HMENU menu, UINT flags, POINT pt, HWND owner);
 
 class Skin {
 public:

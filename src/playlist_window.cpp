@@ -759,7 +759,7 @@ void PlaylistWindow::run_menu_action(Part menu, int item) {
             AppendMenuW(m, MF_STRING, id_dead, L"Remove &dead items");
             AppendMenuW(m, MF_STRING, id_dupes, L"Remove d&uplicates");
             POINT pt; GetCursorPos(&pt);
-            const UINT cmd = TrackPopupMenu(m, TPM_RETURNCMD | TPM_RIGHTBUTTON | TPM_NONOTIFY, pt.x, pt.y, 0, m_wnd, nullptr);
+            const UINT cmd = track_menu(m_skin, SkinCursor::pl_normal, m, TPM_RETURNCMD | TPM_RIGHTBUTTON | TPM_NONOTIFY, pt, m_wnd);
             DestroyMenu(m);
             if (cmd == id_dead) standard_commands::main_remove_dead_entries();
             else if (cmd == id_dupes) standard_commands::main_remove_duplicates();
@@ -786,7 +786,7 @@ void PlaylistWindow::run_menu_action(Part menu, int item) {
             AppendMenuW(m, MF_STRING, id_reverse, L"&Reverse list");
             AppendMenuW(m, MF_STRING, id_random, L"R&andomize list");
             POINT pt; GetCursorPos(&pt);
-            const UINT cmd = TrackPopupMenu(m, TPM_RETURNCMD | TPM_RIGHTBUTTON | TPM_NONOTIFY, pt.x, pt.y, 0, m_wnd, nullptr);
+            const UINT cmd = track_menu(m_skin, SkinCursor::pl_normal, m, TPM_RETURNCMD | TPM_RIGHTBUTTON | TPM_NONOTIFY, pt, m_wnd);
             DestroyMenu(m);
             if (cmd == id_title) pm->activeplaylist_sort_by_format("%title%", false);
             else if (cmd == id_file) pm->activeplaylist_sort_by_format("%filename_ext%", false);
