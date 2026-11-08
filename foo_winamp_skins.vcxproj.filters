@@ -10,6 +10,7 @@
     <ClCompile Include="src\balance_dsp.cpp"><Filter>Source Files</Filter></ClCompile>
     <ClCompile Include="src\canvas.cpp"><Filter>Source Files</Filter></ClCompile>
     <ClCompile Include="src\docking.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClCompile Include="src\drop_target.cpp"><Filter>Source Files</Filter></ClCompile>
     <ClCompile Include="src\eq.cpp"><Filter>Source Files</Filter></ClCompile>
     <ClCompile Include="src\eq_window.cpp"><Filter>Source Files</Filter></ClCompile>
     <ClCompile Include="src\playlist_window.cpp"><Filter>Source Files</Filter></ClCompile>
@@ -39,6 +40,7 @@
     <ClInclude Include="src\balance_dsp.h"><Filter>Header Files</Filter></ClInclude>
     <ClInclude Include="src\canvas.h"><Filter>Header Files</Filter></ClInclude>
     <ClInclude Include="src\docking.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="src\drop_target.h"><Filter>Header Files</Filter></ClInclude>
     <ClInclude Include="src\eq.h"><Filter>Header Files</Filter></ClInclude>
     <ClInclude Include="src\eq_window.h"><Filter>Header Files</Filter></ClInclude>
     <ClInclude Include="src\playlist_window.h"><Filter>Header Files</Filter></ClInclude>

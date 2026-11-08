@@ -312,6 +312,7 @@ HWND MainWindow::create(HookProc hook) {
     if (!m_wnd) throw exception_win32(GetLastError());
     m_tooltip.attach(m_wnd);
     m_taskbar_buttons.attach(m_wnd);
+    m_drop.attach(m_wnd, &m_shell_drop);
 
     pfc::string8 path = config::skin_path.get();
     if (config::random_skin.get() && !config::random_skin_on_play.get()) {
@@ -384,6 +385,7 @@ void MainWindow::destroy() {
     m_elements.clear();
     m_selection.release();
     s_instance = nullptr;
+    m_drop.detach();
     m_tooltip.destroy();
     docking::remove(m_wnd);
     HWND wnd = m_wnd;

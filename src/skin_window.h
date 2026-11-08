@@ -65,6 +65,8 @@ protected:
     virtual const char* region_name() const { return nullptr; }
     // Return true to swallow the message.
     virtual bool on_message(UINT, WPARAM, LPARAM, LRESULT&) { return false; }
+    // destroy(): the window still exists.
+    virtual void on_destroying() {}
 
     // Recomputes window size, canvas and region from skin_size()/scale(). With move_docked, windows docked
     // to it follow (shade, double size); user resizing leaves them in place, like Winamp.

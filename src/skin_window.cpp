@@ -52,6 +52,7 @@ void SkinWindow::create(HWND owner, const wchar_t* title, int x, int y) {
 
 void SkinWindow::destroy() {
     if (!m_wnd) return;
+    on_destroying();
     docking::remove(m_wnd);
     HWND wnd = m_wnd;
     m_wnd = nullptr;

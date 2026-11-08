@@ -2,6 +2,7 @@
 
 #include "canvas.h"
 #include "controls.h"
+#include "drop_target.h"
 #include "element_window.h"
 #include "main_renderer.h"
 #include "skin.h"
@@ -116,6 +117,10 @@ private:
 
     HWND m_wnd = nullptr;
     HWND m_choose_skin = nullptr;
+    struct ShellDrop : DropTarget::Handler {
+        DropTarget::Sink drop(POINT) override { return &shell_drop; }
+    } m_shell_drop;
+    DropTarget m_drop;
     HookProc m_hook = nullptr;
     std::unique_ptr<Callbacks> m_callbacks;
     std::unique_ptr<Skin> m_skin;

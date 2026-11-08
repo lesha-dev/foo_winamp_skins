@@ -9,47 +9,6 @@
 - [ ] Check compatibility with Columns UI
 - [ ] (On request) Tray icon and notifications: tray/notifications are per-UI (Default UI's settings are private to foo_ui_std), so this needs our own options (minimize/close behaviour, tray icon mode, notifications).
 - [ ] (On request) "Show now playing" does nothing (would show the tray notification).
-- [ ] UX polishing/check againts Winamp features
-  - [ ] Drag & drop. Winamp:
-     - Main window: the drop replaces the playlist and plays; Shift adds instead.
-     - Playlist: dropped files go in at the drop row.
-     - Drops from fb2k's own panels (Album List etc.) are accepted.
-     Use foobar's default drag'n'drop logic, read foobar's flags
-  - [x] Right-click menus per control
-      - Song title: current track menu from foobar
-      - Time display (and shade time): Time elapsed / Time remaining (radio)
-      - Visualizer (and shade vis): leave current menu (vis radio)
-      - Prev / Play / Pause / Stop / Next (and shade buttons) - Each button's variants
-      - Eject: none
-      - Seekbar (only while playing something seekable): Jump to time, ±5 s
-      - Shuffle/Repeat: use the same as LM
-      - EQ / PL buttons: none
-  - [x] Shift/Ctrl+click on transport buttons (main and playlist mini buttons):
-     - Prev/Next: Shift seeks ±5 s, Ctrl goes to the first/last track.
-     - Stop: Shift fades out.
-  - [x] Missing keys. Winamp uses this:
-     - Shift+Z/B (seek ±5 s), Ctrl+Z/B (first/last track), Shift+V (fade stop), R/S (repeat/shuffle)
-     - Shift+L or Insert (folder), Ctrl+L (URL), Shift+X (file), the numpad aliases
-     - Ctrl+T (elapsed/remaining), Alt+3 (file info), J (jump to file), Ctrl+J (jump to time; needs a dialog, M)
-     Use foobar's hotkeys instead. Add no new hotkeys for features, missing in foobar.
-  - [x] Pass hotkeys to focused Default Panel (eg Alt+Enter on selected track doesn't work)
-  - [x] Mouse wheel volume text: Winamp shows "Volume: N%" in the song title, also for ↑/↓.
-  - [x] Double-click on the song title opens file info
-  - [x] Sliders keep the grab offset instead of centring on the cursor (volume, balance, seek, EQ). Shift disables the balance and EQ 0 dB snap.
-  - [x] EQ:
-      - Clicking the +12/0/−12 labels sets all bands.
-      - One drag can sweep across several sliders.
-  - [x] Shaded playlist: the wheel and ↑/↓ should change track; now they scroll the hidden list.
-  - [x] Playlist click on one item of a multi-selection should reduce the selection to it on mouse-up.
-  - [x] Clutterbar: The song title shows the button's action while it is held.
-  - [x] kbps of 1000 or more and tracks of 100 minutes or more (Winamp's "14H" and the hundreds digit); we clamp them now.
-  - [x] Time:
-      - Elapsed/remaining items in the menu.
-      - An "Autoscroll songname" toggle.
-  - [x] Random skin option
-  - [x] Reload skin button
-  - [x] Visualizer: clicking should cycle modes only while playing.
-  - [x] Playlist: Bigger/smaller font.
 
 
 ## Done
@@ -92,3 +51,44 @@
 - [x] Readme
 - [x] Support Easter egg main window header
 - [x] After installing, the license is accepted twice
+- [x] UX polishing/check againts Winamp features
+  - [x] Drag & drop. Winamp:
+     - Main window: the drop replaces the playlist and plays; Shift adds instead.
+     - Playlist: dropped files go in at the drop row.
+     - Drops from fb2k's own panels (Album List etc.) are accepted.
+     Use foobar's default drag'n'drop logic, read foobar's flags
+  - [x] Right-click menus per control
+      - Song title: current track menu from foobar
+      - Time display (and shade time): Time elapsed / Time remaining (radio)
+      - Visualizer (and shade vis): leave current menu (vis radio)
+      - Prev / Play / Pause / Stop / Next (and shade buttons) - Each button's variants
+      - Eject: none
+      - Seekbar (only while playing something seekable): Jump to time, ±5 s
+      - Shuffle/Repeat: use the same as LM
+      - EQ / PL buttons: none
+  - [x] Shift/Ctrl+click on transport buttons (main and playlist mini buttons):
+     - Prev/Next: Shift seeks ±5 s, Ctrl goes to the first/last track.
+     - Stop: Shift fades out.
+  - [x] Missing keys. Winamp uses this:
+     - Shift+Z/B (seek ±5 s), Ctrl+Z/B (first/last track), Shift+V (fade stop), R/S (repeat/shuffle)
+     - Shift+L or Insert (folder), Ctrl+L (URL), Shift+X (file), the numpad aliases
+     - Ctrl+T (elapsed/remaining), Alt+3 (file info), J (jump to file), Ctrl+J (jump to time; needs a dialog, M)
+     Use foobar's hotkeys instead. Add no new hotkeys for features, missing in foobar.
+  - [x] Pass hotkeys to focused Default Panel (eg Alt+Enter on selected track doesn't work)
+  - [x] Mouse wheel volume text: Winamp shows "Volume: N%" in the song title, also for ↑/↓.
+  - [x] Double-click on the song title opens file info
+  - [x] Sliders keep the grab offset instead of centring on the cursor (volume, balance, seek, EQ). Shift disables the balance and EQ 0 dB snap.
+  - [x] EQ:
+      - Clicking the +12/0/−12 labels sets all bands.
+      - One drag can sweep across several sliders.
+  - [x] Shaded playlist: the wheel and ↑/↓ should change track; now they scroll the hidden list.
+  - [x] Playlist click on one item of a multi-selection should reduce the selection to it on mouse-up.
+  - [x] Clutterbar: The song title shows the button's action while it is held.
+  - [x] kbps of 1000 or more and tracks of 100 minutes or more (Winamp's "14H" and the hundreds digit); we clamp them now.
+  - [x] Time:
+      - Elapsed/remaining items in the menu.
+      - An "Autoscroll songname" toggle.
+  - [x] Random skin option
+  - [x] Reload skin button
+  - [x] Visualizer: clicking should cycle modes only while playing.
+  - [x] Playlist: Bigger/smaller font.

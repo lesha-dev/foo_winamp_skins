@@ -860,28 +860,55 @@ bool PlaylistWindow::on_message(UINT msg, WPARAM wp, LPARAM, LRESULT& ret) {
     }
     if (msg == WM_SIZE) layout_host();
     if (msg == WM_CREATE) {
-        DragAcceptFiles(m_wnd, TRUE);
+        m_drop.attach(m_wnd, this);
         return false;
     }
-    if (msg == WM_DROPFILES) {
-        HDROP drop = reinterpret_cast<HDROP>(wp);
-        const UINT count = DragQueryFileW(drop, 0xFFFFFFFF, nullptr, 0);
-        pfc::list_t<pfc::string8> paths;
-        for (UINT i = 0; i < count; ++i) {
-            const UINT len = DragQueryFileW(drop, i, nullptr, 0);
-            std::wstring buf(len + 1, L'\0');
-            DragQueryFileW(drop, i, buf.data(), len + 1);
-            buf.resize(len);
-            paths.add_item(pfc::stringcvt::string_utf8_from_wide(buf.c_str()).get_ptr());
-        }
-        DragFinish(drop);
-        pfc::list_t<const char*> ptrs;
-        for (size_t i = 0; i < paths.get_count(); ++i) ptrs.add_item(paths[i].get_ptr());
-        if (ptrs.get_count()) playlist_manager::get()->activeplaylist_add_locations(ptrs, true, m_wnd);
-        ret = 0;
-        return true;
-    }
     return false;
+}
+
+// Where dropped tracks go in the active playlist: between the rows nearest to the cursor over our list,
+// otherwise (frame, shade, hosted Playlist View's border) at the end.
+size_t PlaylistWindow::drop_index(POINT client) const {
+    const size_t count = playlist_manager::get()->activeplaylist_get_item_count();
+    if (m_shade || m_host) return count;
+    const POINT p = to_skin(client);
+    const Rc r = list_rect();
+    if (p.x < r.x || p.x >= r.x + r.w || p.y < r.y || p.y >= r.y + r.h) return count;
+    return std::min(count, m_scroll + static_cast<size_t>((p.y - r.y + m_row_h / 2) / m_row_h));
+}
+
+bool PlaylistWindow::drop_over(POINT client) {
+    const size_t count = playlist_manager::get()->activeplaylist_get_item_count();
+    size_t at = drop_index(client);
+    if (m_shade || m_host) at = SIZE_MAX;
+    else if (at == count) {
+        // Past the last row: marker under it, when it's on screen.
+        const POINT p = to_skin(client);
+        const Rc r = list_rect();
+        if (p.x < r.x || p.x >= r.x + r.w || p.y < r.y || p.y >= r.y + r.h) at = SIZE_MAX;
+    }
+    if (at != m_drop_at) { m_drop_at = at; invalidate(); }
+    return true;
+}
+
+void PlaylistWindow::drop_leave() {
+    if (m_drop_at != SIZE_MAX) { m_drop_at = SIZE_MAX; invalidate(); }
+}
+
+DropTarget::Sink PlaylistWindow::drop(POINT client) {
+    auto pm = playlist_manager::get();
+    const size_t pl = pm->get_active_playlist();
+    if (pl == SIZE_MAX) return {};
+    const size_t at = drop_index(client);
+    return [pl, at](metadb_handle_list_cref items) {
+        auto pm = playlist_manager::get();
+        if (!items.get_count() || pl >= pm->get_playlist_count()) return;
+        const size_t base = std::min(at, pm->playlist_get_item_count(pl));
+        pm->playlist_undo_backup(pl);
+        pm->playlist_clear_selection(pl);
+        const size_t first = pm->playlist_insert_items(pl, base, items, pfc::bit_array_true());
+        if (first != SIZE_MAX) pm->playlist_set_focus_item(pl, first);
+    };
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -1003,6 +1030,11 @@ void PlaylistWindow::render_list(Canvas& c) {
             SetTextColor(dc, col.normal);
             DrawFocusRect(dc, &fr);
         }
+    }
+    if (m_drop_at != SIZE_MAX && m_drop_at >= m_scroll && m_drop_at <= m_scroll + rows) {
+        GdiFlush();
+        const int y = r.y + static_cast<int>(m_drop_at - m_scroll) * m_row_h;
+        c.fill_rect(r.x, std::max(r.y, y - 1), r.w, 2, to_bgrx(col.normal));
     }
     SelectObject(dc, old_font);
     GdiFlush();

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "drop_target.h"
 #include "hosted_element.h"
 #include "skin_window.h"
 
@@ -7,7 +8,7 @@ namespace wsz {
 
 // Winamp's playlist editor. Its list area is our own list, or (switch in its menu) Default UI's Playlist
 // View; all frame controls stay either way.
-class PlaylistWindow : public SkinWindow {
+class PlaylistWindow : public SkinWindow, private DropTarget::Handler {
 public:
     PlaylistWindow();
     ~PlaylistWindow() override;
@@ -51,6 +52,11 @@ protected:
     void on_wheel(int delta) override;
     bool on_key(WPARAM vk) override;
     void on_caption_dblclick() override { set_shade(!m_shade); }
+    void on_destroying() override { m_drop.detach(); }
+    bool drop_over(POINT client) override;
+    void drop_leave() override;
+    DropTarget::Sink drop(POINT client) override;
+    size_t drop_index(POINT client) const;
     void on_position_saved(int x, int y) override;
     void on_visibility_changed(bool visible) override;
     void on_double_size_changed() override;
@@ -124,6 +130,8 @@ private:
     SIZE m_drag_extra = {};
     int m_drag_row = -1;          // reorder drag: row under the cursor last time
     bool m_drag_reorder = false;
+    DropTarget m_drop;
+    size_t m_drop_at = SIZE_MAX; // OLE drag over the list: insertion point (marker above that row)
     size_t m_reduce_to = SIZE_MAX; // plain click on a selected row: select only it on mouse-up unless dragged
     int m_thumb_grab = 0;         // scrollbar: cursor offset within the thumb
 

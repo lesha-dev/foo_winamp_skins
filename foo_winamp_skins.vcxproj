@@ -91,6 +91,7 @@ exit /b 0</Command>
     <ClInclude Include="src\balance_dsp.h" />
     <ClInclude Include="src\canvas.h" />
     <ClInclude Include="src\docking.h" />
+    <ClInclude Include="src\drop_target.h" />
     <ClInclude Include="src\eq.h" />
     <ClInclude Include="src\eq_window.h" />
     <ClInclude Include="src\playlist_window.h" />
@@ -122,6 +123,7 @@ exit /b 0</Command>
     <ClCompile Include="src\balance_dsp.cpp" />
     <ClCompile Include="src\canvas.cpp" />
     <ClCompile Include="src\docking.cpp" />
+    <ClCompile Include="src\drop_target.cpp" />
     <ClCompile Include="src\eq.cpp" />
     <ClCompile Include="src\eq_window.cpp" />
     <ClCompile Include="src\playlist_window.cpp" />
