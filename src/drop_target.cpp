@@ -34,9 +34,19 @@ public:
 
     HRESULT STDMETHODCALLTYPE DragEnter(IDataObject* obj, DWORD, POINTL pt, DWORD* effect) override {
         m_accepted = DROPEFFECT_NONE;
+        m_callback = false;
+        m_allowed = *effect;
+        FORMATETC fmt = { CF_HDROP, nullptr, DVASPECT_CONTENT, -1, TYMED_HGLOBAL };
+        m_files = obj->QueryGetData(&fmt) == S_OK;
         if (m_handler) {
-            DWORD e = DROPEFFECT_NONE;
-            if (playlist_incoming_item_filter::get()->process_dropped_files_check_ex(obj, &e)) m_accepted = pick(e, *effect);
+            DWORD e = *effect;
+            // Other components' drop handlers (e.g. the component installer) come before tracks, as in Default UI.
+            if (ui_drop_item_callback::g_is_accepted_type(obj, &e)) {
+                m_callback = true;
+                m_accepted = e & *effect;
+            } else if (e = DROPEFFECT_NONE, playlist_incoming_item_filter::get()->process_dropped_files_check_ex(obj, &e)) {
+                m_accepted = pick(e, *effect);
+            }
         }
         *effect = over(pt);
         if (m_helper) {
@@ -67,6 +77,15 @@ public:
         if (!m_handler) return S_OK;
         m_handler->drop_leave();
         if (*effect == DROPEFFECT_NONE) return S_OK;
+        bool foreign = false;
+        if (HWND wnd = files_window(pt, foreign); foreign) {
+            if (!wnd || !forward_files(obj, wnd, pt)) *effect = DROPEFFECT_NONE;
+            return S_OK;
+        }
+        if (m_callback) {
+            if (!ui_drop_item_callback::g_on_drop(obj)) *effect = DROPEFFECT_NONE;
+            return S_OK;
+        }
         Sink sink = m_handler->drop(client(pt));
         if (!sink) {
             *effect = DROPEFFECT_NONE;
@@ -91,8 +110,53 @@ private:
         ScreenToClient(m_wnd, &p);
         return p;
     }
+    // OLE looks for a drop target up the parent chain, and a top-level window's parent is its owner. A drop on a
+    // window we own (Preferences, other dialogs) thus lands here even when that window takes WM_DROPFILES itself.
+    // foreign: the point is over another top-level window; returns its nearest window that accepts files, if any.
+    HWND files_window(POINTL pt, bool& foreign) const {
+        const HWND root = GetAncestor(m_wnd, GA_ROOT);
+        HWND w = WindowFromPoint({ pt.x, pt.y });
+        foreign = w && GetAncestor(w, GA_ROOT) != root;
+        if (!foreign) return nullptr;
+        for (; w && w != root; w = GetParent(w))
+            if (GetWindowLongPtr(w, GWL_EXSTYLE) & WS_EX_ACCEPTFILES) return w;
+        return nullptr;
+    }
+    // What the shell does for a WM_DROPFILES window: hand it its own copy of the file list (it frees it with DragFinish).
+    static bool forward_files(IDataObject* obj, HWND wnd, POINTL pt) {
+        FORMATETC fmt = { CF_HDROP, nullptr, DVASPECT_CONTENT, -1, TYMED_HGLOBAL };
+        STGMEDIUM med = {};
+        if (obj->GetData(&fmt, &med) != S_OK) return false;
+        bool ok = false;
+        const SIZE_T size = GlobalSize(med.hGlobal);
+        if (HGLOBAL copy = size >= sizeof(DROPFILES) ? GlobalAlloc(GMEM_MOVEABLE | GMEM_ZEROINIT, size) : nullptr) {
+            const void* src = GlobalLock(med.hGlobal);
+            auto* dst = static_cast<DROPFILES*>(GlobalLock(copy));
+            if (src && dst) {
+                memcpy(dst, src, size);
+                POINT p = { pt.x, pt.y };
+                ScreenToClient(wnd, &p);
+                dst->pt = p;
+                dst->fNC = FALSE;
+            }
+            if (src) GlobalUnlock(med.hGlobal);
+            if (dst) GlobalUnlock(copy);
+            ok = src && dst && PostMessage(wnd, WM_DROPFILES, reinterpret_cast<WPARAM>(copy), 0);
+            if (!ok) GlobalFree(copy);
+        }
+        ReleaseStgMedium(&med);
+        return ok;
+    }
     DWORD over(POINTL pt) {
-        if (!m_handler || m_accepted == DROPEFFECT_NONE) return DROPEFFECT_NONE;
+        if (!m_handler) return DROPEFFECT_NONE;
+        bool foreign = false;
+        if (HWND wnd = files_window(pt, foreign); foreign) {
+            m_handler->drop_leave();
+            if (!wnd || !m_files) return DROPEFFECT_NONE;
+            return (m_allowed & DROPEFFECT_COPY) ? DROPEFFECT_COPY : pick(DROPEFFECT_NONE, m_allowed);
+        }
+        if (m_accepted == DROPEFFECT_NONE) return DROPEFFECT_NONE;
+        if (m_callback) return m_accepted;
         return m_handler->drop_over(client(pt)) ? m_accepted : DROPEFFECT_NONE;
     }
 
@@ -101,6 +165,9 @@ private:
     Handler* m_handler;
     IDropTargetHelper* m_helper = nullptr;
     DWORD m_accepted = DROPEFFECT_NONE;
+    bool m_callback = false;
+    DWORD m_allowed = DROPEFFECT_NONE;
+    bool m_files = false;
 };
 
 void DropTarget::attach(HWND wnd, Handler* handler) {
