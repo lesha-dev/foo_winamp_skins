@@ -5,6 +5,9 @@
 - [ ] Support Winamp Modern skins (.wal: XML + MAKI scripts, freeform layouts) — essentially a separate engine.
 - [ ] (On request) Tray icon and notifications: tray/notifications are per-UI (Default UI's settings are private to foo_ui_std), so this needs our own options (minimize/close behaviour, tray icon mode, notifications).
 - [ ] (On request) "Show now playing" does nothing (would show the tray notification).
+- [ ] Rename default panels
+- [ ] Pick up current Playlist layout for Default UI's Playlist
+- [ ] PR into Columns UI to support colors override
 
 
 ## Done
