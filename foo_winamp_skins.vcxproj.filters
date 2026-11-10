@@ -36,6 +36,9 @@
     <ClCompile Include="src\gen_frame.cpp"><Filter>Source Files</Filter></ClCompile>
     <ClCompile Include="src\visualizer.cpp"><Filter>Source Files</Filter></ClCompile>
     <ClCompile Include="3rdParty\columns_ui-sdk\ui_extension.cpp"><Filter>3rdParty</Filter></ClCompile>
+    <ClCompile Include="3rdParty\columns_ui-sdk\callback.cpp"><Filter>3rdParty</Filter></ClCompile>
+    <ClCompile Include="3rdParty\columns_ui-sdk\dwrite_utils.cpp"><Filter>3rdParty</Filter></ClCompile>
+    <ClCompile Include="3rdParty\columns_ui-sdk\font_manager_v3.cpp"><Filter>3rdParty</Filter></ClCompile>
     <ClCompile Include="3rdParty\miniz\miniz.c"><Filter>3rdParty</Filter></ClCompile>
   </ItemGroup>
   <ItemGroup>

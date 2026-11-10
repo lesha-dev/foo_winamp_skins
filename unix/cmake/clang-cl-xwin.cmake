@@ -11,6 +11,8 @@ if(NOT XWIN_ROOT)
   set(XWIN_ROOT "$ENV{HOME}/.xwin")
 endif()
 list(APPEND CMAKE_TRY_COMPILE_PLATFORM_VARIABLES XWIN_ARCH XWIN_ROOT)
+# xwin splats only release CRT libs; compiler checks must not link msvcrtd.lib.
+set(CMAKE_TRY_COMPILE_CONFIGURATION Release)
 
 if(XWIN_ARCH STREQUAL "x86")
   set(CMAKE_SYSTEM_PROCESSOR x86)

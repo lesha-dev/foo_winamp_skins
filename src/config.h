@@ -29,7 +29,7 @@ extern cfg_string format_main;           // main window song title
 extern cfg_string format_playlist;       // playlist editor rows (track length stays right-aligned)
 extern cfg_string format_playlist_shade; // playlist editor in windowshade mode
 extern cfg_bool lock_ui;              // dragging any skinned window moves everything docked to it
-extern cfg_bool playlist_view_skin_font; // hosted Playlist View uses the skin's playlist font
+extern cfg_bool playlist_view_skin_font; // hosted playlist views (Default UI; Columns UI with host font overrides) use the skin's playlist font
 extern cfg_int pl_font_size;          // playlist font size (Winamp's "Font size"); rows are 3px taller
 extern cfg_bool pl_skin_font;         // playlist font from the skin's pledit.txt, else pl_font
 extern cfg_string pl_font;            // playlist font face when not the skin's

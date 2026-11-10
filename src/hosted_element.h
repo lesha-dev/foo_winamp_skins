@@ -25,7 +25,8 @@ struct ElementState {
 
 // One of foobar2000's UI elements living inside a skinned window. Colours come from the skin's playlist
 // (background from genex.bmp when present), fonts from foobar2000. The GUID may also name a Columns UI
-// panel, which keeps Columns UI's colours and fonts.
+// panel, which keeps Columns UI's colours and fonts, except where Columns UI supports host appearance
+// overrides: then its list panels take the skin's colours and the font from set_list_font.
 class HostedElement : private ui_element_instance_callback_receiver {
 public:
     HostedElement(const GUID& guid, std::vector<uint8_t> config);

@@ -65,7 +65,7 @@ BEGIN
     AUTOCHECKBOX    "Override skin font", IDC_PL_SKIN_FONT, 176, 169, 145, 10
     LTEXT           "Font:", IDC_PL_FONT_LABEL, 176, 184, 20, 8
     COMBOBOX        IDC_PL_FONT, 198, 182, 121, 150, CBS_DROPDOWNLIST | CBS_SORT | WS_VSCROLL | WS_TABSTOP
-    AUTOCHECKBOX    "Set font settings to Default UI", IDC_PLVIEW_FONT, 176, 195, 145, 10
+    AUTOCHECKBOX    "Set font settings to hosted panels", IDC_PLVIEW_FONT, 176, 195, 145, 10
     GROUPBOX        "Title formatting", IDC_STATIC, 7, 218, 319, 59
     LTEXT           "Main window title:", IDC_STATIC, 14, 232, 84, 8
     EDITTEXT        IDC_FORMAT_MAIN, 100, 230, 219, 12, ES_AUTOHSCROLL

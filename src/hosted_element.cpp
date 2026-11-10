@@ -112,8 +112,29 @@ void HostedElement::set_rect(const RECT& r) {
     if (HWND w = hwnd()) SetWindowPos(w, nullptr, r.left, r.top, r.right - r.left, r.bottom - r.top, SWP_NOZORDER | SWP_NOACTIVATE);
 }
 
+// Background like Winamp's own skinned panels: genex.bmp's item background colour (pixel 48,0), or the
+// playlist background from pledit.txt when the skin has no genex.bmp.
+static COLORREF skin_background(const Skin& skin) {
+    const Image& genex = skin.bitmap(SkinBitmap::genex);
+    if (genex.width > 48 && genex.height > 0) {
+        const uint32_t p = genex.pixels[48];
+        return RGB((p >> 16) & 0xFF, (p >> 8) & 0xFF, p & 0xFF);
+    }
+    return skin.playlist_colors().normal_bg;
+}
+
 void HostedElement::set_skin(const Skin* skin) {
     m_skin = skin;
+    if (m_panel) {
+        if (m_skin) {
+            const PlaylistColors& col = m_skin->playlist_colors();
+            // Winamp keeps the text colour on selected rows.
+            const cui::ListColours colours{col.normal, skin_background(*m_skin), col.normal, col.selected_bg};
+            m_panel->set_list_colours(&colours);
+        } else {
+            m_panel->set_list_colours(nullptr);
+        }
+    }
     if (m_elem.is_valid()) m_elem->notify(ui_element_notify_colors_changed, 0, nullptr, 0);
 }
 
@@ -140,22 +161,11 @@ void HostedElement::release() {
     if (IsWindow(child)) DestroyWindow(child);
 }
 
-// Background like Winamp's own skinned panels: genex.bmp's item background colour (pixel 48,0), or the
-// playlist background from pledit.txt when the skin has no genex.bmp. Text and selection colours come
-// from pledit.txt, so hosted elements match the playlist editor.
+// Text and selection colours come from pledit.txt, so hosted elements match the playlist editor.
 bool HostedElement::query_color(const GUID& what, t_ui_color& out) {
     if (m_skin) {
         const PlaylistColors& col = m_skin->playlist_colors();
-        if (what == ui_color_background) {
-            const Image& genex = m_skin->bitmap(SkinBitmap::genex);
-            if (genex.width > 48 && genex.height > 0) {
-                const uint32_t p = genex.pixels[48];
-                out = RGB((p >> 16) & 0xFF, (p >> 8) & 0xFF, p & 0xFF);
-            } else {
-                out = col.normal_bg;
-            }
-            return true;
-        }
+        if (what == ui_color_background) { out = skin_background(*m_skin); return true; }
         if (what == ui_color_text) { out = col.normal; return true; }
         if (what == ui_color_highlight) { out = col.current; return true; }
         if (what == ui_color_selection) { out = col.selected_bg; return true; }
@@ -167,6 +177,7 @@ bool HostedElement::query_color(const GUID& what, t_ui_color& out) {
 void HostedElement::set_list_font(HFONT font) {
     if (font == m_list_font) return;
     m_list_font = font;
+    if (m_panel) m_panel->set_list_font(font);
     if (m_elem.is_valid()) m_elem->notify(ui_element_notify_font_changed, 0, nullptr, 0);
 }
 

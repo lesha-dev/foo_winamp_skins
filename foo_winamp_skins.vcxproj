@@ -59,7 +59,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>$(MSBuildProjectDirectory)\3rdParty\foobar2000_sdk\foobar2000\shared\shared-$(Platform).lib;msimg32.lib;winmm.lib;shlwapi.lib;windowscodecs.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(MSBuildProjectDirectory)\3rdParty\foobar2000_sdk\foobar2000\shared\shared-$(Platform).lib;msimg32.lib;winmm.lib;shlwapi.lib;windowscodecs.lib;dwrite.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Message>Deploying to portable foobar2000 (if present)...</Message>
@@ -150,6 +150,18 @@ exit /b 0</Command>
     <ClCompile Include="src\gen_frame.cpp" />
     <ClCompile Include="src\visualizer.cpp" />
     <ClCompile Include="3rdParty\columns_ui-sdk\ui_extension.cpp">
+      <WarningLevel>TurnOffAllWarnings</WarningLevel>
+      <SDLCheck>false</SDLCheck>
+    </ClCompile>
+    <ClCompile Include="3rdParty\columns_ui-sdk\callback.cpp">
+      <WarningLevel>TurnOffAllWarnings</WarningLevel>
+      <SDLCheck>false</SDLCheck>
+    </ClCompile>
+    <ClCompile Include="3rdParty\columns_ui-sdk\dwrite_utils.cpp">
+      <WarningLevel>TurnOffAllWarnings</WarningLevel>
+      <SDLCheck>false</SDLCheck>
+    </ClCompile>
+    <ClCompile Include="3rdParty\columns_ui-sdk\font_manager_v3.cpp">
       <WarningLevel>TurnOffAllWarnings</WarningLevel>
       <SDLCheck>false</SDLCheck>
     </ClCompile>

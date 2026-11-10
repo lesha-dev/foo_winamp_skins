@@ -61,10 +61,12 @@ add_library(foo_winamp_skins SHARED ${COMPONENT_SRCS} ${REPO}/src/foo_winamp_ski
 target_include_directories(foo_winamp_skins PRIVATE ${REPO}/src ${REPO}/3rdParty/miniz)
 target_include_directories(foo_winamp_skins SYSTEM PRIVATE ${REPO}/3rdParty)
 target_compile_definitions(foo_winamp_skins PRIVATE MINIZ_NO_STDIO MINIZ_NO_ARCHIVE_WRITING_APIS MINIZ_NO_ZLIB_COMPATIBLE_NAMES)
-set_source_files_properties(${REPO}/3rdParty/miniz/miniz.c ${REPO}/3rdParty/columns_ui-sdk/ui_extension.cpp PROPERTIES COMPILE_OPTIONS "-Wno-everything")
+set_source_files_properties(${REPO}/3rdParty/miniz/miniz.c ${REPO}/3rdParty/columns_ui-sdk/ui_extension.cpp
+  ${REPO}/3rdParty/columns_ui-sdk/callback.cpp ${REPO}/3rdParty/columns_ui-sdk/dwrite_utils.cpp
+  ${REPO}/3rdParty/columns_ui-sdk/font_manager_v3.cpp PROPERTIES COMPILE_OPTIONS "-Wno-everything")
 target_compile_options(foo_winamp_skins PRIVATE -W4 -Wno-unused-parameter
   -Wno-microsoft-include -Wno-pragma-pack -Wno-unknown-pragmas -Wno-nonportable-include-path -Wno-unused-command-line-argument)
 target_link_libraries(foo_winamp_skins PRIVATE
   foobar2000_component_client foobar2000_SDK pfc
   ${SDK}/foobar2000/shared/shared-${FB2K_PLATFORM}.lib
-  user32 gdi32 shell32 comctl32 comdlg32 ole32 uuid shlwapi winmm msimg32 windowscodecs)
+  user32 gdi32 shell32 comctl32 comdlg32 ole32 uuid shlwapi winmm msimg32 windowscodecs dwrite)
