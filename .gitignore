@@ -82,3 +82,6 @@ obj/
 # project
 
 3rdParty/
+
+# Python
+__pycache__/

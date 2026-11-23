@@ -1,0 +1,3 @@
+@echo off
+rem Skin tests: see BUILD.md, "Skin tests". Usage: skintest.bat check [skin ...] ^| add ^| accept ^| show ^| ...
+py -3 "%~dp0..\tests\skintest.py" %*

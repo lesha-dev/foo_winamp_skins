@@ -130,6 +130,7 @@ exit /b 0</Command>
     <ClCompile Include="src\classic\eq_window.cpp" />
     <ClCompile Include="src\classic\playlist_window.cpp" />
     <ClCompile Include="src\classic\skin_window.cpp" />
+    <ClCompile Include="src\common\commandline.cpp" />
     <ClCompile Include="src\common\component.cpp" />
     <ClCompile Include="src\common\config.cpp" />
     <ClCompile Include="src\classic\image.cpp" />

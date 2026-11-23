@@ -16,6 +16,10 @@ Put them into the skins folder (*Preferences → Display → Winamp Skins*; `<pr
 
 Now you can finally kick a llama's ass in foobar2000!
 
+## Command line
+
+- `foobar2000.exe "/winamp_skin:<path>"` selects a skin; also works with foobar2000 already running.
+
 ## Building
 
 See [BUILD.md](BUILD.md).

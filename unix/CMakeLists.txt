@@ -68,3 +68,22 @@ target_link_libraries(foo_winamp_skins PRIVATE
   foobar2000_component_client foobar2000_SDK pfc
   ${SDK}/foobar2000/shared/shared-${FB2K_PLATFORM}.lib
   user32 gdi32 shell32 comctl32 comdlg32 ole32 uuid shlwapi winmm msimg32 windowscodecs)
+
+# --- captures portable Winamp's skinned windows for comparison (not shipped) ---
+add_executable(winamp_capture ${REPO}/unix/harness/winamp_capture.cpp)
+target_compile_options(winamp_capture PRIVATE -W4 -Wno-unused-parameter -Wno-unused-command-line-argument)
+target_link_libraries(winamp_capture PRIVATE user32 gdi32 ole32 windowscodecs)
+set_target_properties(winamp_capture PROPERTIES MSVC_RUNTIME_LIBRARY "MultiThreaded")
+
+# --- test helper component for skintest's foobar2000 profiles (not shipped): /skintest_tracks: ---
+add_library(foo_skintest SHARED ${REPO}/unix/harness/foo_skintest.cpp)
+target_include_directories(foo_skintest SYSTEM PRIVATE ${REPO}/3rdParty)
+target_compile_options(foo_skintest PRIVATE -W4 -Wno-unused-parameter -Wno-microsoft-include -Wno-pragma-pack -Wno-unknown-pragmas -Wno-nonportable-include-path -Wno-unused-command-line-argument)
+target_link_libraries(foo_skintest PRIVATE foobar2000_component_client foobar2000_SDK pfc ${SDK}/foobar2000/shared/shared-${FB2K_PLATFORM}.lib
+  user32 gdi32 shell32 comctl32 comdlg32 ole32 uuid shlwapi winmm)
+
+# --- captures foo_winamp_skins' windows in a portable test foobar2000 (not shipped) ---
+add_executable(fb2k_capture ${REPO}/unix/harness/fb2k_capture.cpp)
+target_compile_options(fb2k_capture PRIVATE -W4 -Wno-unused-parameter -Wno-unused-command-line-argument)
+target_link_libraries(fb2k_capture PRIVATE user32 gdi32 ole32 windowscodecs)
+set_target_properties(fb2k_capture PROPERTIES MSVC_RUNTIME_LIBRARY "MultiThreaded")

@@ -16,6 +16,7 @@
     <ClCompile Include="src\classic\eq_window.cpp"><Filter>Source Files</Filter></ClCompile>
     <ClCompile Include="src\classic\playlist_window.cpp"><Filter>Source Files</Filter></ClCompile>
     <ClCompile Include="src\classic\skin_window.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClCompile Include="src\common\commandline.cpp"><Filter>Source Files</Filter></ClCompile>
     <ClCompile Include="src\common\component.cpp"><Filter>Source Files</Filter></ClCompile>
     <ClCompile Include="src\common\config.cpp"><Filter>Source Files</Filter></ClCompile>
     <ClCompile Include="src\classic\image.cpp"><Filter>Source Files</Filter></ClCompile>
