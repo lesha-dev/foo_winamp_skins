@@ -7,8 +7,14 @@ set(CMAKE_SYSTEM_VERSION 10.0)
 if(NOT XWIN_ARCH)
   set(XWIN_ARCH x86_64)
 endif()
+# /opt/xwin when it exists (a symlink to the user's sysroot in every WSL distro sharing this tree: the build
+# directories then hold the same paths whichever distro configures them), else ~/.xwin.
 if(NOT XWIN_ROOT)
-  set(XWIN_ROOT "$ENV{HOME}/.xwin")
+  if(EXISTS /opt/xwin)
+    set(XWIN_ROOT /opt/xwin)
+  else()
+    set(XWIN_ROOT "$ENV{HOME}/.xwin")
+  endif()
 endif()
 list(APPEND CMAKE_TRY_COMPILE_PLATFORM_VARIABLES XWIN_ARCH XWIN_ROOT)
 

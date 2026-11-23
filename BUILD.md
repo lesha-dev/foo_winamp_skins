@@ -146,11 +146,13 @@ Requires clang-cl, lld-link, llvm-rc/lib/mt, cmake, ninja and an xwin sysroot in
 
 ```sh
 cd unix
-cmake -G Ninja -B build-x64 -DCMAKE_TOOLCHAIN_FILE=cmake/clang-cl-xwin.cmake -DXWIN_ARCH=x86_64
-cmake -G Ninja -B build-x86 -DCMAKE_TOOLCHAIN_FILE=cmake/clang-cl-xwin.cmake -DXWIN_ARCH=x86
+cmake -G Ninja -B build-x64 -DCMAKE_TOOLCHAIN_FILE=cmake/clang-cl-xwin.cmake -DXWIN_ARCH=x86_64 -DCMAKE_TRY_COMPILE_CONFIGURATION=Release
+cmake -G Ninja -B build-x86 -DCMAKE_TOOLCHAIN_FILE=cmake/clang-cl-xwin.cmake -DXWIN_ARCH=x86 -DCMAKE_TRY_COMPILE_CONFIGURATION=Release
 ninja -C build-x64 && ninja -C build-x86
 ./deploy.sh    # -> ../foobar2000_x64, ../foobar2000_x32
 ```
+
+(`CMAKE_TRY_COMPILE_CONFIGURATION=Release`: xwin has no debug CRT for CMake's compiler check. The toolchain uses `/opt/xwin` when it exists, else `~/.xwin`. Several WSL distros sharing this tree: link `/opt/xwin` to each one's sysroot (`sudo ln -sfn ~/.xwin /opt/xwin`) so the build dirs hold the same paths whichever configures them; a build dir configured with another path keeps it in its cache: delete `CMakeCache.txt` and `CMakeFiles/` and configure again.)
 
 Source lists come from `foo_winamp_skins.vcxproj`; add files there only.
 Windows headers included with non-lowercase names need an entry in `unix/cmake/case_shim.txt`.
