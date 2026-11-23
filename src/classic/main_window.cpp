@@ -1506,7 +1506,7 @@ void MainWindow::skin_changed() {
 
 bool MainWindow::load_skin(const char* path, bool interactive) {
     try {
-        auto skin = Skin::load(path);
+        auto skin = Skin::load(path, config::fallback_skin_path.get());
         for (auto& w : skin->warnings()) FB2K_console_formatter() << COMPONENT_NAME ": " << path << ": " << w.c_str();
         m_skin = std::move(skin);
         config::skin_path = path;

@@ -57,4 +57,19 @@ size_t text_length(const char* utf8) {
     return pfc::stringcvt::string_wide_from_utf8(utf8).length();
 }
 
+void draw_missing_art_note(Canvas& c, int title_h) {
+    HDC dc = c.dc();
+    const int saved = SaveDC(dc);
+    HFONT font = CreateFontW(-9, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS,
+                             CLIP_DEFAULT_PRECIS, NONANTIALIASED_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"Segoe UI");
+    SelectObject(dc, font);
+    SetBkMode(dc, TRANSPARENT);
+    SetTextColor(dc, RGB(255, 255, 255));
+    RECT r = { 0, 0, c.width(), title_h };
+    DrawTextW(dc, L"Select fallback skin", -1, &r, DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
+    RestoreDC(dc, saved);
+    DeleteObject(font);
+    GdiFlush();
+}
+
 } // namespace wsz

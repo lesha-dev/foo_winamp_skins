@@ -189,6 +189,7 @@ void render_main(Canvas& c, const Skin& skin, const MainState& st) {
     if (st.easter_egg && has_easter_egg(title)) c.blit(title, st.active ? L::title_egg_active : L::title_egg, L::pos_title_bar);
     else c.blit(title, st.active ? L::title_bar_active : L::title_bar, L::pos_title_bar);
     draw_titlebar_buttons(c, title, st);
+    if (title.empty()) draw_missing_art_note(c, L::title_bar.h);
 
     // Clutter bar: background plus selected states for pressed buttons and active toggles.
     // When not always shown, Winamp draws its blank variant until a button is pressed.

@@ -6,6 +6,7 @@ namespace wsz::config {
 extern cfg_int window_x;
 extern cfg_int window_y;
 extern cfg_string skin_path;
+extern cfg_string fallback_skin_path; // classic skin whose art stands in for parts a skin lacks (Winamp's built-in art); empty = none
 extern cfg_bool random_skin;          // load a random skin from the skins folder...
 extern cfg_bool random_skin_on_play;  // ...on each new track (else on startup)
 extern cfg_string skins_folder;        // custom skins folder; empty = <profile>\winamp-skins

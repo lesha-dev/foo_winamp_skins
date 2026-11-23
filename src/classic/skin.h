@@ -63,7 +63,9 @@ public:
 
     // Loads a .wsz/.zip archive or an unpacked skin directory. Throws std::runtime_error on fatal errors;
     // missing individual files are tolerated (left empty / defaults).
-    static std::unique_ptr<Skin> load(const char* path_utf8);
+    // fallback_utf8: a skin whose bitmaps stand in for the ones this skin lacks or can't decode, as Winamp's built-in
+    // art does there (config::fallback_skin_path); null/empty = none. A fallback that fails to load is a warning.
+    static std::unique_ptr<Skin> load(const char* path_utf8, const char* fallback_utf8 = nullptr);
 
     const Image& bitmap(SkinBitmap b) const { return m_bitmaps[static_cast<size_t>(b)]; }
     const std::array<COLORREF, 24>& vis_colors() const { return m_vis_colors; }
@@ -82,6 +84,7 @@ private:
     // name: lowercase basename -> raw file contents
     using FileMap = std::map<std::string, std::vector<uint8_t>>;
     void load_from(FileMap& files);
+    void use_fallback(const Skin& fb);
 
     std::string m_path;
     std::array<Image, static_cast<size_t>(SkinBitmap::count_)> m_bitmaps;
@@ -90,6 +93,7 @@ private:
     SkinRegions m_regions;
     std::vector<std::string> m_warnings;
     std::string m_readme;
+    bool m_has_pledit_txt = false;
     std::array<HCURSOR, static_cast<size_t>(SkinCursor::count_)> m_cursors{};
 };
 

@@ -97,14 +97,15 @@ public:
         config::random_skin = random_checked();
         config::random_skin_on_play = random_on_play();
         if (folder_changed()) skins_folder::set_path(m_folder);
-        const std::wstring current = wide(config::skin_path.get());
-        if (_wcsicmp(m_pending.c_str(), current.c_str()) != 0) {
+        const bool fallback_changed = fallback_differs();
+        if (fallback_changed) config::fallback_skin_path = utf8(m_fallback);
+        if (fallback_changed || _wcsicmp(m_pending.c_str(), wide(config::skin_path.get()).c_str()) != 0) {
             MainWindow* w = MainWindow::instance();
             if (m_pending.empty()) {
                 if (w) w->unload_skin();
                 else config::skin_path = "";
             } else {
-                if (w) w->load_skin(utf8(m_pending), true);
+                if (w) w->load_skin(utf8(m_pending), true); // again for a new fallback
                 else config::skin_path = utf8(m_pending);
             }
         }
@@ -156,12 +157,13 @@ private:
         m_dark.AddDialogWithControls(m_wnd);
         m_pending = wide(config::skin_path.get());
         m_folder = skins_folder::path();
+        m_fallback = wide(config::fallback_skin_path.get());
         uSetDlgItemText(m_wnd, IDC_FOLDER, utf8(m_folder));
         CheckDlgButton(m_wnd, IDC_RANDOM_SKIN, config::random_skin.get() ? BST_CHECKED : BST_UNCHECKED);
         CheckRadioButton(m_wnd, IDC_RANDOM_STARTUP, IDC_RANDOM_PLAY, config::random_skin_on_play.get() ? IDC_RANDOM_PLAY : IDC_RANDOM_STARTUP);
         update_random_enabled();
         init_folder_buttons();
-        refresh_list();
+        refresh_list(true);
         load_preview();
     }
 
@@ -191,6 +193,14 @@ private:
         case IDC_REFRESH:
             if (code == BN_CLICKED) refresh_list();
             break;
+        case IDC_SET_FALLBACK:
+            if (code == BN_CLICKED && !m_pending.empty()) {
+                m_fallback = is_fallback(m_pending) ? std::wstring() : m_pending;
+                refresh_list(true);
+                load_preview();
+                changed();
+            }
+            break;
         case IDC_RANDOM_SKIN:
             if (code == BN_CLICKED) { update_random_enabled(); changed(); }
             break;
@@ -218,6 +228,21 @@ private:
         HWND tip = CreateWindowExW(WS_EX_TOPMOST, TOOLTIPS_CLASSW, nullptr, WS_POPUP | TTS_ALWAYSTIP | TTS_NOPREFIX,
             CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, m_wnd, nullptr, core_api::get_my_instance(), nullptr);
         if (tip) m_dark.AddCtrlAuto(tip);
+        if (tip) {
+            SendMessageW(tip, TTM_SETMAXTIPWIDTH, 0, 360);
+            SendMessageW(tip, TTM_SETDELAYTIME, TTDT_AUTOPOP, 30000);
+            TTTOOLINFOW ti = {};
+            ti.cbSize = sizeof(ti);
+            ti.uFlags = TTF_IDISHWND | TTF_SUBCLASS;
+            ti.hwnd = m_wnd;
+            ti.uId = reinterpret_cast<UINT_PTR>(GetDlgItem(m_wnd, IDC_FALLBACK_HELP));
+            ti.lpszText = const_cast<wchar_t*>(
+                L"The fallback skin stands in for the parts other skins don't provide, as Winamp's own built-in "
+                L"skin does in Winamp.\n\n"
+                L"When the selected skin lacks a bitmap (an equalizer, a playlist editor, a titlebar, buttons...), "
+                L"that part is drawn from the fallback skin instead.");
+            SendMessageW(tip, TTM_ADDTOOLW, 0, reinterpret_cast<LPARAM>(&ti));
+        }
         for (const auto& b : folder_buttons) {
             HWND btn = GetDlgItem(m_wnd, b.id);
             const wchar_t* text = m_icon_font ? (fluent ? b.glyph : b.symbol) : b.text;
@@ -248,27 +273,44 @@ private:
         }
     }
 
-    void refresh_list() {
+    // `keep`: leave a selected skin that isn't in the folder selected (page opening), and the scroll position.
+    void refresh_list(bool keep = false) {
         m_skins = skins_folder::list(m_folder);
         HWND list = GetDlgItem(m_wnd, IDC_SKIN_LIST);
         SendMessageW(list, WM_SETREDRAW, FALSE, 0);
+        const LRESULT top = SendMessageW(list, LB_GETTOPINDEX, 0, 0);
         SendMessageW(list, LB_RESETCONTENT, 0, 0);
         int sel = -1;
         for (size_t i = 0; i < m_skins.size(); ++i) {
-            SendMessageW(list, LB_ADDSTRING, 0, reinterpret_cast<LPARAM>(m_skins[i].name.c_str()));
+            std::wstring label = m_skins[i].name;
+            if (is_fallback(m_skins[i].path)) label += L" (fallback)";
+            SendMessageW(list, LB_ADDSTRING, 0, reinterpret_cast<LPARAM>(label.c_str()));
             if (!m_pending.empty() && _wcsicmp(m_skins[i].path.c_str(), m_pending.c_str()) == 0) sel = static_cast<int>(i);
         }
         SendMessageW(list, LB_SETCURSEL, static_cast<WPARAM>(sel), 0);
+        if (keep && top > 0) SendMessageW(list, LB_SETTOPINDEX, static_cast<WPARAM>(top), 0);
         SendMessageW(list, WM_SETREDRAW, TRUE, 0);
         InvalidateRect(list, nullptr, TRUE);
         // The selected skin is gone (deleted, or another folder): select none.
-        if (sel < 0 && !m_pending.empty()) select_pending({});
+        if (sel < 0 && !m_pending.empty() && !keep) select_pending({});
     }
 
     void select_pending(const std::wstring& path) {
         m_pending = path;
         load_preview();
         changed();
+    }
+
+    bool is_fallback(const std::wstring& path) const {
+        return !m_fallback.empty() && _wcsicmp(path.c_str(), m_fallback.c_str()) == 0;
+    }
+    bool fallback_differs() const { return _wcsicmp(m_fallback.c_str(), wide(config::fallback_skin_path.get()).c_str()) != 0; }
+
+    void update_fallback_button() {
+        HWND btn = GetDlgItem(m_wnd, IDC_SET_FALLBACK);
+        if (!btn) return;
+        SetWindowTextW(btn, is_fallback(m_pending) ? L"Unset Fallback" : L"Set as Fallback");
+        EnableWindow(btn, !m_pending.empty());
     }
 
     void load_preview() {
@@ -278,7 +320,7 @@ private:
             info = "No skin selected.";
         } else {
             try {
-                m_preview = Skin::load(utf8(m_pending));
+                m_preview = Skin::load(utf8(m_pending), utf8(m_fallback));
                 info = m_preview->readme().c_str();
                 if (!m_preview->warnings().empty()) info << (info.is_empty() ? "[" : "\n\n[") << m_preview->warnings().size() << " warning(s), see console after applying]";
             } catch (const std::exception& e) {
@@ -295,6 +337,7 @@ private:
             render_main(m_canvas, *m_preview, st);
         }
         InvalidateRect(GetDlgItem(m_wnd, IDC_PREVIEW), nullptr, FALSE);
+        update_fallback_button();
     }
 
     void draw_preview(HDC dc, const RECT& rc) {
@@ -333,7 +376,7 @@ private:
     bool has_changed() const {
         if (!m_wnd) return false;
         return folder_changed() || random_checked() != config::random_skin.get() || random_on_play() != config::random_skin_on_play.get()
-            || _wcsicmp(m_pending.c_str(), wide(config::skin_path.get()).c_str()) != 0;
+            || fallback_differs() || _wcsicmp(m_pending.c_str(), wide(config::skin_path.get()).c_str()) != 0;
     }
 
     bool random_checked() const { return IsDlgButtonChecked(m_wnd, IDC_RANDOM_SKIN) == BST_CHECKED; }
@@ -355,6 +398,7 @@ private:
     std::vector<skins_folder::Entry> m_skins;
     std::wstring m_pending; // skin path applied on Apply; empty = no skin
     std::wstring m_folder;  // skins folder applied on Apply
+    std::wstring m_fallback; // fallback skin path applied on Apply; empty = none
     std::unique_ptr<Skin> m_preview;
     Canvas m_canvas;
 };

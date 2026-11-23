@@ -62,3 +62,5 @@
 #define IDC_PL_FONT_LABEL   1125
 #define IDC_PL_FONT         1126
 #define IDC_PL_FONT_SMOOTH  1127
+#define IDC_SET_FALLBACK    1135
+#define IDC_FALLBACK_HELP   1136

@@ -279,7 +279,7 @@ Skin::~Skin() {
     for (HCURSOR c : m_cursors) if (c) DestroyCursor(c);
 }
 
-std::unique_ptr<Skin> Skin::load(const char* path_utf8) {
+std::unique_ptr<Skin> Skin::load(const char* path_utf8, const char* fallback_utf8) {
     std::wstring wpath = pfc::stringcvt::string_wide_from_utf8(path_utf8).get_ptr();
     const DWORD attr = GetFileAttributesW(wpath.c_str());
     if (attr == INVALID_FILE_ATTRIBUTES) throw std::runtime_error("skin not found");
@@ -296,7 +296,41 @@ std::unique_ptr<Skin> Skin::load(const char* path_utf8) {
     skin->m_path = path_utf8;
     skin->load_from(files);
     if (skin->bitmap(SkinBitmap::main).empty()) throw std::runtime_error("not a Winamp 2 skin (main.bmp missing or unreadable)");
+    if (fallback_utf8 && *fallback_utf8 && pfc::stricmp_ascii(fallback_utf8, path_utf8) != 0) {
+        try {
+            skin->use_fallback(*load(fallback_utf8));
+        } catch (const std::exception& e) {
+            skin->m_warnings.push_back(pfc::format("fallback skin ", fallback_utf8, ": ", e.what()).c_str());
+        }
+    }
     return skin;
+}
+
+void Skin::use_fallback(const Skin& fb) {
+    using B = SkinBitmap;
+    auto& bm = m_bitmaps;
+    auto take = [&](B b) {
+        const size_t i = static_cast<size_t>(b);
+        if (!bm[i].empty() || fb.m_bitmaps[i].empty()) return false;
+        bm[i] = fb.m_bitmaps[i];
+        return true;
+    };
+    // Winamp's own substitutes stay: balance.bmp falls back to the volume slider (load_from), and nums_ex.bmp is
+    // only an alternative to numbers.bmp.
+    const bool no_digits = bm[static_cast<size_t>(B::numbers)].empty() && bm[static_cast<size_t>(B::nums_ex)].empty();
+    // balance holds the skin's balance.bmp, or its volume.bmp (load_from), or nothing when it has neither.
+    const bool own_balance = !bm[static_cast<size_t>(B::balance)].empty();
+    for (size_t i = 0; i < bm.size(); ++i) {
+        const B b = static_cast<B>(i);
+        if (b == B::balance || b == B::nums_ex) continue;
+        const bool took = take(b);
+        // The playlist's colours belong with its art: the fallback's pledit.txt when its pledit.bmp is used.
+        if (took && b == B::pledit && !m_has_pledit_txt) {
+            m_pl_colors = fb.m_pl_colors;
+        }
+    }
+    if (no_digits) take(B::nums_ex);
+    if (!own_balance && !take(B::balance)) bm[static_cast<size_t>(B::balance)] = bm[static_cast<size_t>(B::volume)];
 }
 
 void Skin::load_from(FileMap& files) {
@@ -327,6 +361,7 @@ void Skin::load_from(FileMap& files) {
     }
 
     if (auto it = files.find("pledit.txt"); it != files.end()) {
+        m_has_pledit_txt = true;
         Ini ini = parse_ini(it->second);
         const IniSection& t = ini["text"];
         auto color = [&](const char* key, COLORREF& out) {

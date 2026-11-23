@@ -4,6 +4,7 @@
 #include "common/config.h"
 #include "classic/main_window.h"
 #include "common/player.h"
+#include "classic/text_font.h"
 
 #include <array>
 #include <cmath>
@@ -352,6 +353,7 @@ void EqWindow::render_normal(Canvas& c) {
         }
         last = y;
     }
+    if (img.empty()) draw_missing_art_note(c, title_active.h);
 }
 
 void EqWindow::render_shade(Canvas& c) {

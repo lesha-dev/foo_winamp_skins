@@ -1003,6 +1003,7 @@ void PlaylistWindow::render_normal(Canvas& c) {
         digit(s % 10, 27);
     }
 
+    if (img.empty()) draw_missing_art_note(c, top_h);
     render_menu(c);
 }
 
