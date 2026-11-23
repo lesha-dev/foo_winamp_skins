@@ -1,6 +1,7 @@
 #pragma once
 
 #include "common/drop_target.h"
+#include "classic/element_window.h"
 #include "common/hosted_element.h"
 #include "classic/skin_window.h"
 

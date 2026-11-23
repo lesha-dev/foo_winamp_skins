@@ -33,7 +33,7 @@ protected:
     void on_caption_dblclick() override { set_shade(!m_shade); }
     void on_position_saved(int x, int y) override;
     void on_visibility_changed(bool visible) override;
-    const char* region_name() const override { return m_shade ? nullptr : "equalizer"; }
+    const char* region_name() const override { return m_shade ? "equalizerws" : "equalizer"; } // region.txt, like Winamp
 
 private:
     // label_*: the +12/0/-12 dB labels, which set all bands. Parts from preamp on are sliders.

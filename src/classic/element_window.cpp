@@ -16,35 +16,6 @@ constexpr int max_size = 4000;
 
 } // namespace
 
-std::vector<ElementInfo> list_elements() {
-    std::vector<ElementInfo> out;
-    for (auto e : ui_element::enumerate()) {
-        if (!e->is_user_addable() || e->get_subclass() == ui_element_subclass_containers) continue;
-        ElementInfo info{ e->get_guid(), {}, {} };
-        e->get_name(info.name);
-        if (!e->get_element_group(info.group)) info.group = "Other";
-        out.push_back(std::move(info));
-    }
-    std::sort(out.begin(), out.end(), [](const ElementInfo& a, const ElementInfo& b) {
-        if (int g = pfc::stricmp_ascii(a.group, b.group)) return g < 0;
-        return pfc::stricmp_ascii(a.name, b.name) < 0;
-    });
-    const GUID playlist_view = playlist_view_guid();
-    for (auto& e : out) e.playlist = e.guid == playlist_view;
-    return out;
-}
-
-std::vector<ElementInfo> list_cui_panels(const std::vector<ElementInfo>& elements) {
-    std::vector<ElementInfo> out;
-    for (auto& p : cui::list_panels()) {
-        const bool duplicate = std::any_of(elements.begin(), elements.end(),
-            [&](const ElementInfo& e) { return !e.cui && pfc::stricmp_ascii(e.name, p.name) == 0; });
-        if (duplicate && !p.playlist) continue;
-        out.push_back({ p.guid, p.name, p.category, true, p.playlist });
-    }
-    return out;
-}
-
 ElementWindow::ElementWindow(const State& state) : m_state(state), m_host(state.guid, state.config) {
     m_state.w = std::clamp(m_state.w, GenFrame::min_width, max_size);
     m_state.h = std::clamp(m_state.h, GenFrame::min_height, max_size);
@@ -86,7 +57,7 @@ void ElementWindow::on_double_size_changed() {
 }
 
 void ElementWindow::on_skin_changed() {
-    m_host.set_skin(m_skin);
+    apply_skin(m_host, m_skin);
     layout_element();
     invalidate();
 }

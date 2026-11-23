@@ -62,6 +62,9 @@ public:
     void toggle_element(const GUID& guid); // shows/hides the element's window, creating it on first use
     void save_element_windows();
 
+    // Winamp's colours for text in a Windows font from text.bmp (its mfont colours): the main window's title,
+    // the playlist's shade line.
+    static void title_font_colors(const Skin& skin, COLORREF& fg, COLORREF& bg);
 private:
     class Callbacks;
     friend class Callbacks;
@@ -98,6 +101,7 @@ private:
 
     // playback events
     void on_track_changed();
+    void on_focus_changed(); // stopped: the title shows the focused track
     void random_skin_on_play();
     void on_playback_stopped();
     void on_dynamic_info(const file_info& info);
@@ -145,9 +149,11 @@ private:
     bool m_status_timed = false;       // m_status is the "Volume: N%" note, cleared by status_timer_id
     void on_volume_changed();
     int m_marquee_px = 0;              // title scroll position (px)
+    metadb_handle_ptr m_last_played; // the title after playback stops when nothing is focused
     int m_marquee_hold = 0;            // timer ticks before auto-scroll resumes after a drag
     int m_marquee_drag_x = 0;          // last cursor x while dragging the title
     int m_kbps = -1;
+    bool m_cbr = false; // the playing track is constant bitrate: its kbps stays (see on_dynamic_info)
     int m_khz = -1;
 
     Visualizer m_vis;

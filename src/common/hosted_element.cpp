@@ -83,7 +83,7 @@ HostedElement::~HostedElement() {
 }
 
 void HostedElement::set_default_cursor() const {
-    if (m_skin) set_skin_cursor(m_skin, SkinCursor::pl_normal);
+    if (on_set_cursor) on_set_cursor();
 }
 
 bool HostedElement::create(HWND parent) {
@@ -112,8 +112,8 @@ void HostedElement::set_rect(const RECT& r) {
     if (HWND w = hwnd()) SetWindowPos(w, nullptr, r.left, r.top, r.right - r.left, r.bottom - r.top, SWP_NOZORDER | SWP_NOACTIVATE);
 }
 
-void HostedElement::set_skin(const Skin* skin) {
-    m_skin = skin;
+void HostedElement::set_colors(const std::optional<HostColors>& colors) {
+    m_colors = colors;
     if (m_elem.is_valid()) m_elem->notify(ui_element_notify_colors_changed, 0, nullptr, 0);
 }
 
@@ -140,25 +140,12 @@ void HostedElement::release() {
     if (IsWindow(child)) DestroyWindow(child);
 }
 
-// Background like Winamp's own skinned panels: genex.bmp's item background colour (pixel 48,0), or the
-// playlist background from pledit.txt when the skin has no genex.bmp. Text and selection colours come
-// from pledit.txt, so hosted elements match the playlist editor.
 bool HostedElement::query_color(const GUID& what, t_ui_color& out) {
-    if (m_skin) {
-        const PlaylistColors& col = m_skin->playlist_colors();
-        if (what == ui_color_background) {
-            const Image& genex = m_skin->bitmap(SkinBitmap::genex);
-            if (genex.width > 48 && genex.height > 0) {
-                const uint32_t p = genex.pixels[48];
-                out = RGB((p >> 16) & 0xFF, (p >> 8) & 0xFF, p & 0xFF);
-            } else {
-                out = col.normal_bg;
-            }
-            return true;
-        }
-        if (what == ui_color_text) { out = col.normal; return true; }
-        if (what == ui_color_highlight) { out = col.current; return true; }
-        if (what == ui_color_selection) { out = col.selected_bg; return true; }
+    if (m_colors) {
+        if (what == ui_color_background) { out = m_colors->background; return true; }
+        if (what == ui_color_text) { out = m_colors->text; return true; }
+        if (what == ui_color_highlight) { out = m_colors->highlight; return true; }
+        if (what == ui_color_selection) { out = m_colors->selection; return true; }
     }
     if (auto m = ui_config_manager::tryGet(); m.is_valid()) return m->query_color(what, out);
     return false;
@@ -186,6 +173,63 @@ t_size HostedElement::host_notify(ui_element_instance*, const GUID& what, t_size
     m_label.set_string(static_cast<const char*>(param2), param2size);
     if (on_label_changed) on_label_changed();
     return 1;
+}
+
+HWND find_vscroll_window(HWND parent) {
+    if (!parent) return nullptr;
+    HWND found = nullptr;
+    EnumChildWindows(parent, [](HWND w, LPARAM lp) -> BOOL {
+        if (!(GetWindowLongPtrW(w, GWL_STYLE) & WS_VSCROLL)) return TRUE;
+        *reinterpret_cast<HWND*>(lp) = w;
+        return FALSE;
+    }, reinterpret_cast<LPARAM>(&found));
+    return found;
+}
+
+bool get_vscroll(HWND list, SCROLLINFO& si) {
+    si = {};
+    si.cbSize = sizeof(si);
+    si.fMask = SIF_ALL;
+    return list && GetScrollInfo(list, SB_VERT, &si) && si.nMax >= si.nMin;
+}
+
+void set_vscroll_pos(HWND list, int pos) {
+    SCROLLINFO si{};
+    si.cbSize = sizeof(si);
+    si.fMask = SIF_POS;
+    si.nPos = pos;
+    SetScrollInfo(list, SB_VERT, &si, FALSE);
+    SendMessageW(list, WM_VSCROLL, MAKEWPARAM(SB_THUMBTRACK, pos & 0xFFFF), 0);
+    SendMessageW(list, WM_VSCROLL, MAKEWPARAM(SB_ENDSCROLL, 0), 0);
+}
+
+std::vector<ElementInfo> list_elements() {
+    std::vector<ElementInfo> out;
+    for (auto e : ui_element::enumerate()) {
+        if (!e->is_user_addable() || e->get_subclass() == ui_element_subclass_containers) continue;
+        ElementInfo info{ e->get_guid(), {}, {} };
+        e->get_name(info.name);
+        if (!e->get_element_group(info.group)) info.group = "Other";
+        out.push_back(std::move(info));
+    }
+    std::sort(out.begin(), out.end(), [](const ElementInfo& a, const ElementInfo& b) {
+        if (int g = pfc::stricmp_ascii(a.group, b.group)) return g < 0;
+        return pfc::stricmp_ascii(a.name, b.name) < 0;
+    });
+    const GUID playlist_view = playlist_view_guid();
+    for (auto& e : out) e.playlist = e.guid == playlist_view;
+    return out;
+}
+
+std::vector<ElementInfo> list_cui_panels(const std::vector<ElementInfo>& elements) {
+    std::vector<ElementInfo> out;
+    for (auto& p : cui::list_panels()) {
+        const bool duplicate = std::any_of(elements.begin(), elements.end(),
+            [&](const ElementInfo& e) { return !e.cui && pfc::stricmp_ascii(e.name, p.name) == 0; });
+        if (duplicate && !p.playlist) continue;
+        out.push_back({ p.guid, p.name, p.category, true, p.playlist });
+    }
+    return out;
 }
 
 } // namespace wsz

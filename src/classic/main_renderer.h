@@ -33,6 +33,7 @@ struct MainState {
     bool pl_on = false;
 
     bool show_time = false;      // false while stopped, and on the "off" phase of the pause blink
+    bool time_blank = false;     // the pause blink's "off" phase: Winamp blanks the digit cells (draw_time's clear)
     int time_seconds = 0;        // absolute value to display
     bool time_negative = false;  // remaining-time mode
 

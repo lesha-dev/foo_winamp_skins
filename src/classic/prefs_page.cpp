@@ -351,8 +351,8 @@ private:
         int w, h;
         const int scale = std::min(aw / bw, ah / bh);
         if (scale >= 1) { w = bw * scale; h = bh * scale; }
-        else if (aw * bh < ah * bw) { w = aw; h = aw * bh / bw; }
-        else { h = ah; w = ah * bw / bh; }
+        else if (aw * bh < ah * bw) { w = aw; h = std::max(1, aw * bh / bw); }
+        else { h = ah; w = std::max(1, ah * bw / bh); }
         const RECT dst = { rc.left + (aw - w) / 2, rc.top + (ah - h) / 2, rc.left + (aw - w) / 2 + w, rc.top + (ah - h) / 2 + h };
         // The skin's region.txt shapes the real main window: mask the preview the same way.
         HRGN shape = nullptr;

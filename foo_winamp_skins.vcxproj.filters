@@ -23,6 +23,7 @@
     <ClCompile Include="src\classic\main_renderer.cpp"><Filter>Source Files</Filter></ClCompile>
     <ClCompile Include="src\classic\main_window.cpp"><Filter>Source Files</Filter></ClCompile>
     <ClCompile Include="src\common\player.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClCompile Include="src\common\playlist_actions.cpp"><Filter>Source Files</Filter></ClCompile>
     <ClCompile Include="src\classic\skin.cpp"><Filter>Source Files</Filter></ClCompile>
     <ClCompile Include="src\classic\prefs_page.cpp"><Filter>Source Files</Filter></ClCompile>
     <ClCompile Include="src\classic\prefs_options.cpp"><Filter>Source Files</Filter></ClCompile>
@@ -56,6 +57,7 @@
     <ClInclude Include="src\classic\main_renderer.h"><Filter>Header Files</Filter></ClInclude>
     <ClInclude Include="src\classic\main_window.h"><Filter>Header Files</Filter></ClInclude>
     <ClInclude Include="src\common\player.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="src\common\playlist_actions.h"><Filter>Header Files</Filter></ClInclude>
     <ClInclude Include="src\common\resource.h"><Filter>Header Files</Filter></ClInclude>
     <ClInclude Include="src\classic\skin.h"><Filter>Header Files</Filter></ClInclude>
     <ClInclude Include="src\classic\skin_layout.h"><Filter>Header Files</Filter></ClInclude>

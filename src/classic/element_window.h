@@ -8,6 +8,49 @@
 
 namespace wsz {
 
+// Remembered per element window: placement, the element's own configuration and window options.
+struct ElementState {
+    GUID guid = {};
+    bool visible = false;
+    bool shade = false;
+    bool double_size = false;
+    int x = CW_USEDEFAULT, y = CW_USEDEFAULT;
+    int w = GenFrame::full_width, h = GenFrame::full_height + 4 * GenFrame::step_h;
+    std::vector<uint8_t> config;
+    pfc::string8 title; // user's title; empty = the element's label or name
+};
+
+// A window that hosts an element and is listed in the Elements menu (generic frame or playlist editor).
+class ElementPanel {
+public:
+    virtual ~ElementPanel() = default;
+    virtual SkinWindow& window() = 0;
+    virtual const GUID& element_guid() const = 0;
+    virtual ElementState element_state() = 0;
+    virtual void release_element() = 0;
+    virtual void on_skin_changed() = 0;
+    virtual void apply_resize_mode() = 0;
+};
+
+// Hosted elements in classic windows: the skin's playlist colours, with the background like Winamp's own
+// skinned panels (genex.bmp's item background colour, pixel 48,0, else pledit.txt's), and its cursor.
+inline void apply_skin(HostedElement& e, const Skin* skin) {
+    if (!skin) {
+        e.set_colors(std::nullopt);
+        e.on_set_cursor = nullptr;
+        return;
+    }
+    const PlaylistColors& col = skin->playlist_colors();
+    HostColors c{col.normal_bg, col.normal, col.current, col.selected_bg};
+    const Image& genex = skin->bitmap(SkinBitmap::genex);
+    if (genex.width > 48 && genex.height > 0) {
+        const uint32_t p = genex.pixels[48];
+        c.background = RGB((p >> 16) & 0xFF, (p >> 8) & 0xFF, p & 0xFF);
+    }
+    e.set_colors(c);
+    e.on_set_cursor = [skin] { set_skin_cursor(skin, SkinCursor::pl_normal); };
+}
+
 // A Winamp generic frame (gen.bmp) hosting one of foobar2000's UI elements (Album Art Viewer, Console, ...).
 class ElementWindow : public SkinWindow, public ElementPanel {
 public:
@@ -57,18 +100,5 @@ private:
     POINT m_drag_origin = {};
     SIZE m_drag_size = {};
 };
-
-// Elements offered in the Elements menu: user-addable, not containers (they need Default UI's edit mode).
-struct ElementInfo {
-    GUID guid;
-    pfc::string8 name;
-    pfc::string8 group;
-    bool cui = false;      // a Columns UI panel
-    bool playlist = false; // a playlist view: shown in the playlist editor
-};
-std::vector<ElementInfo> list_elements();
-// Columns UI panels offered in their own menu (none without Columns UI). Panels named like one of
-// `elements` (a component registering both kinds) are left out; playlist views are always offered.
-std::vector<ElementInfo> list_cui_panels(const std::vector<ElementInfo>& elements);
 
 } // namespace wsz

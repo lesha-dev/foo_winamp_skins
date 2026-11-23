@@ -195,6 +195,14 @@ int track_info_int(const metadb_handle_ptr& track, const char* field) {
     return v > 0 ? static_cast<int>(v) : -1;
 }
 
+// The track's codec_profile is "CBR..." (foobar2000's MP3/AAC decoders).
+bool track_is_cbr(const metadb_handle_ptr& track) {
+    metadb_info_container::ptr info;
+    if (!track.is_valid() || !track->get_info_ref(info)) return false;
+    const char* p = info->info().info_get("codec_profile");
+    return p && strncmp(p, "CBR", 3) == 0;
+}
+
 } // namespace
 
 // ---------------------------------------------------------------------------------------------
@@ -227,8 +235,8 @@ public:
     void on_volume_change(float) override { m_w.on_volume_changed(); }
 
     void on_playback_order_changed(t_size) override { m_w.invalidate(); }
-    void on_item_focus_change(t_size, t_size) override { m_w.invalidate(); }
-    void on_playlist_switch() override { m_w.invalidate(); }
+    void on_item_focus_change(t_size, t_size) override { m_w.on_focus_changed(); }
+    void on_playlist_switch() override { m_w.on_focus_changed(); }
 
 private:
     MainWindow& m_w;
@@ -242,6 +250,35 @@ MainWindow::~MainWindow() {
 }
 
 // Winamp draws the non-bitmap title with the playlist font; the 2x one serves the double-size alternative style.
+// Winamp's colours for the title in a Windows font (its draw.cpp): text.bmp's pixel at (150,4) as the background,
+// and as the text the pixel of the bitmap font's top-left 20x6 that differs most from it. Without a usable
+// text.bmp, the playlist's colours.
+void MainWindow::title_font_colors(const Skin& skin, COLORREF& fg, COLORREF& bg) {
+    const Image& t = skin.bitmap(SkinBitmap::text);
+    if (t.width <= 150 || t.height <= 5) {
+        fg = skin.playlist_colors().normal;
+        bg = skin.playlist_colors().normal_bg;
+        return;
+    }
+    auto rgb = [](uint32_t p) { return RGB((p >> 16) & 0xff, (p >> 8) & 0xff, p & 0xff); };
+    const uint32_t b = t.pixels[size_t(4) * t.width + 150];
+    uint32_t best = b;
+    int best_d = 0;
+    for (int y = 0; y < 6; ++y)
+        for (int x = 0; x < 20; ++x) {
+            const uint32_t p = t.pixels[size_t(y) * t.width + x];
+            const int dr = int((p >> 16) & 0xff) - int((b >> 16) & 0xff), dg = int((p >> 8) & 0xff) - int((b >> 8) & 0xff),
+                      db = int(p & 0xff) - int(b & 0xff);
+            const int d = dr * dr + dg * dg + db * db;
+            if (d > best_d) {
+                best_d = d;
+                best = p;
+            }
+        }
+    fg = rgb(best);
+    bg = rgb(b);
+}
+
 void MainWindow::update_title_fonts() {
     if (m_title_font) DeleteObject(m_title_font);
     if (m_title_font2x) DeleteObject(m_title_font2x);
@@ -250,8 +287,10 @@ void MainWindow::update_title_fonts() {
     LOGFONTW lf = {};
     lf.lfWeight = FW_NORMAL;
     lf.lfCharSet = DEFAULT_CHARSET;
-    lf.lfQuality = NONANTIALIASED_QUALITY;
-    wcsncpy_s(lf.lfFaceName, pfc::stringcvt::string_wide_from_utf8(m_skin->playlist_colors().font.c_str()), _TRUNCATE);
+    lf.lfQuality = DRAFT_QUALITY; // as Winamp: the system's smoothing (ClearType) applies
+    // As Winamp: the playlist font (the skin's pledit.txt one, or the one Options names) at 10 px
+    const char* face = config::pl_skin_font.get() ? m_skin->playlist_colors().font.c_str() : config::pl_font.get().get_ptr();
+    wcsncpy_s(lf.lfFaceName, pfc::stringcvt::string_wide_from_utf8(face), _TRUNCATE);
     lf.lfHeight = -10;
     m_title_font = CreateFontIndirectW(&lf);
     lf.lfHeight = -20;
@@ -278,6 +317,7 @@ FB2K_SERVICE_FACTORY(always_on_top_notify);
 HWND MainWindow::create(HookProc hook) {
     register_class(&s_wndproc);
     s_instance = this;
+    eq::set_listener([this] { on_eq_changed(); });
     m_hook = hook;
     m_scale = config::double_size.get() ? 2 : 1;
     m_shade = config::shade.get();
@@ -385,6 +425,7 @@ void MainWindow::destroy() {
     m_elements.clear();
     m_selection.release();
     s_instance = nullptr;
+    eq::set_listener(nullptr);
     m_drop.detach();
     m_tooltip.destroy();
     docking::remove(m_wnd);
@@ -547,6 +588,7 @@ void MainWindow::update_title_formats() {
 
 void MainWindow::apply_display_options() {
     update_title_formats();
+    update_title_fonts(); // the playlist font can have changed
     if (m_pl) { m_pl->apply_resize_mode(); m_pl->update_font(); }
     for (auto& w : m_elements) w->apply_resize_mode();
     invalidate_all();
@@ -705,11 +747,14 @@ pfc::string8 MainWindow::current_title() {
     pfc::string8 out;
     auto pc = playback_control::get();
     if (pc->is_playing()) {
-        pc->playback_format_title(nullptr, out, m_title_script, nullptr, playback_control::display_level_all);
+        player::format_playing_title(out, m_title_script);
+        metadb_handle_ptr now;
+        if (pc->get_now_playing(now)) m_last_played = now;
     } else {
         auto pm = playlist_manager::get();
         const size_t focus = pm->activeplaylist_get_focus_item();
         if (focus < pm->activeplaylist_get_item_count()) pm->activeplaylist_item_format_title(focus, nullptr, out, m_title_script, nullptr, playback_control::display_level_all);
+        else if (m_last_played.is_valid()) m_last_played->format_title(nullptr, out, m_title_script, nullptr); // nothing focused
     }
     return out;
 }
@@ -750,6 +795,7 @@ MainState MainWindow::build_state() {
     // Time: hidden while stopped; blinks while paused.
     const bool blink_off = st.play == PlayState::paused && (GetTickCount64() / 1000) % 2 == 1;
     st.show_time = st.play != PlayState::stopped && !blink_off;
+    st.time_blank = blink_off;
     st.time_negative = config::time_remaining.get() && length > 0;
     st.time_seconds = static_cast<int>(st.time_negative ? std::max(0.0, length - pos) : pos);
     if (m_pl) m_pl->set_time(st.show_time, st.time_negative, st.time_seconds);
@@ -769,8 +815,7 @@ MainState MainWindow::build_state() {
     }
     if (!config::title_bitmap_font.get()) {
         st.title_font = m_title_font;
-        st.title_fg = m_skin->playlist_colors().normal;
-        st.title_bg = m_skin->playlist_colors().normal_bg;
+        title_font_colors(*m_skin, st.title_fg, st.title_bg);
     }
     if (st.play != PlayState::stopped) {
         st.kbps = m_kbps;
@@ -1359,6 +1404,7 @@ void MainWindow::on_track_changed() {
     auto pc = playback_control::get();
     if (pc->get_now_playing(track)) {
         m_kbps = track_info_int(track, "bitrate");
+        m_cbr = track_is_cbr(track);
         const int sr = track_info_int(track, "samplerate");
         m_khz = sr > 0 ? (sr + 500) / 1000 : -1;
         pfc::string8 title;
@@ -1367,6 +1413,14 @@ void MainWindow::on_track_changed() {
     }
     m_marquee_px = 0;
     m_marquee_hold = 0;
+    invalidate();
+}
+
+void MainWindow::on_focus_changed() {
+    if (!playback_control::get()->is_playing()) { // another title: scroll it from its start
+        m_marquee_px = 0;
+        m_marquee_hold = 0;
+    }
     invalidate();
 }
 
@@ -1379,8 +1433,11 @@ void MainWindow::on_playback_stopped() {
 }
 
 void MainWindow::on_dynamic_info(const file_info& info) {
+    // Winamp shows the bitrate in each frame's header (in_mp3 DecodeThread: SetInfo(br)): a CBR file's never
+    // changes. foobar2000's dynamic bitrate is bytes over time per chunk and can differ (335 for a 320 kbps
+    // file), so it's taken for VBR tracks only.
     const t_int64 br = info.info_get_bitrate_vbr();
-    if (br > 0) m_kbps = static_cast<int>(br);
+    if (br > 0 && !m_cbr) m_kbps = static_cast<int>(br);
     invalidate();
 }
 

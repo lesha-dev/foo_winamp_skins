@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -26,6 +27,8 @@ void set(const Values& v);      // persists; updates the built-in EQ when enable
 bool enabled();                 // = built-in Equalizer present in the DSP chain
 void set_enabled(bool on);      // adds/removes the built-in Equalizer. Main thread only.
 void sync();                    // reads the current chain state (startup)
+// Called on the main thread after values or the on/off state change (the active UI's EQ display).
+void set_listener(std::function<void()> f);
 
 // Slider drag: hints playback to apply changes with low latency.
 void begin_edit();
@@ -36,5 +39,9 @@ void end_edit();
 // load_feq applies the preset itself. Main thread only.
 bool load_feq(const char* path_utf8);
 bool save_feq(const char* path_utf8);
+
+// The Presets menu (Load/Save .feq, as foobar2000's Equalizer). track shows the menu and returns
+// the chosen id (0 = none), so each UI can use its own menu tracking. Main thread only.
+void presets_menu(HWND owner, const std::function<UINT(HMENU)>& track);
 
 } // namespace wsz::eq

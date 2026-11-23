@@ -1,31 +1,21 @@
 #pragma once
 
 #include "common/cui_panels.h"
-#include "classic/gen_frame.h"
-#include "classic/skin.h"
 
 #include <functional>
+#include <optional>
 #include <vector>
 
 namespace wsz {
 
-class SkinWindow;
-
-// Remembered per element window: placement, the element's own configuration and window options.
-struct ElementState {
-    GUID guid = {};
-    bool visible = false;
-    bool shade = false;
-    bool double_size = false;
-    int x = CW_USEDEFAULT, y = CW_USEDEFAULT;
-    int w = GenFrame::full_width, h = GenFrame::full_height + 4 * GenFrame::step_h;
-    std::vector<uint8_t> config;
-    pfc::string8 title; // user's title; empty = the element's label or name
+// Colours a host gives its elements instead of foobar2000's (e.g. a classic skin's playlist colours).
+struct HostColors {
+    COLORREF background, text, highlight, selection;
 };
 
-// One of foobar2000's UI elements living inside a skinned window. Colours come from the skin's playlist
-// (background from genex.bmp when present), fonts from foobar2000. The GUID may also name a Columns UI
-// panel, which keeps Columns UI's colours and fonts.
+// One of foobar2000's UI elements living inside a skinned window. Colours come from the host (see
+// set_colors) or foobar2000, fonts from foobar2000. The GUID may also name a Columns UI panel, which keeps
+// Columns UI's colours and fonts.
 class HostedElement : private ui_element_instance_callback_receiver {
 public:
     HostedElement(const GUID& guid, std::vector<uint8_t> config);
@@ -42,8 +32,10 @@ public:
     HWND hwnd() const { return m_elem.is_valid() ? m_elem->get_wnd() : m_panel ? m_panel->hwnd() : nullptr; }
     bool is_cui() const { return m_panel != nullptr; }
     void set_rect(const RECT& r);
-    void set_skin(const Skin* skin);
-    // Shows the skin's cursor for the element's client area (instead of the system arrow).
+    // Host colours; nullopt = foobar2000's.
+    void set_colors(const std::optional<HostColors>& colors);
+    // Sets the host's cursor for the element's client area (instead of the system arrow); empty = arrow.
+    std::function<void()> on_set_cursor;
     void set_default_cursor() const;
     // Font for list/playlist text instead of foobar2000's (null = foobar2000's); the caller keeps it alive.
     void set_list_font(HFONT font);
@@ -64,7 +56,7 @@ private:
     GUID m_guid;
     std::vector<uint8_t> m_config;
     pfc::string8 m_name, m_label;
-    const Skin* m_skin = nullptr;
+    std::optional<HostColors> m_colors;
     HFONT m_list_font = nullptr;
     ui_element_instance::ptr m_elem;
     std::unique_ptr<cui::Panel> m_panel; // set when the GUID is a Columns UI panel
@@ -77,16 +69,24 @@ bool element_name(const GUID& guid, pfc::string8& out);
 GUID find_element(const char* name);
 inline GUID playlist_view_guid() { return find_element("Playlist View"); }
 
-// A window that hosts an element and is listed in the Elements menu (generic frame or playlist editor).
-class ElementPanel {
-public:
-    virtual ~ElementPanel() = default;
-    virtual SkinWindow& window() = 0;
-    virtual const GUID& element_guid() const = 0;
-    virtual ElementState element_state() = 0;
-    virtual void release_element() = 0;
-    virtual void on_skin_changed() = 0;
-    virtual void apply_resize_mode() = 0;
+// A hosted element's scrollable list: the first child window of `parent` with a vertical scrollbar.
+HWND find_vscroll_window(HWND parent);
+// Its vertical scroll state; false without a window or a valid range.
+bool get_vscroll(HWND list, SCROLLINFO& si);
+// Scrolls it to a position (as if its thumb were dragged there).
+void set_vscroll_pos(HWND list, int pos);
+
+// Elements offered in the Elements menu: user-addable, not containers (they need Default UI's edit mode).
+struct ElementInfo {
+    GUID guid;
+    pfc::string8 name;
+    pfc::string8 group;
+    bool cui = false;      // a Columns UI panel
+    bool playlist = false; // a playlist view: shown in the playlist editor
 };
+std::vector<ElementInfo> list_elements();
+// Columns UI panels offered in their own menu (none without Columns UI). Panels named like one of
+// `elements` (a component registering both kinds) are left out; playlist views are always offered.
+std::vector<ElementInfo> list_cui_panels(const std::vector<ElementInfo>& elements);
 
 } // namespace wsz

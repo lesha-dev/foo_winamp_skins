@@ -169,7 +169,9 @@ void read_zip(const std::vector<uint8_t>& archive, std::map<std::string, std::ve
         std::string full = to_lower(st.m_filename);
         if (full.find("__macosx") != std::string::npos) continue;
         std::string name = basename_lower(st.m_filename);
-        if (name.empty() || files.count(name)) continue; // first occurrence wins
+        // Winamp unpacks a classic skin flat into one folder, overwriting: of entries with the same file name (any
+        // folder, any case) the last one in the archive wins.
+        if (name.empty()) continue;
 
         size_t size = 0;
         void* p = mz_zip_reader_extract_to_heap(&zip, i, &size, 0);
@@ -343,6 +345,9 @@ void Skin::load_from(FileMap& files) {
             m_warnings.push_back(pfc::format(bitmap_files[i], ": ", e.what()).c_str());
         }
     }
+    // As Winamp (draw.cpp): a skin without balance.bmp draws the balance slider from volume.bmp.
+    auto& balance = m_bitmaps[static_cast<size_t>(SkinBitmap::balance)];
+    if (balance.empty()) balance = m_bitmaps[static_cast<size_t>(SkinBitmap::volume)];
 
     for (size_t i = 0; i < std::size(cursor_files); ++i) {
         if (auto it = files.find(cursor_files[i]); it != files.end() && !it->second.empty()) m_cursors[i] = load_cursor(it->second);

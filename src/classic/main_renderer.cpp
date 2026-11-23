@@ -48,9 +48,18 @@ void draw_titlebar_buttons(Canvas& c, const Image& title, const MainState& st) {
 }
 
 void draw_time(Canvas& c, const Skin& skin, const MainState& st) {
-    if (!st.show_time) return;
     const Image& ex = skin.bitmap(SkinBitmap::nums_ex);
     const Image& digits = ex.empty() ? skin.bitmap(SkinBitmap::numbers) : ex;
+    if (st.time_blank) {
+        // Winamp's draw_time clear: the blank cell over the digits and the minus slot; with numbers.bmp the
+        // minus slot gets a 5x1 piece of the "1" cell over the dash instead.
+        c.blit(digits, L::no_minus_nums_ex, L::pos_minus);
+        if (!ex.empty()) c.blit(digits, L::no_minus_nums_ex, { L::pos_minus.x + 2, L::pos_minus.y });
+        else c.blit(digits, 9, 6, 5, 1, L::pos_minus_dash.x + 2, L::pos_minus_dash.y);
+        for (const L::Pos& p : L::pos_digits) c.blit(digits, L::no_minus_nums_ex, p);
+        return;
+    }
+    if (!st.show_time) return;
 
     const int minutes = std::min(st.time_seconds / 60, 999);
     const int seconds = st.time_seconds % 60;
@@ -59,6 +68,9 @@ void draw_time(Canvas& c, const Skin& skin, const MainState& st) {
 
     // The minus slot: the 9px blank cell (90,0) (numbers.bmp has it too when 99px wide), then the
     // hundreds of minutes, then the minus on top, like Winamp (nums_ex's minus hides the hundreds).
+    // While paused, the blink's cleared state (above) has also put a nums_ex blank at x 38..46, of which Winamp's
+    // shown state paints over only up to 44: x 45..46 keep it.
+    if (!ex.empty() && st.play == PlayState::paused) c.blit(digits, L::no_minus_nums_ex, { L::pos_minus.x + 2, L::pos_minus.y });
     if (!ex.empty() || digits.width >= L::no_minus_nums_ex.x + L::no_minus_nums_ex.w) c.blit(digits, L::no_minus_nums_ex, L::pos_minus);
     if (minutes >= 100) c.blit(digits, minutes / 100 * L::digit_w, 0, L::digit_w, L::digit_h, L::pos_minus.x, L::pos_minus.y);
     if (st.time_negative) {
@@ -142,7 +154,13 @@ void render_shade(Canvas& c, const Skin& skin, const MainState& st) {
     c.blit(title, st.active ? L::shade_bg_active : L::shade_bg, { 0, 0 });
     draw_titlebar_buttons(c, title, st);
 
-    if (st.show_time) {
+    if (st.time_blank) {
+        // Winamp's draw_time clear: text.bmp's blank (142,0) over the minus, hundreds and digits.
+        const int y = L::pos_shade_minus.y;
+        c.blit(font, 142, 0, 3, font_char_h, L::pos_shade_minus.x - 4, y);
+        c.blit(font, 142, 0, 3, font_char_h, L::pos_shade_minus.x, y);
+        for (int x : L::shade_time_x) c.blit(font, 142, 0, font_char_w, font_char_h, x, y);
+    } else if (st.show_time) {
         // 3px minus (or blank) and text.bmp digits; the colon belongs to the background. From 100 minutes
         // the hundreds digit takes x=129 and the minus moves 4px left, like Winamp.
         const int m = std::min(st.time_seconds / 60, 999), s = st.time_seconds % 60;

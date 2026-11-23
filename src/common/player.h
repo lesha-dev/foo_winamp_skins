@@ -17,6 +17,11 @@ void set_order(const char* name);
 double db_to_slider(double db);
 double slider_to_db(double slider);
 
+// The playing track's title with script, as playback_control::playback_format_title, plus %list_index% and
+// %list_total% from its place in the playing playlist (Winamp's "3. Artist - Title"; fb2k defines them only in
+// playlist views).
+void format_playing_title(pfc::string_base& out, const titleformat_object::ptr& script);
+
 void play();
 void pause();
 void stop();

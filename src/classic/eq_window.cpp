@@ -274,27 +274,11 @@ void EqWindow::drag_to(POINT p) {
 void EqWindow::on_wheel(int delta) { MainWindow::wheel(delta); }
 
 void EqWindow::show_presets_menu() {
-    // Same two actions as foobar2000's Equalizer: presets are .feq files.
-    enum : UINT { id_load = 1, id_save };
-    HMENU menu = CreatePopupMenu();
-    AppendMenuW(menu, MF_STRING, id_load, L"&Load preset...");
-    AppendMenuW(menu, MF_STRING, id_save, L"&Save preset...");
     POINT pt = { (pos_presets.x) * m_scale, (pos_presets.y + presets_btn.h) * m_scale };
     ClientToScreen(m_wnd, &pt);
-    const UINT cmd = track_menu(m_skin, SkinCursor::eq_normal, menu, TPM_RETURNCMD | TPM_RIGHTBUTTON | TPM_NONOTIFY, pt, m_wnd);
-    DestroyMenu(menu);
-    static const char feq_filter[] = "foobar2000 EQ presets (*.feq)|*.feq|All files|*.*";
-    pfc::string8 path;
-    if (cmd == id_load) {
-        if (uGetOpenFileName(m_wnd, feq_filter, 0, "feq", "Load EQ preset", nullptr, path, FALSE)) {
-            if (!eq::load_feq(path)) popup_message::g_show(pfc::format("Not a foobar2000 EQ preset file:\n", path), "Equalizer", popup_message::icon_error);
-        }
-    } else if (cmd == id_save) {
-        if (uGetOpenFileName(m_wnd, feq_filter, 0, "feq", "Save EQ preset", nullptr, path, TRUE)) {
-            if (!eq::save_feq(path))
-                popup_message::g_show(pfc::format("Cannot write file:\n", path), "Equalizer", popup_message::icon_error);
-        }
-    }
+    eq::presets_menu(m_wnd, [&](HMENU menu) {
+        return track_menu(m_skin, SkinCursor::eq_normal, menu, TPM_RETURNCMD | TPM_RIGHTBUTTON | TPM_NONOTIFY, pt, m_wnd);
+    });
     invalidate();
 }
 
@@ -347,9 +331,10 @@ void EqWindow::render_normal(Canvas& c) {
         const int y = std::clamp(static_cast<int>(curve[x]), 0, gh - 1);
         if (last < 0) last = y;
         for (int yy = std::min(y, last); yy <= std::max(y, last); ++yy) {
-            const bool have = img.height > graph_colors.y + yy && img.width > graph_colors.x;
-            const uint32_t col = have ? img.pixels[size_t(graph_colors.y + yy) * img.width + graph_colors.x] : 0x00ff00u;
-            c.set_pixel(pos_graph.x + 2 + static_cast<int>(x), pos_graph.y + yy, col);
+            // Winamp copies each pixel from eqmain.bmp itself: rows the bitmap doesn't have draw nothing.
+            if (img.height <= graph_colors.y + yy || img.width <= graph_colors.x) continue;
+            c.set_pixel(pos_graph.x + 2 + static_cast<int>(x), pos_graph.y + yy,
+                        img.pixels[size_t(graph_colors.y + yy) * img.width + graph_colors.x]);
         }
         last = y;
     }

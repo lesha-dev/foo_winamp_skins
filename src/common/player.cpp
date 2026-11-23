@@ -14,6 +14,18 @@ bool is_repeat_order(const char* name) { return starts_with(name, "Repeat"); }
 
 } // namespace
 
+void format_playing_title(pfc::string_base& out, const titleformat_object::ptr& script) {
+    auto pc = playback_control::get();
+    auto pm = playlist_manager::get();
+    t_size playlist = 0, index = 0;
+    if (pm->get_playing_item_location(&playlist, &index)) {
+        titleformat_hook_impl_list hook(index, pm->playlist_get_item_count(playlist));
+        pc->playback_format_title(&hook, out, script, nullptr, playback_control::display_level_all);
+    } else {
+        pc->playback_format_title(nullptr, out, script, nullptr, playback_control::display_level_all);
+    }
+}
+
 pfc::string8 active_order() {
     auto pm = playlist_manager::get();
     return pm->playback_order_get_name(pm->playback_order_get_active());

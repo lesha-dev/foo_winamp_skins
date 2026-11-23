@@ -25,7 +25,7 @@ extern cfg_bool title_font_alt;       // double size: draw the font title at ful
 // Title formatting scripts (foobar2000 syntax). $num(%list_index%,0) is Winamp's unpadded position.
 constexpr const char default_format_main[] = "[$num(%list_index%,0). ][%artist% - ]%title%[ '('%length%')']'  ***  '";
 constexpr const char default_format_playlist[] = "$num(%list_index%,0). [%artist% - ]%title%";
-constexpr const char default_format_playlist_shade[] = "[%artist% - ]%title%";
+constexpr const char default_format_playlist_shade[] = "$num(%list_index%,0). [%artist% - ]%title%"; // Winamp: the entry as listed
 extern cfg_string format_main;           // main window song title
 extern cfg_string format_playlist;       // playlist editor rows (track length stays right-aligned)
 extern cfg_string format_playlist_shade; // playlist editor in windowshade mode

@@ -4,6 +4,7 @@
 #include "common/docking.h"
 #include "classic/main_window.h"
 #include "common/player.h"
+#include "common/playlist_actions.h"
 #include "classic/text_font.h"
 
 #include <shellapi.h>
@@ -176,7 +177,7 @@ void PlaylistWindow::set_time(bool show, bool negative, int seconds) {
 
 void PlaylistWindow::on_skin_changed() {
     update_font();
-    if (m_host) m_host->set_skin(m_skin);
+    if (m_host) apply_skin(*m_host, m_skin);
     invalidate();
 }
 
@@ -280,7 +281,7 @@ void PlaylistWindow::ensure_host() {
                                       core_api::get_my_instance(), nullptr);
         if (!m_container) return;
     }
-    m_host->set_skin(m_skin);
+    apply_skin(*m_host, m_skin);
     if (!m_font) update_font();
     apply_list_font();
     m_host->create(m_container);
@@ -316,21 +317,11 @@ void PlaylistWindow::update_host_clip() {
 }
 
 HWND PlaylistWindow::list_hwnd() const {
-    if (!m_container) return nullptr;
-    struct Find { HWND found = nullptr; } f;
-    EnumChildWindows(m_container, [](HWND w, LPARAM lp) -> BOOL {
-        if (GetWindowLongPtrW(w, GWL_STYLE) & WS_VSCROLL) { reinterpret_cast<Find*>(lp)->found = w; return FALSE; }
-        return TRUE;
-    }, reinterpret_cast<LPARAM>(&f));
-    return f.found;
+    return find_vscroll_window(m_container);
 }
 
 bool PlaylistWindow::list_scroll(SCROLLINFO& si) const {
-    HWND list = list_hwnd();
-    si = {};
-    si.cbSize = sizeof(si);
-    si.fMask = SIF_ALL;
-    return list && GetScrollInfo(list, SB_VERT, &si) && si.nMax >= si.nMin;
+    return get_vscroll(list_hwnd(), si);
 }
 
 void PlaylistWindow::update_font() {
@@ -585,14 +576,7 @@ void PlaylistWindow::scroll_to_thumb(int y) {
         const int range = si.nMax + 1 - si.nMin - static_cast<int>(si.nPage);
         if (range <= 0) return;
         const double t = std::clamp((y - m_thumb_grab - top_h) / double(track_h), 0.0, 1.0);
-        HWND list = list_hwnd();
-        SCROLLINFO pos = {};
-        pos.cbSize = sizeof(pos);
-        pos.fMask = SIF_POS;
-        pos.nPos = si.nMin + static_cast<int>(std::lround(t * range));
-        SetScrollInfo(list, SB_VERT, &pos, FALSE);
-        SendMessageW(list, WM_VSCROLL, MAKEWPARAM(SB_THUMBTRACK, pos.nPos & 0xFFFF), 0);
-        SendMessageW(list, WM_VSCROLL, MAKEWPARAM(SB_ENDSCROLL, 0), 0);
+        set_vscroll_pos(list_hwnd(), si.nMin + static_cast<int>(std::lround(t * range)));
         return;
     }
     const size_t count = playlist_manager::get()->activeplaylist_get_item_count();
@@ -755,76 +739,11 @@ void PlaylistWindow::on_right_click(POINT screen_pt) {
 }
 
 void PlaylistWindow::run_menu_action(Part menu, int item) {
-    auto pm = playlist_manager::get();
-    const size_t n = pm->activeplaylist_get_item_count();
-    switch (menu) {
-    case Part::menu_add:
-        if (item == 0) standard_commands::main_add_location();
-        else if (item == 1) standard_commands::main_add_directory();
-        else standard_commands::main_add_files();
-        break;
-    case Part::menu_rem:
-        if (item == 0) {
-            enum : UINT { id_dead = 1, id_dupes };
-            HMENU m = CreatePopupMenu();
-            AppendMenuW(m, MF_STRING, id_dead, L"Remove &dead items");
-            AppendMenuW(m, MF_STRING, id_dupes, L"Remove d&uplicates");
-            POINT pt; GetCursorPos(&pt);
-            const UINT cmd = track_menu(m_skin, SkinCursor::pl_normal, m, TPM_RETURNCMD | TPM_RIGHTBUTTON | TPM_NONOTIFY, pt, m_wnd);
-            DestroyMenu(m);
-            if (cmd == id_dead) standard_commands::main_remove_dead_entries();
-            else if (cmd == id_dupes) standard_commands::main_remove_duplicates();
-        } else if (item == 1) pm->activeplaylist_clear();
-        else if (item == 2) pm->activeplaylist_remove_selection(true);
-        else pm->activeplaylist_remove_selection(false);
-        break;
-    case Part::menu_sel:
-        if (item == 0) {
-            pfc::bit_array_bittable sel(n);
-            pm->activeplaylist_get_selection_mask(sel);
-            pm->activeplaylist_set_selection(pfc::bit_array_true(), pfc::bit_array_not(sel));
-        } else if (item == 1) pm->activeplaylist_clear_selection();
-        else pm->activeplaylist_set_selection(pfc::bit_array_true(), pfc::bit_array_true());
-        break;
-    case Part::menu_misc:
-        if (item == 0) {
-            enum : UINT { id_title = 1, id_file, id_path, id_reverse, id_random };
-            HMENU m = CreatePopupMenu();
-            AppendMenuW(m, MF_STRING, id_title, L"Sort list by &title");
-            AppendMenuW(m, MF_STRING, id_file, L"Sort list by &filename");
-            AppendMenuW(m, MF_STRING, id_path, L"Sort list by &path and filename");
-            AppendMenuW(m, MF_SEPARATOR, 0, nullptr);
-            AppendMenuW(m, MF_STRING, id_reverse, L"&Reverse list");
-            AppendMenuW(m, MF_STRING, id_random, L"R&andomize list");
-            POINT pt; GetCursorPos(&pt);
-            const UINT cmd = track_menu(m_skin, SkinCursor::pl_normal, m, TPM_RETURNCMD | TPM_RIGHTBUTTON | TPM_NONOTIFY, pt, m_wnd);
-            DestroyMenu(m);
-            if (cmd == id_title) pm->activeplaylist_sort_by_format("%title%", false);
-            else if (cmd == id_file) pm->activeplaylist_sort_by_format("%filename_ext%", false);
-            else if (cmd == id_path) pm->activeplaylist_sort_by_format("%path%", false);
-            else if (cmd == id_random) pm->activeplaylist_sort_by_format(nullptr, false);
-            else if (cmd == id_reverse && n > 1) {
-                std::vector<size_t> order(n);
-                for (size_t i = 0; i < n; ++i) order[i] = n - 1 - i;
-                pm->activeplaylist_reorder_items(order.data(), n);
-            }
-        } else if (item == 1) {
-            metadb_handle_list items;
-            pm->activeplaylist_get_selected_items(items);
-            if (items.get_count()) standard_commands::context_file_properties(items);
-        } else {
-            POINT pt; GetCursorPos(&pt);
-            contextmenu_manager::win32_run_menu_context_playlist(m_wnd, &pt);
-        }
-        break;
-    case Part::menu_list:
-        if (item == 0) standard_commands::main_create_playlist();
-        else if (item == 1) standard_commands::main_save_playlist();
-        else standard_commands::main_load_playlist();
-        break;
-    default:
-        break;
-    }
+    if (menu < Part::menu_add || menu > Part::menu_list) return;
+    const auto m = static_cast<playlist_actions::Menu>(static_cast<int>(menu) - static_cast<int>(Part::menu_add));
+    playlist_actions::run(m, item, m_wnd, [this](HMENU h, POINT pt) {
+        return track_menu(m_skin, SkinCursor::pl_normal, h, TPM_RETURNCMD | TPM_RIGHTBUTTON | TPM_NONOTIFY, pt, m_wnd);
+    });
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -959,10 +878,27 @@ void PlaylistWindow::render_normal(Canvas& c) {
     const bool a = title_lit();
     c.clear(0);
 
-    // Top: corners, title centred, tiles between.
-    c.tile(img, a ? top_tile_sel : top_tile, 25, 0, w - 50, top_h);
+    // Top as Winamp lays it out (draw_pe_tbar): corner, tiles, title, tiles, corner. An odd tile count starts the
+    // left run with the tile's first 12 columns and the right run with its first 13.
+    const S tile = a ? top_tile_sel : top_tile;
+    c.tile(img, tile, 25, 0, w - 50, top_h); // under it all, for widths off Winamp's 25 px steps
     c.blit(img, a ? top_left_sel : top_left, { 0, 0 });
-    c.blit(img, a ? top_title_sel : top_title, { (w - 100) / 2, 0 });
+    {
+        const int nt = (w - 150) / 25;
+        int x = 25;
+        for (int side = 0; side < 2; ++side) {
+            if (nt > 0 && (nt & 1)) {
+                const int part = side ? 13 : 12;
+                c.blit(img, tile.x, tile.y, part, top_h, x, 0);
+                x += part;
+            }
+            for (int i = 0; i < nt / 2; ++i, x += 25) c.blit(img, tile, { x, 0 });
+            if (side == 0) {
+                c.blit(img, a ? top_title_sel : top_title, { x, 0 });
+                x += 100;
+            }
+        }
+    }
     c.blit(img, a ? top_right_sel : top_right, { w - 25, 0 });
     // Title buttons always come from the active row when not pressed.
     // Unpressed title buttons are part of the title row.
@@ -995,7 +931,9 @@ void PlaylistWindow::render_normal(Canvas& c) {
     const Image& font = m_skin->bitmap(SkinBitmap::text);
     if (m_lengths_dirty) recompute_lengths();
     const int bx = w - 150, by = h - bottom_h;
-    const pfc::string8 running = pfc::format(time_str(m_sel_len, true), "/", time_str(m_total_len, true));
+    pfc::string8 running = pfc::format(time_str(m_sel_len, true), "/", time_str(m_total_len, true));
+    // Winamp draws all 18 cells, padding with spaces (text.bmp's blank, not always the background).
+    while (text_length(running) < 18) running += " ";
     c.set_clip(bx + 7, by + 10, 18 * font_char_w, font_char_h);
     draw_text(c, font, bx + 7, by + 10, running);
     c.reset_clip();
@@ -1006,12 +944,20 @@ void PlaylistWindow::render_normal(Canvas& c) {
         const int m = std::min(m_time_seconds / 60, 999), s = m_time_seconds % 60;
         auto digit = [&](int d, int dx) { c.blit(font, 5 * d, 6, 5, 6, x + dx, y); };
         if (m < 100) c.blit(font, 142, 0, 4, 6, x, y);
+        // The sign cell is 3 px, but Winamp's cleared state (start, stop, the pause blink) put a 5 px blank there
+        // that stays at x+7..x+8 until the window is fully repainted.
+        c.blit(font, 142, 0, 5, 6, x + 4, y);
         c.blit(font, m_time_negative ? 75 : 142, m_time_negative ? 6 : 0, 3, 6, x + (m >= 100 ? 0 : 4), y);
         if (m >= 100) digit(m / 100, 4);
         digit(m / 10 % 10, 9);
         digit(m % 10, 14);
         digit(s / 10, 22);
         digit(s % 10, 27);
+    } else {
+        // Cleared (stopped, the pause blink's off phase): text.bmp's blank over every cell, like Winamp.
+        const int x = w - 86, y = h - 15;
+        c.blit(font, 142, 0, 4, 6, x, y);
+        for (int dx : { 4, 9, 14, 22, 27 }) c.blit(font, 142, 0, 5, 6, x + dx, y);
     }
 
     if (img.empty()) draw_missing_art_note(c, top_h);
@@ -1042,7 +988,10 @@ void PlaylistWindow::render_list(Canvas& c) {
         const bool selected = pm->activeplaylist_is_item_selected(item);
         if (selected) {
             GdiFlush();
-            c.fill_rect(r.x, y, r.w, m_row_h, to_bgrx(col.selected_bg));
+            // Winamp repaints y 20..22 with the normal background after the first visible row (draw_pe_song, !pos),
+            // so that row's top pixel never shows the selection.
+            const int top = i == 0 ? 1 : 0;
+            c.fill_rect(r.x, y + top, r.w, m_row_h - top, to_bgrx(col.selected_bg));
         }
         pfc::string8 title;
         pm->activeplaylist_item_format_title(item, nullptr, title, m_title_script, nullptr, playback_control::display_level_titles);
@@ -1051,18 +1000,34 @@ void PlaylistWindow::render_list(Canvas& c) {
         const std::wstring right = len > 0 ? wide(time_str(len, true)) : std::wstring();
 
         SetTextColor(dc, playing_here && item == playing_idx ? col.current : col.normal);
-        RECT tr = { r.x, y, r.x + r.w - 3, y + m_row_h };
+        // Like Winamp (draw_pe_song): the time is " m:ss " with a space on each side, right-aligned to the list's
+        // right edge, and the title ends where the time's text starts.
+        RECT tr = { r.x, y, r.x + r.w, y + m_row_h };
         SIZE rs = {};
         if (!right.empty()) {
-            GetTextExtentPoint32W(dc, right.c_str(), static_cast<int>(right.size()), &rs);
-            DrawTextW(dc, right.c_str(), static_cast<int>(right.size()), &tr, DT_RIGHT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
+            const std::wstring padded = L" " + right + L" ";
+            GetTextExtentPoint32W(dc, padded.c_str(), static_cast<int>(padded.size()), &rs);
+            if (rs.cx < tr.right - tr.left)
+                DrawTextW(dc, padded.c_str(), static_cast<int>(padded.size()), &tr, DT_RIGHT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
+            else
+                rs.cx = 0;
         }
-        RECT lr = { tr.left, y, tr.right - (rs.cx ? rs.cx + 4 : 0), y + m_row_h };
+        RECT lr = { tr.left, y, tr.right - rs.cx, y + m_row_h };
         DrawTextW(dc, left.c_str(), static_cast<int>(left.size()), &lr, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX | DT_END_ELLIPSIS);
         if (item == focus && has_focus) {
-            RECT fr = { r.x, y, r.x + r.w, y + m_row_h };
-            SetTextColor(dc, col.normal);
-            DrawFocusRect(dc, &fr);
+            // A dotted frame in the Normal text color (DrawFocusRect XORs it with the row's background,
+            // which turns it another color on a selected row).
+            GdiFlush();
+            const uint32_t fc = to_bgrx(col.normal);
+            const int right = r.x + r.w - 1, bottom = y + m_row_h - 1;
+            for (int x = r.x; x <= right; ++x) {
+                if ((x + y) & 1) c.set_pixel(x, y, fc);
+                if ((x + bottom) & 1) c.set_pixel(x, bottom, fc);
+            }
+            for (int yy = y + 1; yy < bottom; ++yy) {
+                if ((r.x + yy) & 1) c.set_pixel(r.x, yy, fc);
+                if ((right + yy) & 1) c.set_pixel(right, yy, fc);
+            }
         }
     }
     if (m_drop_at != SIZE_MAX && m_drop_at >= m_scroll && m_drop_at <= m_scroll + rows) {
@@ -1103,8 +1068,13 @@ void PlaylistWindow::render_shade(Canvas& c) {
     pfc::string8 title;
     double len = 0;
     metadb_handle_ptr track;
+    size_t pl_index = SIZE_MAX, item_index = SIZE_MAX;
     if (pc->get_now_playing(track)) {
-        pc->playback_format_title(nullptr, title, m_shade_script, nullptr, playback_control::display_level_titles);
+        // Through its playlist entry when it has one, so %list_index% is set (Winamp: the entry as listed).
+        if (pm->get_playing_item_location(&pl_index, &item_index))
+            pm->playlist_item_format_title(pl_index, item_index, nullptr, title, m_shade_script, nullptr, playback_control::display_level_titles);
+        else
+            pc->playback_format_title(nullptr, title, m_shade_script, nullptr, playback_control::display_level_titles);
         len = track->get_length();
     } else {
         const size_t focus = pm->activeplaylist_get_focus_item();
@@ -1113,29 +1083,33 @@ void PlaylistWindow::render_shade(Canvas& c) {
             len = pm->activeplaylist_get_item_handle(focus)->get_length();
         }
     }
+    if (title.is_empty()) title = "<no file>"; // Winamp's IDS_PLEDIT_NOFILE_WSHADE
     if (!config::title_bitmap_font.get()) {
-        // Like Winamp: the playlist font and colours over x 4..w-29, time right-aligned as " m:ss ".
-        const PlaylistColors& col = m_skin->playlist_colors();
+        // Like Winamp (draw_pe_song for the shade line): the playlist font in text.bmp's colours over x 4..w-29, the
+        // title upper-cased, time right-aligned as " m:ss ".
+        COLORREF fg = 0, bg = 0;
+        MainWindow::title_font_colors(*m_skin, fg, bg);
         const int right = w - 29;
-        c.fill_rect(4, 2, right - 4, 10, to_bgrx(col.normal_bg));
+        c.fill_rect(4, 2, right - 4, 10, to_bgrx(bg));
         HDC dc = c.dc();
         const int saved = SaveDC(dc);
         IntersectClipRect(dc, 4, 2, right, 12);
         SelectObject(dc, m_shade_font);
         SetBkMode(dc, TRANSPARENT);
-        SetTextColor(dc, col.normal);
+        SetTextColor(dc, fg);
         int text_right = right;
         if (len > 0) {
             const std::wstring t = wide(pfc::format(" ", time_str(len, false), " ").c_str());
-            RECT tr = { 4, 1, right, 11 };
-            DrawTextW(dc, t.c_str(), -1, &tr, DT_RIGHT | DT_SINGLELINE | DT_NOPREFIX);
+            RECT tr = { 4, 2, right, 12 };
+            DrawTextW(dc, t.c_str(), -1, &tr, DT_RIGHT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
             RECT m = {};
             DrawTextW(dc, t.c_str(), -1, &m, DT_CALCRECT | DT_SINGLELINE | DT_NOPREFIX);
             text_right -= m.right - m.left;
         }
         RECT r = { 4, 2, text_right, 12 };
-        const std::wstring wt = wide(title.c_str());
-        DrawTextW(dc, wt.c_str(), -1, &r, DT_LEFT | DT_SINGLELINE | DT_NOPREFIX);
+        std::wstring wt = wide(title.c_str());
+        CharUpperBuffW(wt.data(), static_cast<DWORD>(wt.size()));
+        DrawTextW(dc, wt.c_str(), -1, &r, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS | DT_NOPREFIX);
         RestoreDC(dc, saved);
         GdiFlush();
         return;

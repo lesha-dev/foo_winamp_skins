@@ -2,7 +2,6 @@
 #include "common/eq.h"
 #include "common/config.h"
 #include "common/guids.h"
-#include "classic/main_window.h"
 
 #include <atomic>
 #include <cmath>
@@ -107,8 +106,10 @@ void store(const Values& v) {
     config::eq_values = s;
 }
 
+std::function<void()> g_listener;
+
 void notify() {
-    if (auto* mw = MainWindow::instance()) mw->on_eq_changed();
+    if (g_listener) g_listener();
 }
 
 // Writes our values into the built-in EQ's chain entry, inserting it if missing.
@@ -239,6 +240,24 @@ void end_edit() {
     g_live_edit.release();
 }
 
+void presets_menu(HWND owner, const std::function<UINT(HMENU)>& track) {
+    enum : UINT { id_load = 1, id_save };
+    HMENU menu = CreatePopupMenu();
+    AppendMenuW(menu, MF_STRING, id_load, L"&Load preset...");
+    AppendMenuW(menu, MF_STRING, id_save, L"&Save preset...");
+    const UINT cmd = track(menu);
+    DestroyMenu(menu);
+    static const char feq_filter[] = "foobar2000 EQ presets (*.feq)|*.feq|All files|*.*";
+    pfc::string8 path;
+    if (cmd == id_load) {
+        if (uGetOpenFileName(owner, feq_filter, 0, "feq", "Load EQ preset", nullptr, path, FALSE) && !load_feq(path))
+            popup_message::g_show(pfc::format("Not a foobar2000 EQ preset file:\n", path), "Equalizer", popup_message::icon_error);
+    } else if (cmd == id_save) {
+        if (uGetOpenFileName(owner, feq_filter, 0, "feq", "Save EQ preset", nullptr, path, TRUE) && !save_feq(path))
+            popup_message::g_show(pfc::format("Cannot write file:\n", path), "Equalizer", popup_message::icon_error);
+    }
+}
+
 bool load_feq(const char* path_utf8) {
     FILE* f = nullptr;
     if (_wfopen_s(&f, pfc::stringcvt::string_wide_from_utf8(path_utf8), L"rb") != 0 || !f) return false;
@@ -276,5 +295,7 @@ bool save_feq(const char* path_utf8) {
     for (uint8_t b : d) fprintf(f, "%d\r\n", static_cast<int>(builtin_max_db) - b);
     return fclose(f) == 0;
 }
+
+void set_listener(std::function<void()> f) { g_listener = std::move(f); }
 
 } // namespace wsz::eq
