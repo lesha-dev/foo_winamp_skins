@@ -45,9 +45,9 @@ for %%D in ("%DLL86%" "%DLL64%") do if not exist "%%~D" (
     exit /b 1
 )
 set "VER="
-for /f "tokens=3" %%V in ('findstr /c:"define COMPONENT_VERSION " "%ROOT%\src\version.h"') do set "VER=%%~V"
+for /f "tokens=3" %%V in ('findstr /c:"define COMPONENT_VERSION " "%ROOT%\src\common\version.h"') do set "VER=%%~V"
 if not defined VER (
-    echo COMPONENT_VERSION not found in src\version.h.
+    echo COMPONENT_VERSION not found in src\common\version.h.
     exit /b 1
 )
 set "STAGE=%TEMP%\foo_winamp_skins_release"

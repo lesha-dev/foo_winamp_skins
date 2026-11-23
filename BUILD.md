@@ -2,7 +2,9 @@
 
 ## Layout
 
-- `src/` — component sources
+- `src/` — component sources (include paths are relative to `src/`, e.g. `"common/config.h"`):
+  - `common/` — shared code: component registration, settings, playback/EQ/balance glue, docking, hosted foobar2000 elements, resources
+  - `classic/` — classic `.wsz` skins: skin loader, windows, renderer, preferences pages
 - `3rdParty/` — all dependencies (not in git; copy manually):
   - `foobar2000_sdk/` — foobar2000 SDK 2026-10-01 (unmodified)
   - `columns_ui-sdk/` — Columns UI SDK 8.1.0 (unmodified; only `ui_extension.cpp` is compiled)

@@ -57,7 +57,7 @@ endif()
 
 # --- the component ---
 vcxproj_sources(COMPONENT_SRCS ${REPO}/foo_winamp_skins.vcxproj)
-add_library(foo_winamp_skins SHARED ${COMPONENT_SRCS} ${REPO}/src/foo_winamp_skins.rc)
+add_library(foo_winamp_skins SHARED ${COMPONENT_SRCS} ${REPO}/src/common/foo_winamp_skins.rc)
 target_include_directories(foo_winamp_skins PRIVATE ${REPO}/src ${REPO}/3rdParty/miniz)
 target_include_directories(foo_winamp_skins SYSTEM PRIVATE ${REPO}/3rdParty)
 target_compile_definitions(foo_winamp_skins PRIVATE MINIZ_NO_STDIO MINIZ_NO_ARCHIVE_WRITING_APIS MINIZ_NO_ZLIB_COMPATIBLE_NAMES)

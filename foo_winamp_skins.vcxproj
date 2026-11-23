@@ -88,67 +88,67 @@ exit /b 0</Command>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="src\balance_dsp.h" />
-    <ClInclude Include="src\canvas.h" />
-    <ClInclude Include="src\cui_panels.h" />
-    <ClInclude Include="src\docking.h" />
-    <ClInclude Include="src\drop_target.h" />
-    <ClInclude Include="src\eq.h" />
-    <ClInclude Include="src\eq_window.h" />
-    <ClInclude Include="src\playlist_window.h" />
-    <ClInclude Include="src\skin_window.h" />
-    <ClInclude Include="src\config.h" />
-    <ClInclude Include="src\controls.h" />
-    <ClInclude Include="src\guids.h" />
-    <ClInclude Include="src\image.h" />
-    <ClInclude Include="src\main_renderer.h" />
-    <ClInclude Include="src\main_window.h" />
-    <ClInclude Include="src\player.h" />
-    <ClInclude Include="src\resource.h" />
-    <ClInclude Include="src\skin.h" />
-    <ClInclude Include="src\skin_layout.h" />
-    <ClInclude Include="src\stdafx.h" />
-    <ClInclude Include="src\skins_folder.h" />
-    <ClInclude Include="src\taskbar_buttons.h" />
-    <ClInclude Include="src\text_font.h" />
-    <ClInclude Include="src\version.h" />
-    <ClInclude Include="src\vis_options.h" />
-    <ClInclude Include="src\tooltip.h" />
-    <ClInclude Include="src\element_window.h" />
-    <ClInclude Include="src\hosted_element.h" />
-    <ClInclude Include="src\gen_frame.h" />
-    <ClInclude Include="src\visualizer.h" />
+    <ClInclude Include="src\common\balance_dsp.h" />
+    <ClInclude Include="src\classic\canvas.h" />
+    <ClInclude Include="src\common\cui_panels.h" />
+    <ClInclude Include="src\common\docking.h" />
+    <ClInclude Include="src\common\drop_target.h" />
+    <ClInclude Include="src\common\eq.h" />
+    <ClInclude Include="src\classic\eq_window.h" />
+    <ClInclude Include="src\classic\playlist_window.h" />
+    <ClInclude Include="src\classic\skin_window.h" />
+    <ClInclude Include="src\common\config.h" />
+    <ClInclude Include="src\classic\controls.h" />
+    <ClInclude Include="src\common\guids.h" />
+    <ClInclude Include="src\classic\image.h" />
+    <ClInclude Include="src\classic\main_renderer.h" />
+    <ClInclude Include="src\classic\main_window.h" />
+    <ClInclude Include="src\common\player.h" />
+    <ClInclude Include="src\common\resource.h" />
+    <ClInclude Include="src\classic\skin.h" />
+    <ClInclude Include="src\classic\skin_layout.h" />
+    <ClInclude Include="src\common\stdafx.h" />
+    <ClInclude Include="src\common\skins_folder.h" />
+    <ClInclude Include="src\classic\taskbar_buttons.h" />
+    <ClInclude Include="src\classic\text_font.h" />
+    <ClInclude Include="src\common\version.h" />
+    <ClInclude Include="src\common\vis_options.h" />
+    <ClInclude Include="src\common\tooltip.h" />
+    <ClInclude Include="src\classic\element_window.h" />
+    <ClInclude Include="src\common\hosted_element.h" />
+    <ClInclude Include="src\classic\gen_frame.h" />
+    <ClInclude Include="src\classic\visualizer.h" />
     <ClInclude Include="3rdParty\miniz\miniz.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\balance_dsp.cpp" />
-    <ClCompile Include="src\canvas.cpp" />
-    <ClCompile Include="src\cui_panels.cpp" />
-    <ClCompile Include="src\docking.cpp" />
-    <ClCompile Include="src\drop_target.cpp" />
-    <ClCompile Include="src\eq.cpp" />
-    <ClCompile Include="src\eq_window.cpp" />
-    <ClCompile Include="src\playlist_window.cpp" />
-    <ClCompile Include="src\skin_window.cpp" />
-    <ClCompile Include="src\component.cpp" />
-    <ClCompile Include="src\config.cpp" />
-    <ClCompile Include="src\image.cpp" />
-    <ClCompile Include="src\main_renderer.cpp" />
-    <ClCompile Include="src\main_window.cpp" />
-    <ClCompile Include="src\player.cpp" />
-    <ClCompile Include="src\skin.cpp" />
-    <ClCompile Include="src\prefs_page.cpp" />
-    <ClCompile Include="src\prefs_options.cpp" />
-    <ClCompile Include="src\prefs_vis.cpp" />
-    <ClCompile Include="src\skins_folder.cpp" />
-    <ClCompile Include="src\taskbar_buttons.cpp" />
-    <ClCompile Include="src\text_font.cpp" />
-    <ClCompile Include="src\ui_module.cpp" />
-    <ClCompile Include="src\tooltip.cpp" />
-    <ClCompile Include="src\element_window.cpp" />
-    <ClCompile Include="src\hosted_element.cpp" />
-    <ClCompile Include="src\gen_frame.cpp" />
-    <ClCompile Include="src\visualizer.cpp" />
+    <ClCompile Include="src\common\balance_dsp.cpp" />
+    <ClCompile Include="src\classic\canvas.cpp" />
+    <ClCompile Include="src\common\cui_panels.cpp" />
+    <ClCompile Include="src\common\docking.cpp" />
+    <ClCompile Include="src\common\drop_target.cpp" />
+    <ClCompile Include="src\common\eq.cpp" />
+    <ClCompile Include="src\classic\eq_window.cpp" />
+    <ClCompile Include="src\classic\playlist_window.cpp" />
+    <ClCompile Include="src\classic\skin_window.cpp" />
+    <ClCompile Include="src\common\component.cpp" />
+    <ClCompile Include="src\common\config.cpp" />
+    <ClCompile Include="src\classic\image.cpp" />
+    <ClCompile Include="src\classic\main_renderer.cpp" />
+    <ClCompile Include="src\classic\main_window.cpp" />
+    <ClCompile Include="src\common\player.cpp" />
+    <ClCompile Include="src\classic\skin.cpp" />
+    <ClCompile Include="src\classic\prefs_page.cpp" />
+    <ClCompile Include="src\classic\prefs_options.cpp" />
+    <ClCompile Include="src\classic\prefs_vis.cpp" />
+    <ClCompile Include="src\common\skins_folder.cpp" />
+    <ClCompile Include="src\classic\taskbar_buttons.cpp" />
+    <ClCompile Include="src\classic\text_font.cpp" />
+    <ClCompile Include="src\classic\ui_module.cpp" />
+    <ClCompile Include="src\common\tooltip.cpp" />
+    <ClCompile Include="src\classic\element_window.cpp" />
+    <ClCompile Include="src\common\hosted_element.cpp" />
+    <ClCompile Include="src\classic\gen_frame.cpp" />
+    <ClCompile Include="src\classic\visualizer.cpp" />
     <ClCompile Include="3rdParty\columns_ui-sdk\ui_extension.cpp">
       <WarningLevel>TurnOffAllWarnings</WarningLevel>
       <SDLCheck>false</SDLCheck>
@@ -160,7 +160,7 @@ exit /b 0</Command>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="src\foo_winamp_skins.rc" />
+    <ResourceCompile Include="src\common\foo_winamp_skins.rc" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="3rdParty\foobar2000_sdk\pfc\pfc.vcxproj">
