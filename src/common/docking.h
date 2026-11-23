@@ -29,6 +29,11 @@ void move_to_cursor(HWND wnd);
 // Returns true if `wnd` was being moved.
 bool end_move(HWND wnd);
 
+// Resize drag: moves the dragged edges of `r` (the proposed window rect) onto nearby work-area and
+// window edges. Same settings as snap() (docking on, distance, Shift inverts).
+struct Edges { bool left, top, right, bottom; };
+void snap_resize(HWND wnd, RECT& r, Edges edges);
+
 // Size change of a window (shade/double size/resize): docked windows below its old bottom edge
 // shift by the height delta, those right of its old right edge by the width delta.
 void resized(HWND wnd, const RECT& before, const RECT& after, const std::vector<HWND>& docked_before);

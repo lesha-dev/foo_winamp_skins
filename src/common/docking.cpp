@@ -106,6 +106,35 @@ void snap(HWND wnd, WINDOWPOS* wp) {
     if (std::abs(best_y) < snap_distance) wp->y += best_y;
 }
 
+void snap_resize(HWND wnd, RECT& r, Edges edges) {
+    const bool shift = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
+    if (config::snap.get() == shift || g_suppress) return;
+    const int snap_distance = std::clamp(static_cast<int>(config::snap_distance.get()), 1, 99);
+    std::vector<int> xs, ys; // candidate lines
+    MONITORINFO mi = {};
+    mi.cbSize = sizeof(mi);
+    if (GetMonitorInfoW(MonitorFromRect(&r, MONITOR_DEFAULTTONEAREST), &mi)) {
+        xs.insert(xs.end(), { mi.rcWork.left, mi.rcWork.right });
+        ys.insert(ys.end(), { mi.rcWork.top, mi.rcWork.bottom });
+    }
+    for (HWND other : g_windows) {
+        if (other == wnd || !IsWindowVisible(other) || IsIconic(other)) continue;
+        const RECT o = rect_of(other);
+        if (overlaps(r.top - snap_distance, r.bottom + snap_distance, o.top, o.bottom)) xs.insert(xs.end(), { o.left, o.right });
+        if (overlaps(r.left - snap_distance, r.right + snap_distance, o.left, o.right)) ys.insert(ys.end(), { o.top, o.bottom });
+    }
+    auto edge = [&](LONG& e, const std::vector<int>& lines) {
+        int best = snap_distance;
+        for (int l : lines)
+            if (std::abs(l - e) < std::abs(best)) best = l - e;
+        if (std::abs(best) < snap_distance) e += best;
+    };
+    if (edges.left) edge(r.left, xs);
+    if (edges.right) edge(r.right, xs);
+    if (edges.top) edge(r.top, ys);
+    if (edges.bottom) edge(r.bottom, ys);
+}
+
 // Like Winamp, closed (hidden) windows touching the group move with it, so they reopen docked;
 // only open windows extend the chain further.
 std::vector<HWND> docked_to(HWND leader) {

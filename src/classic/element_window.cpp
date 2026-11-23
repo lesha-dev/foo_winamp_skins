@@ -1,6 +1,7 @@
 #include "common/stdafx.h"
 #include "classic/element_window.h"
 #include "common/config.h"
+#include "common/docking.h"
 #include "classic/main_window.h"
 #include "common/resource.h"
 
@@ -152,8 +153,19 @@ void ElementWindow::on_mouse_move(POINT p) {
         // Steps of 25x29 px like Winamp, or per pixel with smooth resizing.
         const bool smooth = config::smooth_resize.get();
         auto step = [&](int d, int s) { return smooth ? d : static_cast<int>(std::floor(d / double(s) + 0.5)) * s; };
-        apply_size(m_drag_size.cx + step((now.x - m_drag_origin.x) / scale(), GenFrame::step_w),
-                   m_drag_size.cy + step((now.y - m_drag_origin.y) / scale(), GenFrame::step_h));
+        int nw = m_drag_size.cx + step((now.x - m_drag_origin.x) / scale(), GenFrame::step_w);
+        int nh = m_drag_size.cy + step((now.y - m_drag_origin.y) / scale(), GenFrame::step_h);
+        if (smooth) { // stepped sizes don't snap
+            RECT r;
+            GetWindowRect(m_wnd, &r);
+            r.right += (nw - m_state.w) * scale();
+            r.bottom += (nh - m_state.h) * scale();
+            const RECT want = r;
+            docking::snap_resize(m_wnd, r, {false, false, true, true});
+            nw += (r.right - want.right) / scale();
+            nh += (r.bottom - want.bottom) / scale();
+        }
+        apply_size(nw, nh);
         break;
     }
     default: break;

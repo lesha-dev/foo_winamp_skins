@@ -1,6 +1,7 @@
 #include "common/stdafx.h"
 #include "classic/playlist_window.h"
 #include "common/config.h"
+#include "common/docking.h"
 #include "classic/main_window.h"
 #include "common/player.h"
 #include "classic/text_font.h"
@@ -628,8 +629,18 @@ void PlaylistWindow::on_mouse_move(POINT p) {
         // Steps of 25x29 px like Winamp, or per pixel with smooth resizing.
         const bool smooth = config::smooth_resize.get();
         auto step = [&](int d, int s) { return smooth ? d : static_cast<int>(std::floor(d / double(s) + 0.5)) * s; };
-        const int we = m_drag_extra.cx + step(dx, step_w);
-        const int he = m_shade ? m_h_extra : m_drag_extra.cy + step(dy, step_h);
+        int we = m_drag_extra.cx + step(dx, step_w);
+        int he = m_shade ? m_h_extra : m_drag_extra.cy + step(dy, step_h);
+        if (smooth) { // stepped sizes don't snap
+            RECT r;
+            GetWindowRect(m_wnd, &r);
+            r.right += (we - m_w_extra) * scale();
+            r.bottom += (he - m_h_extra) * scale();
+            const RECT want = r;
+            docking::snap_resize(m_wnd, r, {false, false, true, !m_shade});
+            we += (r.right - want.right) / scale();
+            he += (r.bottom - want.bottom) / scale();
+        }
         apply_size(we, he);
         break;
     }
