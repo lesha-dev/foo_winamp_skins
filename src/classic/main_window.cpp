@@ -252,7 +252,9 @@ MainWindow::~MainWindow() {
 // Winamp draws the non-bitmap title with the playlist font; the 2x one serves the double-size alternative style.
 // Winamp's colours for the title in a Windows font (its draw.cpp): text.bmp's pixel at (150,4) as the background,
 // and as the text the pixel of the bitmap font's top-left 20x6 that differs most from it. Without a usable
-// text.bmp, the playlist's colours.
+// text.bmp, the playlist's colours - deliberately unlike Winamp (a decision): for a text.bmp narrower than 151 px
+// Winamp's GetPixel(150,4) returns CLR_INVALID, taken as white, so its text becomes the font's darkest pixel, nearly
+// invisible on the dark title background (e.g. Ice, 145 px wide: #08111D on black).
 void MainWindow::title_font_colors(const Skin& skin, COLORREF& fg, COLORREF& bg) {
     const Image& t = skin.bitmap(SkinBitmap::text);
     if (t.width <= 150 || t.height <= 5) {

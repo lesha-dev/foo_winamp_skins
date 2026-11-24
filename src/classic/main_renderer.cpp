@@ -70,6 +70,10 @@ void draw_time(Canvas& c, const Skin& skin, const MainState& st) {
     // hundreds of minutes, then the minus on top, like Winamp (nums_ex's minus hides the hundreds).
     // While paused, the blink's cleared state (above) has also put a nums_ex blank at x 38..46, of which Winamp's
     // shown state paints over only up to 44: x 45..46 keep it.
+    // Deliberately unlike Winamp (a decision): a numbers.bmp narrower than 99 px has no complete blank cell, and we
+    // skip it, leaving main.bmp's art. Winamp copies what part of it exists and keeps leftovers of earlier states in
+    // the rest (e.g. the pause blink's dash piece at (40,32): dukeamp_1, 90 px; a black block: sp_skin_adore_amp_2,
+    // 98 px; Rush_Hour_2 and Old_Flame, 93 px).
     if (!ex.empty() && st.play == PlayState::paused) c.blit(digits, L::no_minus_nums_ex, { L::pos_minus.x + 2, L::pos_minus.y });
     if (!ex.empty() || digits.width >= L::no_minus_nums_ex.x + L::no_minus_nums_ex.w) c.blit(digits, L::no_minus_nums_ex, L::pos_minus);
     if (minutes >= 100) c.blit(digits, minutes / 100 * L::digit_w, 0, L::digit_w, L::digit_h, L::pos_minus.x, L::pos_minus.y);
@@ -151,6 +155,9 @@ void render_shade(Canvas& c, const Skin& skin, const MainState& st) {
     const Image& title = skin.bitmap(SkinBitmap::titlebar);
     const Image& font = skin.bitmap(SkinBitmap::text);
     c.clear(0);
+    // As Winamp, whose main-window buffer holds main.bmp under the shade bar: where a short titlebar.bmp has no
+    // pixels (e.g. LeakyPipes, 301 px wide: the last column), main.bmp shows.
+    c.blit(skin.bitmap(SkinBitmap::main), 0, 0, c.width(), c.height(), 0, 0);
     c.blit(title, st.active ? L::shade_bg_active : L::shade_bg, { 0, 0 });
     draw_titlebar_buttons(c, title, st);
 
@@ -224,6 +231,10 @@ void render_main(Canvas& c, const Skin& skin, const MainState& st) {
         if (is(Control::clutter_v)) c.blit(title, L::clutter_v_on, L::pos_clutter_v);
     }
 
+    // Deliberately unlike Winamp (a decision): a glyph outside a too-small playpaus.bmp is clipped away, leaving
+    // main.bmp's art. Winamp (draw_main.cpp draw_playicon) blits into its persistent main-window buffer, where an
+    // out-of-range source leaves the previous indicator, so it depends on history - e.g. Fire_Elemental (9x9
+    // playpaus.bmp, only the play glyph) keeps the play triangle after pausing; ours shows main.bmp's square.
     switch (st.play) {
     case PlayState::playing:
         c.blit(playpaus, L::ind_playing, L::pos_play_state);

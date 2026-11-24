@@ -947,6 +947,9 @@ void PlaylistWindow::render_normal(Canvas& c) {
         // The sign cell is 3 px, but Winamp's cleared state (start, stop, the pause blink) put a 5 px blank there
         // that stays at x+7..x+8 until the window is fully repainted.
         c.blit(font, 142, 0, 5, 6, x + 4, y);
+        // Likewise the cleared state's blanks stay under the digits; they show where text.bmp is too short for the
+        // digits' bottom row (e.g. My_First_Sony_2, 11 px high: the blank's dot at (146,5) shows below them).
+        for (int dx : { 9, 14, 22, 27 }) c.blit(font, 142, 0, 5, 6, x + dx, y);
         c.blit(font, m_time_negative ? 75 : 142, m_time_negative ? 6 : 0, 3, 6, x + (m >= 100 ? 0 : 4), y);
         if (m >= 100) digit(m / 100, 4);
         digit(m / 10 % 10, 9);

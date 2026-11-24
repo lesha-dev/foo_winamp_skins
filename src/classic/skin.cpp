@@ -5,6 +5,7 @@
 
 #include <miniz.h>
 
+#include <algorithm>
 #include <cctype>
 
 namespace wsz {
@@ -104,7 +105,12 @@ using Ini = std::map<std::string, IniSection>;
 Ini parse_ini(const std::vector<uint8_t>& data) {
     Ini ini;
     std::string section;
+    // As Winamp's GetPrivateProfileString: a UTF-16 file (BOM FF FE / FE FF) is read too, e.g. Vampire_Vista_Skin's
+    // pledit.txt. split_lines drops the zero bytes; the BOM would hide the first line's [section].
+    const bool utf16 = data.size() >= 2 && ((data[0] == 0xff && data[1] == 0xfe) || (data[0] == 0xfe && data[1] == 0xff));
+    bool first = true;
     for (auto& raw : split_lines(data)) {
+        if (std::exchange(first, false) && utf16) raw.erase(0, 2);
         std::string line = trim(raw);
         if (line.empty() || line[0] == ';' || line.rfind("//", 0) == 0) continue;
         if (line[0] == '[') {
@@ -121,16 +127,13 @@ Ini parse_ini(const std::vector<uint8_t>& data) {
 }
 
 std::optional<COLORREF> parse_hex_color(std::string v) {
+    // As Winamp (Skins.cpp hexGetPrivateProfileInt): an empty value keeps the default, else strtol base 16 after an
+    // optional '#', so short values count from the right ("#A375C" = #0A375C) and junk reads as black.
     v = trim(v);
-    if (!v.empty() && v[0] == '#') v.erase(0, 1);
-    if (v.size() < 6) return std::nullopt;
-    unsigned rgb = 0;
-    for (size_t i = 0; i < 6; ++i) {
-        int c = std::tolower(static_cast<unsigned char>(v[i]));
-        int d = std::isdigit(c) ? c - '0' : (c >= 'a' && c <= 'f') ? c - 'a' + 10 : -1;
-        if (d < 0) return std::nullopt;
-        rgb = (rgb << 4) | static_cast<unsigned>(d);
-    }
+    if (v.empty()) return std::nullopt;
+    const char* s = v.c_str();
+    if (*s == '#') ++s;
+    const long rgb = std::strtol(s, nullptr, 16);
     return RGB((rgb >> 16) & 0xff, (rgb >> 8) & 0xff, rgb & 0xff);
 }
 
@@ -157,8 +160,22 @@ std::string basename_lower(const char* name) {
 }
 
 void read_zip(const std::vector<uint8_t>& archive, std::map<std::string, std::vector<uint8_t>>& files) {
+    // Data in front of the zip (e.g. Leon_vs_Tyrant: a 528-byte sound header) shifts every offset; Winamp's unzip
+    // (minizip) allows for it, as the gap between where the central directory ends and where the end record is.
+    size_t skip = 0;
+    const size_t n = archive.size();
+    for (size_t i = n >= 22 ? n - 22 : 0, stop = n > 65557 ? n - 65557 : 0; n >= 22; --i) {
+        const uint8_t* e = archive.data() + i;
+        if (e[0] == 'P' && e[1] == 'K' && e[2] == 5 && e[3] == 6) {
+            auto u32 = [&](size_t o) { return uint32_t(e[o]) | uint32_t(e[o + 1]) << 8 | uint32_t(e[o + 2]) << 16 | uint32_t(e[o + 3]) << 24; };
+            const uint64_t end_of_cd = uint64_t(u32(16)) + u32(12);
+            if (end_of_cd < i) skip = static_cast<size_t>(i - end_of_cd);
+            break;
+        }
+        if (i == stop) break;
+    }
     mz_zip_archive zip{};
-    if (!mz_zip_reader_init_mem(&zip, archive.data(), archive.size(), 0))
+    if (!mz_zip_reader_init_mem(&zip, archive.data() + skip, n - skip, 0))
         throw std::runtime_error(pfc::format("not a valid zip archive (", mz_zip_get_error_string(mz_zip_get_last_error(&zip)), ")").c_str());
 
     const mz_uint count = mz_zip_reader_get_num_files(&zip);
@@ -297,7 +314,11 @@ std::unique_ptr<Skin> Skin::load(const char* path_utf8, const char* fallback_utf
     std::unique_ptr<Skin> skin(new Skin());
     skin->m_path = path_utf8;
     skin->load_from(files);
-    if (skin->bitmap(SkinBitmap::main).empty()) throw std::runtime_error("not a Winamp 2 skin (main.bmp missing or unreadable)");
+    // As Winamp, a missing main.bmp doesn't reject the skin (Winamp substitutes its own): the fallback skin's stands
+    // in, else black. E.g. ViperAmp (its background is a Main.jpg, which Winamp doesn't read either) and green_ghost
+    // (region-only, region.txt hides it). Only an archive with no skin bitmap at all is refused.
+    if (std::all_of(skin->m_bitmaps.begin(), skin->m_bitmaps.end(), [](const Image& i) { return i.empty(); }))
+        throw std::runtime_error("not a Winamp 2 skin (no skin bitmaps found)");
     if (fallback_utf8 && *fallback_utf8 && pfc::stricmp_ascii(fallback_utf8, path_utf8) != 0) {
         try {
             skin->use_fallback(*load(fallback_utf8));
@@ -332,13 +353,30 @@ void Skin::use_fallback(const Skin& fb) {
         }
     }
     if (no_digits) take(B::nums_ex);
-    if (!own_balance && !take(B::balance)) bm[static_cast<size_t>(B::balance)] = bm[static_cast<size_t>(B::volume)];
+    // As Winamp (draw.cpp): with a skin loaded, balance is its balance.bmp or else the volume slider in use - here
+    // the fallback's volume.bmp, never the fallback's balance.bmp (Winamp's built-in balance art is only for no
+    // skin). Cut from x 9 as always, its rounded ends don't show (e.g. GO_CYCLONES, Tron_set, van_halen).
+    if (!own_balance) bm[static_cast<size_t>(B::balance)] = bm[static_cast<size_t>(B::volume)];
 }
 
 void Skin::load_from(FileMap& files) {
     for (size_t i = 0; i < std::size(bitmap_files); ++i) {
         auto it = files.find(bitmap_files[i]);
         if (it == files.end()) continue;
+        // Deliberately unlike Winamp (decisions): every bitmap is drawn as the skin has it.
+        // - Invalid bitmaps: Winamp loads skin bitmaps with LoadImage (draw.cpp draw_LBitmap), which refuses some
+        //   files that WIC decodes - RLE-compressed with biSizeImage 0 (btcs cbuttons.bmp) or larger than the data
+        //   in the file (Puss_n_Boots PLAYPAUS.BMP: 398 for 206 bytes), more palette colours than the bit depth
+        //   allows (blank_audio TEXT.BMP, biClrUsed 17 at 4 bpp), 32 bpp with a 108-byte V4 header (every bitmap
+        //   of XMMS-Turquoise, whose header is also laid out like a V5 one without its masks) - and Winamp then
+        //   shows its own built-in bitmap. We show the skin's art.
+        // - Black/white palettes: LoadImage makes device-dependent bitmaps (no LR_CREATEDIBSECTION on a true-colour
+        //   display), so a bitmap whose palette is only black and white (1-bit, or 4/8-bit using just those two)
+        //   becomes monochrome, and BitBlt paints its black pixels in the target DC's text colour and white ones in
+        //   its background colour - whatever the last text drawing left: the main window's title colours (taken
+        //   from text.bmp in draw.cpp, set by the Windows-font title) or the playlist's row colours (pledit.txt or
+        //   the defaults). Winamp then recolours or inverts that art, e.g. AMG-_Urd (text.bmp: kbps/kHz, playlist
+        //   info and time) and CaesarAmp (playpaus.bmp). We keep the bitmap's own colours.
         try {
             m_bitmaps[i] = decode_image(it->second.data(), it->second.size());
         } catch (const std::exception& e) {
