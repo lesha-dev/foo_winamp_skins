@@ -19,9 +19,9 @@ public:
     void set_skin(const Skin* skin);
     bool visible() const { return m_wnd && IsWindowVisible(m_wnd); }
 
-    // Double size: the skin is drawn at 2x; hosted UI elements keep their own size inside the larger frame.
-    // Use MainWindow::toggle_double_size to follow Options (all windows or just this one).
-    bool is_double_size() const { return m_scale == 2; }
+    // Double size: the skin is drawn at twice the DPI scale; hosted UI elements keep their own size inside
+    // the larger frame. Use MainWindow::toggle_double_size to follow Options (all windows or just this one).
+    bool is_double_size() const { return m_double_size; }
     void set_double_size(bool on);
 
     // Window actions at the top of its context menu; unsupported ones are shown disabled.
@@ -34,11 +34,13 @@ public:
     void invalidate();
 
 protected:
-    // Size in skin pixels and the integer display scale.
+    // Size in skin pixels and the integer display scale (DPI scale, doubled in double size).
     virtual SIZE skin_size() const = 0;
     int scale() const { return m_scale; }
-    // After set_double_size: store the flag, lay out child windows.
+    // After set_double_size: store the flag.
     virtual void on_double_size_changed() {}
+    // After the display scale changed (double size, DPI): lay out child windows.
+    virtual void on_scale_changed() {}
     virtual void render(Canvas& c) = 0;
     // Client points over controls get mouse input; everything else drags the window.
     virtual bool is_control(POINT skin_pt) const = 0;
@@ -74,6 +76,7 @@ protected:
     HWND m_wnd = nullptr;
     const Skin* m_skin = nullptr;
     bool m_active = false;
+    bool m_double_size = false;
     int m_scale = 1;
     Canvas m_canvas;
     Tooltip m_tooltip;
@@ -82,6 +85,8 @@ private:
     static LRESULT CALLBACK s_wndproc(HWND, UINT, WPARAM, LPARAM);
     LRESULT wndproc(UINT msg, WPARAM wp, LPARAM lp);
     void apply_region();
+    int target_scale() const;
+    void apply_scale();
     void save_window_position();
     void paint();
 };

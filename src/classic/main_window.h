@@ -109,6 +109,8 @@ private:
     // window modes
     void set_shade(bool on);
     void set_double_size(bool on);
+    int target_scale() const; // DPI scale, doubled in double size
+    void apply_scale();
     void set_always_on_top(bool on);
     void apply_geometry();
     void apply_region();
@@ -132,11 +134,12 @@ private:
     titleformat_object::ptr m_title_script;   // Options > Main window title
     titleformat_object::ptr m_caption_script; // taskbar caption
     void update_title_formats();
-    HFONT m_title_font = nullptr, m_title_font2x = nullptr; // playlist font for the non-bitmap title
+    HFONT m_title_font = nullptr, m_title_font2x = nullptr; // playlist font for the non-bitmap title (1x, window scale)
     void update_title_fonts();
     void skin_changed(); // propagate m_skin to all windows
 
     int m_scale = 1;
+    bool m_double_size = false;
     bool m_shade = false;
     bool m_always_on_top = false;
     bool m_active = false;

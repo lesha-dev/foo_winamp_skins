@@ -92,6 +92,7 @@ exit /b 0</Command>
     <ClInclude Include="src\classic\canvas.h" />
     <ClInclude Include="src\common\cui_panels.h" />
     <ClInclude Include="src\common\docking.h" />
+    <ClInclude Include="src\common\dpi.h" />
     <ClInclude Include="src\common\drop_target.h" />
     <ClInclude Include="src\common\eq.h" />
     <ClInclude Include="src\classic\eq_window.h" />

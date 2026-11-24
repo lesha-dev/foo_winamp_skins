@@ -23,7 +23,7 @@ ElementWindow::ElementWindow(const State& state) : m_state(state), m_host(state.
         m_state.w = std::max(GenFrame::min_width, m_state.w - m_state.w % GenFrame::step_w);
         m_state.h = std::max(GenFrame::min_height, m_state.h - m_state.h % GenFrame::step_h);
     }
-    m_scale = m_state.double_size ? 2 : 1;
+    m_double_size = m_state.double_size;
     m_host.on_label_changed = [this] { invalidate(); };
     m_host.on_activate = [this] { show(true); };
 }
@@ -51,10 +51,9 @@ void ElementWindow::on_visibility_changed(bool visible) {
     if (MainWindow* w = MainWindow::instance()) w->invalidate();
 }
 
-void ElementWindow::on_double_size_changed() {
-    m_state.double_size = is_double_size();
-    layout_element();
-}
+void ElementWindow::on_double_size_changed() { m_state.double_size = is_double_size(); }
+
+void ElementWindow::on_scale_changed() { layout_element(); }
 
 void ElementWindow::on_skin_changed() {
     apply_skin(m_host, m_skin);

@@ -45,6 +45,7 @@
     <ClInclude Include="src\classic\canvas.h"><Filter>Header Files</Filter></ClInclude>
     <ClInclude Include="src\common\cui_panels.h"><Filter>Header Files</Filter></ClInclude>
     <ClInclude Include="src\common\docking.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="src\common\dpi.h"><Filter>Header Files</Filter></ClInclude>
     <ClInclude Include="src\common\drop_target.h"><Filter>Header Files</Filter></ClInclude>
     <ClInclude Include="src\common\eq.h"><Filter>Header Files</Filter></ClInclude>
     <ClInclude Include="src\classic\eq_window.h"><Filter>Header Files</Filter></ClInclude>

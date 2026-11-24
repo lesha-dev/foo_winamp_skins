@@ -64,6 +64,7 @@ protected:
     void on_position_saved(int x, int y) override;
     void on_visibility_changed(bool visible) override;
     void on_double_size_changed() override;
+    void on_scale_changed() override;
     bool on_message(UINT msg, WPARAM wp, LPARAM lp, LRESULT& ret) override;
 
 private:
@@ -117,6 +118,7 @@ private:
     titleformat_object::ptr m_title_script; // rows
     titleformat_object::ptr m_shade_script; // windowshade title
     HFONT m_font = nullptr;       // list rows, at Options' font size
+    HFONT m_list_font = nullptr;  // m_font for the hosted list: scaled to the DPI (null at 96 DPI)
     HFONT m_shade_font = nullptr; // windowshade title: same face, Winamp's fixed size
     int m_row_h = 13;             // font size + 3
 

@@ -3,6 +3,7 @@
 #include "common/balance_dsp.h"
 #include "common/config.h"
 #include "common/docking.h"
+#include "common/dpi.h"
 #include "common/eq.h"
 #include "common/guids.h"
 #include "classic/eq_window.h"
@@ -249,7 +250,6 @@ MainWindow::~MainWindow() {
     if (m_title_font2x) DeleteObject(m_title_font2x);
 }
 
-// Winamp draws the non-bitmap title with the playlist font; the 2x one serves the double-size alternative style.
 // Winamp's colours for the title in a Windows font (its draw.cpp): text.bmp's pixel at (150,4) as the background,
 // and as the text the pixel of the bitmap font's top-left 20x6 that differs most from it. Without a usable
 // text.bmp, the playlist's colours - deliberately unlike Winamp (a decision): for a text.bmp narrower than 151 px
@@ -281,6 +281,8 @@ void MainWindow::title_font_colors(const Skin& skin, COLORREF& fg, COLORREF& bg)
     bg = rgb(b);
 }
 
+// Winamp draws the non-bitmap title with the playlist font; the scaled one serves the alternative style
+// (full resolution at 2x and above).
 void MainWindow::update_title_fonts() {
     if (m_title_font) DeleteObject(m_title_font);
     if (m_title_font2x) DeleteObject(m_title_font2x);
@@ -295,7 +297,7 @@ void MainWindow::update_title_fonts() {
     wcsncpy_s(lf.lfFaceName, pfc::stringcvt::string_wide_from_utf8(face), _TRUNCATE);
     lf.lfHeight = -10;
     m_title_font = CreateFontIndirectW(&lf);
-    lf.lfHeight = -20;
+    lf.lfHeight = -10 * m_scale;
     m_title_font2x = CreateFontIndirectW(&lf);
 }
 
@@ -321,7 +323,8 @@ HWND MainWindow::create(HookProc hook) {
     s_instance = this;
     eq::set_listener([this] { on_eq_changed(); });
     m_hook = hook;
-    m_scale = config::double_size.get() ? 2 : 1;
+    m_double_size = config::double_size.get();
+    m_scale = target_scale();
     m_shade = config::shade.get();
     m_always_on_top = config_object::g_get_data_bool_simple(standard_config_objects::bool_ui_always_on_top, false);
     m_vis.set_mode(static_cast<VisMode>(std::clamp<int>(static_cast<int>(config::vis_mode.get()), 0, 2)));
@@ -352,6 +355,7 @@ HWND MainWindow::create(HookProc hook) {
         WS_POPUP | WS_SYSMENU | WS_MINIMIZEBOX | WS_CLIPCHILDREN,
         x, y, w, h, nullptr, nullptr, core_api::get_my_instance(), this);
     if (!m_wnd) throw exception_win32(GetLastError());
+    m_scale = target_scale(); // the window's own DPI
     m_tooltip.attach(m_wnd);
     m_taskbar_buttons.attach(m_wnd);
     m_drop.attach(m_wnd, &m_shell_drop);
@@ -554,6 +558,9 @@ LRESULT MainWindow::wndproc(UINT msg, WPARAM wp, LPARAM lp) {
         m_active = LOWORD(wp) != WA_INACTIVE;
         invalidate();
         break;
+    case WM_DPICHANGED: // only with per-monitor DPI awareness; the size follows the skin, not the suggestion
+        apply_scale();
+        return 0;
     case WM_WINDOWPOSCHANGING:
         docking::snap(m_wnd, reinterpret_cast<WINDOWPOS*>(lp));
         break;
@@ -677,7 +684,7 @@ void MainWindow::toggle_element(const GUID& guid) {
     ElementState s;
     s.guid = guid;
     // New windows join the others' double size when it applies to all windows.
-    s.double_size = config::double_size_all.get() && m_scale == 2;
+    s.double_size = config::double_size_all.get() && m_double_size;
     create_element_window(s)->window().show(true);
     save_element_windows();
 }
@@ -696,8 +703,8 @@ void MainWindow::on_paint() {
         const MainState st = build_state();
         render_main(m_canvas, *m_skin, st);
         m_canvas.present(dc, m_scale);
-        if (m_scale == 2 && !m_shade && st.title_font && config::title_font_alt.get())
-            draw_title_font(dc, 2, m_title_font2x, st);
+        if (m_scale >= 2 && !m_shade && st.title_font && config::title_font_alt.get())
+            draw_title_font(dc, m_scale, m_title_font2x, st);
     } else {
         paint_placeholder(dc);
     }
@@ -741,7 +748,8 @@ void MainWindow::layout_placeholder() {
     RECT rc; GetClientRect(m_wnd, &rc);
     const int top = titlebar_height * m_scale;
     const int body_mid = top + (rc.bottom - top) / 2;
-    const int bw = 110, bh = 24;
+    const int dpi = static_cast<int>(dpi::window_dpi(m_wnd));
+    const int bw = MulDiv(110, dpi, USER_DEFAULT_SCREEN_DPI), bh = MulDiv(24, dpi, USER_DEFAULT_SCREEN_DPI);
     SetWindowPos(m_choose_skin, nullptr, (rc.right - bw) / 2, body_mid + 2, bw, bh, SWP_NOZORDER | SWP_NOACTIVATE | SWP_SHOWWINDOW);
 }
 
@@ -768,7 +776,7 @@ MainState MainWindow::build_state() {
     st.shade = m_shade;
     st.easter_egg = config::title_easter_egg.get();
     st.always_on_top = m_always_on_top;
-    st.double_size = m_scale == 2;
+    st.double_size = m_double_size;
     st.pressed = m_pressed_inside ? m_pressed : Control::none;
     if (m_pressed == Control::volume || m_pressed == Control::balance || m_pressed == Control::posbar) st.pressed = m_pressed;
 
@@ -810,7 +818,7 @@ MainState MainWindow::build_state() {
         case Control::clutter_o: st.marquee = "Options menu"; break;
         case Control::clutter_a: st.marquee = m_always_on_top ? "Disable always on top" : "Enable always on top"; break;
         case Control::clutter_i: st.marquee = "File info box"; break;
-        case Control::clutter_d: st.marquee = m_scale == 2 ? "Disable doublesize mode" : "Enable doublesize mode"; break;
+        case Control::clutter_d: st.marquee = m_double_size ? "Disable doublesize mode" : "Enable doublesize mode"; break;
         default: st.marquee = "Visualization menu"; break;
         }
         st.marquee_px = 0;
@@ -1040,7 +1048,7 @@ void MainWindow::show_context_menu(POINT pt, SkinWindow* panel) {
     // The clicked window's own actions.
     {
         auto flags = [](bool can, bool on) { return MF_STRING | (can ? 0u : UINT(MF_GRAYED)) | (on ? UINT(MF_CHECKED) : 0u); };
-        const bool dbl_can = true, dbl_on = panel ? panel->is_double_size() : m_scale == 2;
+        const bool dbl_can = true, dbl_on = panel ? panel->is_double_size() : m_double_size;
         const bool shade_can = panel ? panel->can_shade() : true, shade_on = panel ? panel->is_shaded() : m_shade;
         AppendMenuW(menu, flags(dbl_can, dbl_on), id_panel_double, L"&Double size");
         AppendMenuW(menu, flags(shade_can, shade_on), id_panel_shade, L"&Windowshade");
@@ -1455,15 +1463,24 @@ void MainWindow::set_shade(bool on) {
 }
 
 void MainWindow::set_double_size(bool on) {
-    const int scale = on ? 2 : 1;
+    if (on == m_double_size) return;
+    m_double_size = on;
+    config::double_size = on;
+    apply_scale();
+}
+
+int MainWindow::target_scale() const { return dpi::skin_scale(m_wnd) * (m_double_size ? 2 : 1); }
+
+void MainWindow::apply_scale() {
+    const int scale = target_scale();
     if (scale == m_scale) return;
     m_scale = scale;
-    config::double_size = on;
+    update_title_fonts();
     apply_geometry();
 }
 
 void MainWindow::toggle_double_size(SkinWindow* source) {
-    const bool on = source ? !source->is_double_size() : m_scale == 1;
+    const bool on = source ? !source->is_double_size() : !m_double_size;
     if (!config::double_size_all.get()) {
         if (source) source->set_double_size(on);
         else set_double_size(on);
@@ -1477,7 +1494,7 @@ void MainWindow::toggle_double_size(SkinWindow* source) {
 }
 
 void MainWindow::sync_double_size() {
-    const bool on = m_scale == 2;
+    const bool on = m_double_size;
     const bool outer = !docking::relayout_active();
     if (outer) docking::begin_relayout(m_wnd);
     if (m_eq) m_eq->set_double_size(on);

@@ -2,6 +2,7 @@
 #include "classic/skin_window.h"
 #include "common/config.h"
 #include "common/docking.h"
+#include "common/dpi.h"
 #include "classic/main_window.h"
 
 namespace wsz {
@@ -29,6 +30,7 @@ SkinWindow::~SkinWindow() { destroy(); }
 
 void SkinWindow::create(HWND owner, const wchar_t* title, int x, int y) {
     register_class(&s_wndproc);
+    m_scale = target_scale();
     const SIZE sz = skin_size();
     const int w = sz.cx * scale(), h = sz.cy * scale();
     if (x != CW_USEDEFAULT) {
@@ -47,7 +49,9 @@ void SkinWindow::create(HWND owner, const wchar_t* title, int x, int y) {
     if (!m_wnd) throw exception_win32(GetLastError());
     docking::add(m_wnd);
     m_tooltip.attach(m_wnd);
+    m_scale = target_scale(); // the window's own DPI
     apply_geometry();
+    on_scale_changed();
 }
 
 void SkinWindow::destroy() {
@@ -69,11 +73,20 @@ void SkinWindow::set_skin(const Skin* skin) {
 }
 
 void SkinWindow::set_double_size(bool on) {
-    const int scale = on ? 2 : 1;
+    if (on == m_double_size) return;
+    m_double_size = on;
+    apply_scale();
+    on_double_size_changed();
+}
+
+int SkinWindow::target_scale() const { return dpi::skin_scale(m_wnd) * (m_double_size ? 2 : 1); }
+
+void SkinWindow::apply_scale() {
+    const int scale = target_scale();
     if (scale == m_scale) return;
     m_scale = scale;
     apply_geometry();
-    on_double_size_changed();
+    on_scale_changed();
 }
 
 void SkinWindow::show(bool on) {
@@ -229,6 +242,9 @@ LRESULT SkinWindow::wndproc(UINT msg, WPARAM wp, LPARAM lp) {
         m_active = LOWORD(wp) != WA_INACTIVE;
         invalidate();
         break;
+    case WM_DPICHANGED: // only with per-monitor DPI awareness; the size follows the skin, not the suggestion
+        apply_scale();
+        return 0;
     case WM_WINDOWPOSCHANGING:
         docking::snap(m_wnd, reinterpret_cast<WINDOWPOS*>(lp));
         break;

@@ -2,6 +2,7 @@
 #include "classic/playlist_window.h"
 #include "common/config.h"
 #include "common/docking.h"
+#include "common/dpi.h"
 #include "classic/main_window.h"
 #include "common/player.h"
 #include "common/playlist_actions.h"
@@ -115,6 +116,7 @@ PlaylistWindow::~PlaylistWindow() {
     m_callbacks.reset();
     destroy();
     if (m_font) DeleteObject(m_font);
+    if (m_list_font) DeleteObject(m_list_font);
     if (m_shade_font) DeleteObject(m_shade_font);
 }
 
@@ -268,8 +270,10 @@ RECT PlaylistWindow::host_rect() const {
     return { left_w * s, top_h * s, (width() - right_w) * s, (height() - bottom_h) * s };
 }
 
-void PlaylistWindow::on_double_size_changed() {
-    config::pl_double = is_double_size();
+void PlaylistWindow::on_double_size_changed() { config::pl_double = is_double_size(); }
+
+void PlaylistWindow::on_scale_changed() {
+    if (m_font) update_font(); // the hosted list's font follows the DPI
     layout_host();
 }
 
@@ -325,8 +329,8 @@ bool PlaylistWindow::list_scroll(SCROLLINFO& si) const {
 }
 
 void PlaylistWindow::update_font() {
-    HFONT old = m_font; // deleted after the hosted element has switched to the new one
-    m_font = nullptr;
+    HFONT old = m_font, old_list = m_list_font; // deleted after the hosted element has switched to the new ones
+    m_font = m_list_font = nullptr;
     // Like Winamp: the skin's pledit.txt font unless Options names another; the size is the user's.
     const std::wstring face = wide(config::pl_skin_font.get() ? (m_skin ? m_skin->playlist_colors().font.c_str() : "Arial")
                                                               : config::pl_font.get().get_ptr());
@@ -339,17 +343,23 @@ void PlaylistWindow::update_font() {
     lf.lfQuality = config::pl_font_smooth.get() ? DEFAULT_QUALITY : NONANTIALIASED_QUALITY; // DEFAULT: system smoothing (ClearType)
     wcsncpy_s(lf.lfFaceName, face.c_str(), _TRUNCATE);
     m_font = CreateFontIndirectW(&lf);
+    // Our rows are drawn in skin pixels; the hosted list is a native window, so its font follows the DPI.
+    if (const UINT dpi = dpi::window_dpi(m_wnd); dpi != USER_DEFAULT_SCREEN_DPI) {
+        lf.lfHeight = -MulDiv(size, static_cast<int>(dpi), USER_DEFAULT_SCREEN_DPI);
+        m_list_font = CreateFontIndirectW(&lf);
+    }
     if (m_shade_font) DeleteObject(m_shade_font);
     lf.lfHeight = -config::pl_font_size_default;
     m_shade_font = CreateFontIndirectW(&lf);
     apply_list_font();
     if (old) DeleteObject(old);
+    if (old_list) DeleteObject(old_list);
     clamp_scroll();
     invalidate();
 }
 
 void PlaylistWindow::apply_list_font() {
-    if (m_host) m_host->set_list_font(config::playlist_view_skin_font.get() ? m_font : nullptr);
+    if (m_host) m_host->set_list_font(config::playlist_view_skin_font.get() ? (m_list_font ? m_list_font : m_font) : nullptr);
 }
 
 void PlaylistWindow::apply_size(int w_extra, int h_extra) {
