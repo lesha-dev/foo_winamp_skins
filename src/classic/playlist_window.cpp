@@ -1032,14 +1032,14 @@ void PlaylistWindow::render_list(Canvas& c) {
             // which turns it another color on a selected row).
             GdiFlush();
             const uint32_t fc = to_bgrx(col.normal);
-            const int right = r.x + r.w - 1, bottom = y + m_row_h - 1;
-            for (int x = r.x; x <= right; ++x) {
+            const int frame_right = r.x + r.w - 1, frame_bottom = y + m_row_h - 1;
+            for (int x = r.x; x <= frame_right; ++x) {
                 if ((x + y) & 1) c.set_pixel(x, y, fc);
-                if ((x + bottom) & 1) c.set_pixel(x, bottom, fc);
+                if ((x + frame_bottom) & 1) c.set_pixel(x, frame_bottom, fc);
             }
-            for (int yy = y + 1; yy < bottom; ++yy) {
+            for (int yy = y + 1; yy < frame_bottom; ++yy) {
                 if ((r.x + yy) & 1) c.set_pixel(r.x, yy, fc);
-                if ((right + yy) & 1) c.set_pixel(right, yy, fc);
+                if ((frame_right + yy) & 1) c.set_pixel(frame_right, yy, fc);
             }
         }
     }
