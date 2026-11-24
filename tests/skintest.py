@@ -706,7 +706,21 @@ def fb2k_paths(arch):
 
 
 def newest_dll(arch):
-    """The newest build of the component (WSL or VS, as redeploy.bat picks), rebuilt in WSL when the sources are newer."""
+    """The newest build of the component (WSL or VS, as redeploy.bat picks), rebuilt in WSL when the sources are newer.
+    SKINTEST_COMPONENT=<.fb2k-component> tests that package's DLLs instead (a release candidate): x86 at its root, x64 in x64/."""
+    pkg = os.environ.get('SKINTEST_COMPONENT')
+    if pkg:
+        import zipfile
+        name = ('x64/' if arch == 'x64' else '') + 'foo_winamp_skins.dll'
+        out = RUNS / f'component-{arch}'
+        shutil.rmtree(out, ignore_errors=True)
+        out.mkdir(parents=True)
+        try:
+            with zipfile.ZipFile(pkg) as z:
+                (out / 'foo_winamp_skins.dll').write_bytes(z.read(name))
+        except (OSError, KeyError, zipfile.BadZipFile) as e:
+            raise SetupError(f'SKINTEST_COMPONENT {pkg}: no {name} ({e})')
+        return out / 'foo_winamp_skins.dll'
     _, _, plat = ARCHS[arch]
     wsl = REPO / 'unix' / f'build-{arch}' / 'foo_winamp_skins.dll'
     cands = [wsl, REPO / 'out' / plat / 'Debug' / 'foo_winamp_skins.dll', REPO / 'out' / plat / 'Release' / 'foo_winamp_skins.dll']

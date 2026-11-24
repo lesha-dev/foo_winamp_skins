@@ -91,6 +91,9 @@ Exit code 0: passed; 1: a check failed or an accepted skin has unaccepted result
 tool, capture or test install). Skin names starting with `-` (`-Flo-`) go after `--`.
 
 - After a change: `check`; after UI-layer or classic changes and before a release: `check --fb2k both`.
+- A release package: `SKINTEST_COMPONENT=out/foo_winamp_skins-<ver>.fb2k-component skintest.py check --fb2k both`
+  runs foobar2000 with the package's DLLs (x86 at its root, x64 in `x64/`) instead of the newest build; the harness
+  gates still test the sources.
 - foobar2000 and Winamp runs need the desktop: leave it alone meanwhile. An `info ... brought to the front` line
   means another program kept the focus, so title bars may be drawn inactive (classic skins then fail on them).
 - Captures and harness renders keep their transparency, and comparisons count alpha (premultiplied colour and
